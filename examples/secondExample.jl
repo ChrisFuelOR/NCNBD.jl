@@ -35,8 +35,8 @@ function exampleModel()
 
             # for each nonlinear constraint, determine the expression graph
             # and replace the nonlinearity by the auxliary variable
-            @constraint(problem, alctual_nlcon_1, x[2] - nonlinearAux[1] <= 0)
-            @constraint(problem, alctual_nlcon_2, -x[2] + nonlinearAux[2] <= 0)
+            @constraint(problem, actual_nlcon_1, x[2] - nonlinearAux[1] <= 0)
+            @constraint(problem, actual_nlcon_2, -x[2] + nonlinearAux[2] <= 0)
         end
 
         # SET-UP NONLINEARITIES

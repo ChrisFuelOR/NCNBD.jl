@@ -44,22 +44,19 @@ struct InitialAlgoParams
     sigma :: Dict{Int64,Float64}
 end
 
-# struct for nonlinear functions
-struct NonlinearFunction
-    nonlinearExpression :: Any # function?
-    auxVariable :: JuMP.VariableRef
-    refToNonlinearConstraint :: JuMP.ConstraintRef
-    variablesCOntained :: Vector{JuMP.VariableRef}
-    triangulation :: NCNBD.Triangulation # Nothing
+# struct for Simplex
+mutable struct Simplex
+    # vertices?
+    vertexIndices :: Vector{Int64}
 end
 
 # struct for Triangulation
 # better to use dicts instead of vectors without index?
 mutable struct Triangulation
-    nonlinearfunction :: NCNBD.NonlinearFunction
+    nonlinearfunction :: NonlinearFunction
     vertices :: Union{Vector{Float64}, Array{Float64,2}}
     verticeValues :: Vector{Float64}
-    simplices :: Vector{NCNBD.Simplex}
+    simplices :: Vector{Simplex}
     precision :: Float64
     plrVariables :: Vector{JuMP.VariableRef}
     plrConstraints :: Vector{JuMP.ConstraintRef}
@@ -67,17 +64,20 @@ mutable struct Triangulation
     maxUnderestimation :: Vector{Float64}
 end
 
-# struct for Simplex
-mutable struct Simplex
-    # vertices?
-    vertexIndices :: Vector{Int64}
+# struct for nonlinear functions
+struct NonlinearFunction
+    nonlinearExpression :: Any # function?
+    auxVariable :: JuMP.VariableRef
+    refToNonlinearConstraint :: JuMP.ConstraintRef
+    variablesCOntained :: Vector{JuMP.VariableRef}
+    triangulation :: Triangulation # Nothing
 end
 
 # struct for solvers to be used (maybe mutable)
 struct AppliedSolvers
-    LP :: JuMP.MathProgBase.AbstractMathProgSolver
-    MILP :: JuMP.MathProgBase.AbstractMathProgSolver
-    MINLP :: JuMP.MathProgBase.AbstractMathProgSolver
+    LP :: Any
+    MILP :: Any
+    MINLP :: Any
 end
 
 
