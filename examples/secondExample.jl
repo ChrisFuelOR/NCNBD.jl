@@ -62,12 +62,6 @@ function exampleModel()
         nlf_1 = NCNBD.NonlinearFunction(nonlinearexp_1, nonlinearAux[1], nlcon_1, [x[2]])
         nlf_2 = NCNBD.NonlinearFunction(nonlinearexp_2, nonlinearAux[2], nlcon_2, [x[2]])
 
-        nonlinearExpression :: Any # function?
-        auxVariable :: JuMP.VariableRef
-        refToNonlinearConstraint :: JuMP.ConstraintRef
-        variablesContained :: Vector{JuMP.VariableRef}
-        triangulation :: Triangulation # Nothing
-
         # push both nonlinearFunction objects to list
         push!(nonlinearFunctionList, nlf_1)
         push!(nonlinearFunctionList, nlf_2)

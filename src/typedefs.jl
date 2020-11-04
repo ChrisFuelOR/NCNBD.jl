@@ -82,7 +82,7 @@ struct NonlinearFunction
             auxVariable,
             refToNonlinearConstraint,
             variablesContained,
-            nothing,
+            nothing
         )
     end
 
