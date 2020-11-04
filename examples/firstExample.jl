@@ -67,7 +67,7 @@ function main()
 
     # (3) START THE NC-NBD METHOD
     ############################################################################
-    #startNCNBD(MINLPmodel, MILPmodel, nonlinearFunctionList, algoConfig)
+    NCNBD.startNCNBD(MINLPmodel, MILPmodel, nonlinearFunctionList, algoParams)
 
 
 

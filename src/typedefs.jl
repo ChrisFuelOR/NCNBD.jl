@@ -4,33 +4,70 @@
 # If a copy of the MPL was not distributed with this file, you can obtain one
 # at https://mozilla.org/MPL/x.x.
 
-# This file is inspired by source code from SDDiP.jl (lkapelevich), SLDP.jl
-# (bfpc) and SDDP.jl (odow).
+# This file is inspired by and re-uses parts from the source code of
+# SDDiP.jl (lkapelevich),
+# SLDP.jl (bfpc)
+# and SDDP.jl (odow).
 
 import JuMP
 import Revise
 #import SDDP
 
-# Struct for algorithmic parameters that may change during the iterations
-# Note that some parameters can change between stages and are thus arrays.
-mutable struct AlgoParams
-    sigma       ::  Array{Float64,1} # parameters used to obtain the regularized problem
-    binaryNum   ::  Array{Int64} # Numbers of binary variables of latest binary expansion
-    binaryEps   ::  Array{Float64,1} # Epsilons for latest/current binary expansion
-    maxcuts     ::  Int64 # maximum number of cuts to be stored (for storage efficiency)
-    dropcuts    ::  Int64 # number of cuts dropped so far
-end
-    # what about number of constraints and variables in the model?
-    # check whether mutable is required
-    # what about differences in the binary expansion of all components?
+# Struct for algorithmic parameters
+# ------------------------------------------------------------------------------------------------------------------
+# epsilon_outerLoop: optimality tolerance for outer loop
+# epsilon_innerLoop: optimality tolerance for inner loop
+# binaryPrecision: epsilons for latest/current binary expansion (better use vector instead of dict?)
+# plaPrecision: precision of the initial PLA (same for all stages, but can differ between nonlinearities so far)
+# sigma: parameters used to obtain the regularized problem (better vector?)
+# ------------------------------------------------------------------------------------------------------------------
+# possible extensions:
+# maxcuts ::  Int64 # maximum number of cuts to be stored (for storage efficiency)
+# dropcuts ::  Int64 # number of cuts dropped so far
+# what about number of constraints and variables in the model?
+# what about differences in the binary expansion of different components?
 
-# Struct for initial algorithmic parameters that remain fixed to characterize a model run.
-struct InitialAlgoParams
-    sigma       ::  Float64 # parameters used to obtain the regularized problem (array later for stages)
-    initialSimplices :: Int64 # number of simplices for the PLAs used in the beginning (could also be an array)
-    initialBinaryPrecision :: Float64 # initial binary precision for all binary expansions (could also be an array)
-    maxcuts     ::  Int64 # maximum number of cuts to be stored (for storage efficiency)
+# Mutable struct for algorithmic parameters that may change during the iterations
+mutable struct AlgoParams
+    epsilon_outerLoop :: Float64 # optimality tolerance for outer loop
+    epsilon_innerLoop :: Float64 # optimality tolerance for inner loop
+    binaryPrecision :: Dict{Int64,Float64} # Epsilons for latest/current binary expansion (better vector?)
+    sigma :: Dict{Int64,Float64} # parameters used to obtain the regularized problem (better vector?)
 end
+
+# Struct for initial algorithmic parameters that remain fixed and characterize a model run
+struct InitialAlgoParams
+    epsilon_outerLoop :: Float64
+    epsilon_innerLoop :: Float64
+    binaryPrecision :: Dict{Int64,Float64}
+    plaPrecision :: Vector{Float64}
+    sigma :: Dict{Int64,Float64}
+end
+
+# struct for nonlinear functions
+struct NonlinearFunction
+    nonlinearExpression :: Any # function?
+    auxVariable :: JuMP.VariableRef
+    refToNonlinearConstraint :: JuMP.ConstraintRef
+    variablesCOntained :: Vector{JuMP.VariableRef}
+    triangulation :: Triangulation = Nothing
+end
+
+# struct for solvers to be used (maybe mutable)
+struct AppliedSolvers
+    LP :: JuMP.MathProgBase.AbstractMathProgSolver
+    MILP :: JuMP.MathProgBase.AbstractMathProgSolver
+    MINLP :: JuMP.MathProgBase.AbstractMathProgSolver
+end
+
+
+
+
+
+
+
+
+
 
 # Struct to store information on a nonlinear cut
 struct NonlinearCut
@@ -44,33 +81,6 @@ end
     # do we need to store the trial point also in binary? I think not because
     # we can always convert it. Do we really need binaryNum and binaryEps?
 
-
-# Do I need matrix B explicitly?
-
-# struct for nonlinear functions used in the GAMS model
-#struct NonlinearFunction{F<:Function}
-struct NonlinearFunction
-    variableList::Vector{JuMP.VariableRef} #Array{Vector{JuMP.variable},1}
-    auxVariable::JuMP.VariableRef
-    constraintRef::JuMP.ConstraintRef  #check in SDDP
-    func::Any
-#    #triangulation       ::  #Triangulation
-#    #piecewiseLinearApp  ::  #PiecewiseLinearApproximationStructure
-
-# Constructor
-    #NonlinearFunction{F}(variableList, auxVariable, constraintRef, func) where {F<:Function} = new(variableList, auxVariable, constraintRef, func)
-
-    #function NonlinearFunction(;
-#        variableList::Vector{JuMP.VariableRef},
-#        auxVariable::JuMP.VariableRef,
-#        constraintRef::JuMP.ConstraintRef,
-#        func::F
-#    ){F<:Function}
-#        return new{typeof{func}}(
-#            variableList, auxVariable, constraintRef, func
-#        )
-#    end
-end
 
 
 #nlf1 = NonlinearFunction(variables_nfl1, nonlinearAux, nlcon, quadr)

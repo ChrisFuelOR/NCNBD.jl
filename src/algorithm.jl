@@ -1,8 +1,9 @@
 function startNCNBD(MINLPmodel::JuMP.Model, MILPmodel::JuMP.Model,
     nonlinearFunctionList::Vector{NonlinearFunction}, algoConfig::InitialAlgoParams)
 
-    print("blubb")
-
+    # (1) DETERMINE A TRIANGULATION
+    ############################################################################
+    triangulation
 
 end
 
