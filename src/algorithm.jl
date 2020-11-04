@@ -1,36 +1,41 @@
-function startNCNBD(MINLPmodel::JuMP.model, MILPmodel, nonlinearFunctionList, algoConfig)
+function startNCNBD(MINLPmodel::JuMP.Model, MILPmodel::JuMP.Model,
+    nonlinearFunctionList::Vector{NonlinearFunction}, algoConfig::InitialAlgoParams)
+
+    print("blubb")
+
+
+end
+
+
+
+
+
+#MILPmodel = constructMILP(MILPmodel, MINLPmodel, nonlinearFunctionList)
 
 
 
 
 
 
-MILPmodel = constructMILP(MILPmodel, MINLPmodel, nonlinearFunctionList)
 
-
-
-
-
-
-
-for nonlinfunc in nonlinearFunctionList
+#for nonlinfunc in nonlinearFunctionList
     # Determine the variable bounds
     # Determine a triangulation
-    xgrid = Vector(lower_bound(nlf1.variableList[1]): upper_bound(nlf1.variableList[1]))
+    #xgrid = Vector(lower_bound(nlf1.variableList[1]): upper_bound(nlf1.variableList[1]))
 
     # Determine the function values of all vertices
-    ygrid = quadr.(xgrid)
+    #ygrid = quadr.(xgrid)
 
     # Determine the piecewise linear approximation
-    z = piecewiselinear(MILPmodel, x_MILP[2], xgrid, ygrid; method=:DLog)
+    #z = piecewiselinear(MILPmodel, x_MILP[2], xgrid, ygrid; method=:DLog)
 
-    println(all_variables(MINLPmodel))
-    println(MINLPmodel)
+    #println(all_variables(MINLPmodel))
+    #println(MINLPmodel)
 
-    println(all_variables(MILPmodel))
-    println(MILPmodel)
+    #println(all_variables(MILPmodel))
+    #println(MILPmodel)
 
-    λ
+    #λ
 
 
     # Deleting all variables from previous PLA
@@ -55,4 +60,4 @@ for nonlinfunc in nonlinearFunctionList
     # Set up a piecewise linear function
 
     # Should this be done directly in the constructor
-end
+#end

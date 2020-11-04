@@ -8,7 +8,8 @@
 # (bfpc) and SDDP.jl (odow).
 
 import JuMP
-import SDDP
+import Revise
+#import SDDP
 
 # Struct for algorithmic parameters that may change during the iterations
 # Note that some parameters can change between stages and are thus arrays.
@@ -25,7 +26,7 @@ end
 
 # Struct for initial algorithmic parameters that remain fixed to characterize a model run.
 struct InitialAlgoParams
-    sigma       ::  Array{Float64,1} # parameters used to obtain the regularized problem
+    sigma       ::  Float64 # parameters used to obtain the regularized problem (array later for stages)
     initialSimplices :: Int64 # number of simplices for the PLAs used in the beginning (could also be an array)
     initialBinaryPrecision :: Float64 # initial binary precision for all binary expansions (could also be an array)
     maxcuts     ::  Int64 # maximum number of cuts to be stored (for storage efficiency)

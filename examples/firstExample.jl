@@ -2,6 +2,7 @@ using JuMP
 using Delaunay
 using Gurobi
 using PiecewiseLinearOpt
+using Revise
 using NCNBD
 
 function main()
@@ -17,7 +18,7 @@ function main()
     # --------------------------------------------------------------------------
     # first a list is constructed containing all the nonlinear expressions and function structs
     #nonlinearExpressionList = NonlinearExpression[]
-    nonlinearFunctionList = NonlinearFunction[]
+    nonlinearFunctionList = NCNBD.NonlinearFunction[]
     numberOfNonlinearFunctions = 2
 
     # for each nonlinear term to be approximated, an auxiliary variables is introduced
@@ -48,21 +49,21 @@ function main()
 
     # defining the nonlinear constraints by setting the auxiliary variable equal to the nonlinear term
     @NLconstraint(MINLPmodel, nlcon_1, nonlinearAux[1]==nonlinearexp_1(x[2]))
-    nlf_1 = NonlinearFunction([x_MILP[2]], nonlinearAux[1], nlcon_1, nonlinearexp_1)
+    nlf_1 = NCNBD.NonlinearFunction([x_MILP[2]], nonlinearAux[1], nlcon_1, nonlinearexp_1)
     push!(nonlinearFunctionList, nlf_1)
 
     @NLconstraint(MINLPmodel, nlcon_2, nonlinearAux[2]==nonlinearexp_2(x[2]))
-    nlf_2 = NonlinearFunction([x_MILP[2]], nonlinearAux[2], nlcon_2, nonlinearexp_2)
+    nlf_2 = NCNBD.NonlinearFunction([x_MILP[2]], nonlinearAux[2], nlcon_2, nonlinearexp_2)
     push!(nonlinearFunctionList, nlf_2)
 
     # (2) DEFINE NC-NBD parameters
     ############################################################################
-    sigma = 1
+    sigma = 1.0
     initialSimplices = 5
     initialBinaryPrecision = 0.5
     maxcuts = 100
 
-    algoParams = InitialAlgoParams(sigma, initialSimplices, initialBinaryPrecision, maxucts)
+    algoParams = NCNBD.InitialAlgoParams(sigma, initialSimplices, initialBinaryPrecision, maxcuts)
 
     # (3) START THE NC-NBD METHOD
     ############################################################################
