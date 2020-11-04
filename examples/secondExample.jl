@@ -26,7 +26,6 @@ function exampleModel()
         ############################################################################
         for problem in [subproblem, linearizedSubproblem]
             @variable(problem, 0 <= x[i=1:2] <= 4)
-            @stageobjective(problem, sum(x[i] for i in 1:2))
 
             # SET-UP EXPRESSION GRAPH FOR NONLINEARITIES OF MINLP MODEL
             ########################################################################
@@ -38,6 +37,10 @@ function exampleModel()
             @constraint(problem, actual_nlcon_1, x[2] - nonlinearAux[1] <= 0)
             @constraint(problem, actual_nlcon_2, -x[2] + nonlinearAux[2] <= 0)
         end
+        x = subproblem[:x]
+        @stageobjective(subproblem, sum(x[i] for i in 1:2))
+        x = linearizedSubproblem[:x]
+        @objective(linearizedSubproblem, MOI.MIN_SENSE, sum(x[i] for i in 1:2))
 
         # SET-UP NONLINEARITIES
         ############################################################################
@@ -50,12 +53,20 @@ function exampleModel()
         register(subproblem, :nonlinearexp_2, 1, nonlinearexp_2, autodiff=true)
 
         # defining nonlinear constraints using auxiliary variables
+        nonlinearAux = subproblem[:nonlinearAux]
+        x = subproblem[:x]
         @NLconstraint(subproblem, nlcon_1, nonlinearAux[1] == nonlinearexp_1(x[2]))
         @NLconstraint(subproblem, nlcon_2, nonlinearAux[2] == nonlinearexp_2(x[2]))
 
         # construct nonlinearFunction objects for both constraints
-        nlf_1 = NCNBD.NonlinearFunction([x[2]], nonlinearAux[1], nlcon_1, nonlinearexp_1)
-        nlf_2 = NCNBD.NonlinearFunction([x[2]], nonlinearAux[2], nlcon_2, nonlinearexp_2)
+        nlf_1 = NCNBD.NonlinearFunction(nonlinearexp_1, nonlinearAux[1], nlcon_1, [x[2]])
+        nlf_2 = NCNBD.NonlinearFunction(nonlinearexp_2, nonlinearAux[2], nlcon_2, [x[2]])
+
+        nonlinearExpression :: Any # function?
+        auxVariable :: JuMP.VariableRef
+        refToNonlinearConstraint :: JuMP.ConstraintRef
+        variablesContained :: Vector{JuMP.VariableRef}
+        triangulation :: Triangulation # Nothing
 
         # push both nonlinearFunction objects to list
         push!(nonlinearFunctionList, nlf_1)

@@ -53,7 +53,6 @@ end
 # struct for Triangulation
 # better to use dicts instead of vectors without index?
 mutable struct Triangulation
-    nonlinearfunction :: NonlinearFunction
     vertices :: Union{Vector{Float64}, Array{Float64,2}}
     verticeValues :: Vector{Float64}
     simplices :: Vector{Simplex}
@@ -69,9 +68,27 @@ struct NonlinearFunction
     nonlinearExpression :: Any # function?
     auxVariable :: JuMP.VariableRef
     refToNonlinearConstraint :: JuMP.ConstraintRef
-    variablesCOntained :: Vector{JuMP.VariableRef}
+    variablesContained :: Vector{JuMP.VariableRef}
     triangulation :: Triangulation # Nothing
+
+    function NonlinearFunction(
+        nonlinearExpression::Any,
+        auxVariable::JuMP.VariableRef,
+        refToNonlinearConstraint::JuMP.ConstraintRef,
+        variablesContained::Vector{JuMP.VariableRef},
+         ) where {T}
+        return new{T}(
+            nonlinearExpression,
+            auxVariable,
+            refToNonlinearConstraint,
+            variablesContained,
+            nothing,
+        )
+    end
+
+
 end
+
 
 # struct for solvers to be used (maybe mutable)
 struct AppliedSolvers
