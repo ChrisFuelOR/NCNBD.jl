@@ -50,7 +50,27 @@ struct NonlinearFunction
     auxVariable :: JuMP.VariableRef
     refToNonlinearConstraint :: JuMP.ConstraintRef
     variablesCOntained :: Vector{JuMP.VariableRef}
-    triangulation :: Triangulation = Nothing
+    triangulation :: NCNBD.Triangulation # Nothing
+end
+
+# struct for Triangulation
+# better to use dicts instead of vectors without index?
+mutable struct Triangulation
+    nonlinearfunction :: NCNBD.NonlinearFunction
+    vertices :: Union{Vector{Float64}, Array{Float64,2}}
+    verticeValues :: Vector{Float64}
+    simplices :: Vector{NCNBD.Simplex}
+    precision :: Float64
+    plrVariables :: Vector{JuMP.VariableRef}
+    plrConstraints :: Vector{JuMP.ConstraintRef}
+    maxOverestimation :: Vector{Float64}
+    maxUnderestimation :: Vector{Float64}
+end
+
+# struct for Simplex
+mutable struct Simplex
+    # vertices?
+    vertexIndices :: Vector{Int64}
 end
 
 # struct for solvers to be used (maybe mutable)
@@ -59,6 +79,7 @@ struct AppliedSolvers
     MILP :: JuMP.MathProgBase.AbstractMathProgSolver
     MINLP :: JuMP.MathProgBase.AbstractMathProgSolver
 end
+
 
 
 

@@ -10,9 +10,9 @@ function exampleModel()
         stages = 1,
         lower_bound = 0.0,
         optimizer = Gurobi.Optimizer,
-        objective_sense = MOI.MIN_SENSE,
-        integrality_handler = SDDP.SDDiP()
-) do subproblem, t
+        sense = :Min
+        #integrality_handler = SDDP.SDDiP()
+    ) do subproblem, t
 
         # DEFINE MILP MODEL
         ############################################################################
@@ -24,9 +24,9 @@ function exampleModel()
 
         # SET-UP LINEAR PART OF MODEL
         ############################################################################
-        for problem in [subproblem, linearizedSubproblem]:
+        for problem in [subproblem, linearizedSubproblem]
             @variable(problem, 0 <= x[i=1:2] <= 4)
-            @stageobjective(problem, Min, sum(x[i] for i in 1:2))
+            @stageobjective(problem, sum(x[i] for i in 1:2))
 
             # SET-UP EXPRESSION GRAPH FOR NONLINEARITIES OF MINLP MODEL
             ########################################################################
