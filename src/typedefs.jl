@@ -76,7 +76,7 @@ struct NonlinearFunction
         auxVariable::JuMP.VariableRef,
         refToNonlinearConstraint::JuMP.ConstraintRef,
         variablesContained::Vector{JuMP.VariableRef}
-         ) where
+         )
         return new(
             nonlinearExpression,
             auxVariable,
