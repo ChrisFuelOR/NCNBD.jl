@@ -66,16 +66,11 @@ function exampleModel()
         push!(nonlinearFunctionList, nlf_1)
         push!(nonlinearFunctionList, nlf_2)
 
-        model.nodes[t].ext[:nlFunctions] = nonlinearFunctionList
-
-        # TODOS.
-        # 1.) Leere Triangulation erzeugen, wie geht es?
-        # 2.) Wie kann ich das linearizedSubproblem abspeichern?
-        # Auf den node hat man vermutlich noch keinen Zugriff (Zeile 69).
-        # Man könnte es in ext subproblem speichern und das dann später switchen,
-        # ist aber auch komisch.
-
-
+        # no access to model or node yet, so store nonlinearFunctionList in ext of subproblem
+        # shift it to right location later
+        #model.nodes[t].ext[:nlFunctions] = nonlinearFunctionList
+        subproblem.ext[:nlFunctions] = nonlinearFunctionList
+        
     end
 
     #appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, Scip.Optimizer)

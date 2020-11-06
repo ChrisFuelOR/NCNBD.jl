@@ -69,7 +69,7 @@ struct NonlinearFunction
     auxVariable :: JuMP.VariableRef
     refToNonlinearConstraint :: JuMP.ConstraintRef
     variablesContained :: Vector{JuMP.VariableRef}
-    triangulation :: Triangulation # Nothing
+    triangulation :: Union{Triangulation, Nothing}
 
     function NonlinearFunction(
         nonlinearExpression::Any,
