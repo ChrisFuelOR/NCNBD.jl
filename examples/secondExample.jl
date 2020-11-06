@@ -15,7 +15,7 @@ function exampleModel()
     ) do subproblem, t
 
         # DEFINE MILP MODEL
-        ############################################################################
+        ########################################################################
         linearizedSubproblem = JuMP.Model()
 
         # construct a list to store all nonlinear functions
@@ -23,12 +23,12 @@ function exampleModel()
         numberOfNonlinearFunctions = 2
 
         # SET-UP LINEAR PART OF MODEL
-        ############################################################################
+        ########################################################################
         for problem in [subproblem, linearizedSubproblem]
             @variable(problem, 0 <= x[i=1:2] <= 4)
 
             # SET-UP EXPRESSION GRAPH FOR NONLINEARITIES OF MINLP MODEL
-            ########################################################################
+            ####################################################################
             # for each nonlinear term, introduce an auxiliary variable
             @variable(problem, nonlinearAux[i=1:numberOfNonlinearFunctions])
 
@@ -43,7 +43,7 @@ function exampleModel()
         @objective(linearizedSubproblem, MOI.MIN_SENSE, sum(x[i] for i in 1:2))
 
         # SET-UP NONLINEARITIES
-        ############################################################################
+        ########################################################################
         # define nonlinear expressions
         nonlinearexp_1(y) = y^2
         nonlinearexp_2(y) = sqrt(y)
@@ -66,14 +66,36 @@ function exampleModel()
         push!(nonlinearFunctionList, nlf_1)
         push!(nonlinearFunctionList, nlf_2)
 
-        # no access to model or node yet, so store nonlinearFunctionList in ext of subproblem
+        # no access to model or node yet, so store nonlinearFunctionList
+        # and the linearizedSubproblem in ext of subproblem
         # shift it to right location later
         #model.nodes[t].ext[:nlFunctions] = nonlinearFunctionList
         subproblem.ext[:nlFunctions] = nonlinearFunctionList
-        
+        subproblem.ext[:]
+
     end
 
-    #appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, Scip.Optimizer)
+    # SET-UP PARAMETERS
+    ############################################################################
+    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, Scip.Optimizer)
+
+    epsilon_outerLoop = 0
+    epsilon_innerLoop = 0
+    binaryPrecision = 0.5
+    plaPrecision = 0.5
+    sigma = 1
+
+    initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
+                            epsilon_innerLoop, binaryPrecision, plaPrecision, sigma)
+    algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
+                                      binaryPrecision, sigma)
+
+    # SET-UP NONLINEARITIES
+    ############################################################################
+    SDDP.solve(model, algoParams=algoParameters, initialAlgoParams=initialAlgoParameters,
+               iteration_limit = 100, print_level = 0)
+
+
 
 end
 
