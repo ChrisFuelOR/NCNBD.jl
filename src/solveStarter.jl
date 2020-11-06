@@ -265,7 +265,7 @@ function solve_ncnbd(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::Options
 
         # determines a piecewise linear relaxation for all nonlinear functions
         # in this node
-        piecewiseLinearRelaxation!(node)
+        piecewiseLinearRelaxation!(node, algoParams)
 
     end
 
