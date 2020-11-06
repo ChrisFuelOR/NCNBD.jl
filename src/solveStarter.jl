@@ -94,86 +94,86 @@ function solve(
 
     # INITIALIZATION (AS IN SDDP)
     ############################################################################
-    # # Reset the TimerOutput.
-    # TimerOutputs.reset_timer!(NCNBD_TIMER)
-    # log_file_handle = open(log_file, "a")
-    # log = Log[]
-    #
-    # if print_level > 0
-    #     print_helper(print_banner, log_file_handle)
-    # end
-    #
-    # if run_numerical_stability_report
-    #     report =
-    #         sprint(io -> numerical_stability_report(io, model, print = print_level > 0))
-    #     print_helper(print, log_file_handle, report)
-    # end
-    #
-    # if print_level > 0
-    #     print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), log_file_handle)
-    #     print_helper(print_iteration_header, log_file_handle)
-    # end
-    #
-    # # Convert the vector to an AbstractStoppingRule. Otherwise if the user gives
-    # # something like stopping_rules = [SDDP.IterationLimit(100)], the vector
-    # # will be concretely typed and we can't add a TimeLimit.
-    # stopping_rules = convert(Vector{AbstractStoppingRule}, stopping_rules)
-    # # Add the limits as stopping rules. An IterationLimit or TimeLimit may
-    # # already exist in stopping_rules, but that doesn't matter.
-    # if iteration_limit !== nothing
-    #     push!(stopping_rules, IterationLimit(iteration_limit))
-    # end
-    # if time_limit !== nothing
-    #     push!(stopping_rules, TimeLimit(time_limit))
-    # end
-    # if length(stopping_rules) == 0
-    #     @warn(
-    #         "You haven't specified a stopping rule! You can only terminate " *
-    #         "the call to NCNBD.solve via a keyboard interrupt ([CTRL+C])."
-    #     )
-    # end
-    #
-    # # Update the nodes with the selected cut type (SINGLE_CUT or MULTI_CUT)
-    # # and the cut deletion minimum.
-    # if cut_deletion_minimum < 0
-    #     cut_deletion_minimum = typemax(Int)
-    # end
-    # for (key, node) in model.nodes
-    #     node.bellman_function.cut_type = cut_type
-    #     node.bellman_function.global_theta.cut_oracle.deletion_minimum =
-    #         cut_deletion_minimum
-    #     for oracle in node.bellman_function.local_thetas
-    #         oracle.cut_oracle.deletion_minimum = cut_deletion_minimum
-    #     end
-    # end
-    #
-    # # Perform relaxations required by integrality_handler
-    # # binaries, integers =
-    # #    relax_integrality(model, last(first(model.nodes)).integrality_handler)
-    #
-    # dashboard_callback = if dashboard
-    #     launch_dashboard()
-    # else
-    #     (::Any, ::Any) -> nothing
-    # end
-    #
-    # sddpOptions = Options(
-    #     model,
-    #     model.initial_root_state,
-    #     sampling_scheme,
-    #     backward_sampling_scheme,
-    #     risk_measure,
-    #     cycle_discretization_delta,
-    #     refine_at_similar_nodes,
-    #     stopping_rules,
-    #     dashboard_callback,
-    #     print_level,
-    #     time(),
-    #     log,
-    #     log_file_handle,
-    #     log_frequency,
-    #     forward_pass,
-    # )
+    # Reset the TimerOutput.
+    TimerOutputs.reset_timer!(NCNBD_TIMER)
+    log_file_handle = open(log_file, "a")
+    log = Log[]
+
+    if print_level > 0
+        print_helper(print_banner, log_file_handle)
+    end
+
+    if run_numerical_stability_report
+        report =
+            sprint(io -> numerical_stability_report(io, model, print = print_level > 0))
+        print_helper(print, log_file_handle, report)
+    end
+
+    if print_level > 0
+        print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), log_file_handle)
+        print_helper(print_iteration_header, log_file_handle)
+    end
+
+    # Convert the vector to an AbstractStoppingRule. Otherwise if the user gives
+    # something like stopping_rules = [SDDP.IterationLimit(100)], the vector
+    # will be concretely typed and we can't add a TimeLimit.
+    stopping_rules = convert(Vector{AbstractStoppingRule}, stopping_rules)
+    # Add the limits as stopping rules. An IterationLimit or TimeLimit may
+    # already exist in stopping_rules, but that doesn't matter.
+    if iteration_limit !== nothing
+        push!(stopping_rules, IterationLimit(iteration_limit))
+    end
+    if time_limit !== nothing
+        push!(stopping_rules, TimeLimit(time_limit))
+    end
+    if length(stopping_rules) == 0
+        @warn(
+            "You haven't specified a stopping rule! You can only terminate " *
+            "the call to NCNBD.solve via a keyboard interrupt ([CTRL+C])."
+        )
+    end
+
+    # Update the nodes with the selected cut type (SINGLE_CUT or MULTI_CUT)
+    # and the cut deletion minimum.
+    if cut_deletion_minimum < 0
+        cut_deletion_minimum = typemax(Int)
+    end
+    for (key, node) in model.nodes
+        node.bellman_function.cut_type = cut_type
+        node.bellman_function.global_theta.cut_oracle.deletion_minimum =
+            cut_deletion_minimum
+        for oracle in node.bellman_function.local_thetas
+            oracle.cut_oracle.deletion_minimum = cut_deletion_minimum
+        end
+    end
+
+    # Perform relaxations required by integrality_handler
+    # binaries, integers =
+    #    relax_integrality(model, last(first(model.nodes)).integrality_handler)
+
+    dashboard_callback = if dashboard
+        launch_dashboard()
+    else
+        (::Any, ::Any) -> nothing
+    end
+
+    sddpOptions = Options(
+        model,
+        model.initial_root_state,
+        sampling_scheme,
+        backward_sampling_scheme,
+        risk_measure,
+        cycle_discretization_delta,
+        refine_at_similar_nodes,
+        stopping_rules,
+        dashboard_callback,
+        print_level,
+        time(),
+        log,
+        log_file_handle,
+        log_frequency,
+        forward_pass,
+    )
 
     # MODEL CHECK
     ############################################################################
