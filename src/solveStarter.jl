@@ -181,7 +181,7 @@ function solve(
     counter_integer_variables = 0
     counter_nonlinear_functions = 0
 
-    for (node_index, children = in model.nodes)
+    for (node_index, children) in model.nodes
         node = model.nodes[node_index]
         m = node.subproblem
 

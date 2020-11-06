@@ -9,6 +9,8 @@ import Revise
 
 # Write your package code here.
 include("typedefs.jl")
+include("solveStarter.jl")
 include("algorithm.jl")
+
 
 end
