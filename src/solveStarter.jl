@@ -157,7 +157,7 @@ function solve(
         (::Any, ::Any) -> nothing
     end
 
-    sddpOptions = Options(
+    sddpOptions = SDDP.Options(
         model,
         model.initial_root_state,
         sampling_scheme,
@@ -186,7 +186,7 @@ function solve(
         m = node.subproblem
 
         for x in JuMP.all_variables(m)
-            if JuMP.is_binary(x) or JuMP.is_integer(x)
+            if JuMP.is_binary(x) || JuMP.is_integer(x)
                 counter_integer_variables += 1
             end
         end
@@ -210,6 +210,7 @@ function solve(
         else
             # call SDDP
             status = SDDP.solve_sddp(parallel_scheme, model, options)
+        end
     catch ex
         if isa(ex, InterruptException)
             status = :interrupted
@@ -240,7 +241,8 @@ function solve(
     return
 end
 
-function solve_ncnbd(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::Options, algoParams::algoParams) where {T}
+function solve_ncnbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
+    options::SDDP.Options, algoParams::NCNBD.algoParams) where {T}
 
     # SHIFT LINEARIZED SUBPROBLEM AND NONLINEAR FUNCTION LIST TO NODES
     ############################################################################
@@ -276,21 +278,23 @@ function solve_ncnbd(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::Options
 
 end
 
-function solve_ncnbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::Options, algoParams::algoParams) where {T}
+function solve_ncnbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T},
+    options::SDDP.Options, algoParams::NCNBD.algoParams) where {T}
 
     status = master_loop_ncbd_inner(parallel_scheme, model, options, algoParams)
     return status
 
 end
 
-function solve_sddp(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::Options) where {T}
+function solve_sddp(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::SDDP.Options) where {T}
 
     status = SDDP.master_loop(parallel_scheme, model, options)
     return status
 
 end
 
-function master_loop_ncbd(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::Options, algoParams::algoParams) where {T}
+function master_loop_ncbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
+    options::SDDP.Options, algoParams::NCNBD.algoParams) where {T}
     while true
         result = outer_loop(model, options)
         log_iteration(options)
@@ -300,7 +304,8 @@ function master_loop_ncbd(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::Op
     end
 end
 
-function master_loop_ncbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::Options, algoParams::algoParams) where {T}
+function master_loop_ncbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T},
+    options::SDDP.Options, algoParams::NCNBD.algoParams) where {T}
     while true
         result = inner_loop(model, options)
         log_iteration(options)

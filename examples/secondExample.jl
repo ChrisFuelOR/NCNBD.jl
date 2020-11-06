@@ -92,6 +92,8 @@ function exampleModel()
 
     # SET-UP NONLINEARITIES
     ############################################################################
+    NCNBD.solve_ncnbd()
+
     NCNBD.solve(model, algoParams=algoParameters, initialAlgoParams=initialAlgoParameters,
                 iteration_limit = 100, print_level = 0)
 
