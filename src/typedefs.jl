@@ -28,20 +28,21 @@ import Revise
 # what about differences in the binary expansion of different components?
 
 # Mutable struct for algorithmic parameters that may change during the iterations
+# Vector{Float64} or Dict{Int64, Float64}?
 mutable struct AlgoParams
     epsilon_outerLoop :: Float64 # optimality tolerance for outer loop
     epsilon_innerLoop :: Float64 # optimality tolerance for inner loop
-    binaryPrecision :: Dict{Int64,Float64} # Epsilons for latest/current binary expansion (better vector?)
-    sigma :: Dict{Int64,Float64} # parameters used to obtain the regularized problem (better vector?)
+    binaryPrecision :: Vector{Float64} # Epsilons for latest/current binary expansion (better vector?)
+    sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run
 struct InitialAlgoParams
     epsilon_outerLoop :: Float64
     epsilon_innerLoop :: Float64
-    binaryPrecision :: Dict{Int64,Float64}
+    binaryPrecision :: Vector{Float64}
     plaPrecision :: Vector{Float64}
-    sigma :: Dict{Int64,Float64}
+    sigma :: Vector{Float64}
 end
 
 # struct for Simplex
