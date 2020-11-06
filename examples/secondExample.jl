@@ -71,19 +71,19 @@ function exampleModel()
         # shift it to right location later
         #model.nodes[t].ext[:nlFunctions] = nonlinearFunctionList
         subproblem.ext[:nlFunctions] = nonlinearFunctionList
-        subproblem.ext[:]
+        subproblem.ext[:linSubproblem] = linearizedSubproblem
 
     end
 
     # SET-UP PARAMETERS
     ############################################################################
-    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, Scip.Optimizer)
+    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, Gurobi.Optimizer)
 
-    epsilon_outerLoop = 0
-    epsilon_innerLoop = 0
-    binaryPrecision = 0.5
-    plaPrecision = 0.5
-    sigma = 1
+    epsilon_outerLoop = 0.0
+    epsilon_innerLoop = 0.0
+    binaryPrecision = [0.5]
+    plaPrecision = [0.5]
+    sigma = [1.0]
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision, sigma)
@@ -92,9 +92,10 @@ function exampleModel()
 
     # SET-UP NONLINEARITIES
     ############################################################################
-    SDDP.solve(model, algoParams=algoParameters, initialAlgoParams=initialAlgoParameters,
-               iteration_limit = 100, print_level = 0)
+    NCNBD.solve(model, algoParams=algoParameters, initialAlgoParams=initialAlgoParameters,
+                iteration_limit = 100, print_level = 0)
 
+    #TODO: AppliedSolvers muss man noch immer mit übergeben
 
 
 end

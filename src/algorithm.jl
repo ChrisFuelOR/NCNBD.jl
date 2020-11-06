@@ -34,7 +34,7 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, algoParams::AlgoParams)
         piecewiseLinearApproximation!(triang, linearizedSubproblem)
 
         # Shift approximation to obtain a relaxation
-        for simplex in triang.simplices:
+        for simplex in triang.simplices
             shiftApproximation(simplex, triang, linearizedSubproblem)
         end
     end
