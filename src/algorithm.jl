@@ -23,6 +23,11 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
     # MILP subproblem
     linearizedSubproblem = node.ext[:linSubproblem]
 
+    # TODO: Alternative: Define dicts for lists for storing variable
+    # and constraint references in linearizedSubproblem.ext.
+    #linearizedSubproblem.ext[:varReferences]
+    #linearizedSubproblem.ext[:constrReferences]
+
     # LOOP OVER ALL NONLINEAR FUNCTIONS AND CALL MORE SPECIFIC FUNCTIONS
     ############################################################################
     for (nlIndex, nlFunction) in node.ext[:nlFunctions]
@@ -178,61 +183,75 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     number_of_simplices = size(triangulation.simplices, 1)
     dimension = size(triangulation.ext[:nonlinearFunction].variablesContained, 1)
 
+    @assert dimension <= 2
+    @assert dimension >= 1
+
     # ADD VARIABLES
     ############################################################################
-    # TODO: e = ... oder @variable(linSubproblem, e)
+    # variables associated with nonlinear function
+    if dimension == 1
+        x_1 = triangulation.ext[:nonlinearFunction].variablesContained[1]
+    elseif dimension == 2
+        x_1 = triangulation.ext[:nonlinearFunction].variablesContained[1]
+        x_2 = triangulation.ext[:nonlinearFunction].variablesContained[2]
+    end
 
-    # normal variables
-    x = linSubproblem[:x]
-    JuMP.@variable(linSubproblem, y[k=nlIndex]) # encodes the function value of the PLA
-    JuMP.@variable(linSubproblem, λ[k=nlIndex, i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1)
+    # TODO: Pre-allocation instead of push. But then I have to determine
+    # how many variables/constraints have to be added.
 
-    # log modeling
-    number_log = ceil(Int, log2(number_of_simplices))
-    z = JuMP.@variable(linSubproblem, [k=nlIndex, l=1:number_log], Bin)
-
-    # shift
-    e = JuMP.@variable(linSubproblem, [k=nlIndex])
-
-    # constraint to identify simplex
-    JuMP.@constraint(linSubproblem, )
-
-
-
-    # push new variables to plr variable list of triangulation
+    # variable to encode function value of PLA
+    y = JuMP.@variable(linSubproblem, [k=nlIndex], base_name="y")
     push!(triangulation.plrVariables, y)
+
+    # variable to encode convex combination
+    λ = JuMP.@variable(linSubproblem, [k=nlIndex, i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1, base_name="λ")
+    append!(triangulation.plrVariables, λ)
+
+    # variables for log modeling
+    number_log = ceil(Int, log2(number_of_simplices))
+    z = JuMP.@variable(linSubproblem, [k=nlIndex, l=1:number_log], Bin, base_name="z")
+    append!(triangulation.plrVariables, z)
+
+    # variable for shift
+    e = JuMP.@variable(linSubproblem, [k=nlIndex], base_name="e")
     push!(triangulation.plrVariables, e)
-    push!(triangulation.plrVariables, λ)
 
-    # push new constraint to plr constraint list of triangulation
+    # ADD CONSTRAINTS
+    ############################################################################
+    # constraints to identify simplex
+    # sum of convex coefficients must be 1
+
+    # not required, since it's simply all the values stored in lambda currently
+    # convexSum = JuMP.@constraint(linSubproblem, sum(λ[nlIndex, i, j] for i in 1:number_of_simplices, j in 1:dimension+1) == 1)
+    convexSum = JuMP.@constraint(linSubproblem, sum(λ) == 1)
+    push!(triangulation.plrConstraints, convexSum)
+
+    # reflected gray codes provide the unique identification of the logarithmic binary encoding
+    c = PiecewiseLinearOpt.reflected_gray_codes(number_log)
+
+    # log modeling constraints
+    for l in 1:number_log
+        logConst1 = JuMP.@constraint(linSubproblem, sum(c[i][l]*λ[nlIndex,i,j] for i in 1:number_of_simplices, j in 1:dimension+1 <= z[nlIndex,l])
+        logConst2 = JuMP.@constraint(linSubproblem, sum((1-c[i][l])*λ[nlIndex,i,j] for i in 1:number_of_simplices, j in 1:dimension+1 <= 1 - z[nlIndex,l])
+        push!(triangulation.plrConstraints, logConst1)
+        push!(triangulation.plrConstraints, logConst2)
+    end
+
+    # function value encoding
+    yConst = JuMP.@constraint(linSubproblem, sum(λ[nlIndex,i,j] * triangulation.verticeValues[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) + e == y )
+    push!(triangulation.plrConstraints, yConst)
+
+    # original variable encoding
+    if dimension == 1
+        xConst = JuMP.@constraint(linSubproblem, sum(λ[nlIndex,i,j] * triangulation.vertices[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
+        push!(triangulation.plrConstraints, xConst)
+    elseif dimension == 2
+        xConst1 = JuMP.@constraint(linSubproblem, sum(λ[nlIndex,i,j] * triangulation.vertices[triangulation.simplices[i,j]][1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
+        push!(triangulation.plrConstraints, xConst1)
+
+        xConst2 = JuMP.@constraint(linSubproblem, sum(λ[nlIndex,i,j] * triangulation.vertices[triangulation.simplices[i,j]][2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
+        push!(triangulation.plrConstraints, xConst2)
+    end
 
 
-            JuMP.@constraint(m, sum(γ) == 1)
-            JuMP.@constraint(m, γ[1,1]* d[1] + sum((γ[i,i-1]+γ[i,i])* d[i] for i in 2:n-1) + γ[n,n-1]* d[n] == x)
-            JuMP.@constraint(m, γ[1,1]*fd[1] + sum((γ[i,i-1]+γ[i,i])*fd[i] for i in 2:n-1) + γ[n,n-1]*fd[n] == z)
-
-            H = reflected_gray_codes(r)
-            for j in 1:r
-                JuMP.@constraint(m, sum((γ[i,i]+γ[i+1,i])*H[i][j] for i in 1:(n-1)) == y[j])
-            end
 end
-
-
-#for nonlinfunc in nonlinearFunctionList
-# Determine the variable bounds
-# Determine a triangulation
-
-
-# Determine the function values of all vertices
-#ygrid = quadr.(xgrid)
-
-# Determine the piecewise linear approximation
-#z = piecewiselinear(MILPmodel, x_MILP[2], xgrid, ygrid; method=:DLog)
-
-#println(all_variables(MINLPmodel))
-#println(MINLPmodel)
-
-#println(all_variables(MILPmodel))
-#println(MILPmodel)
-
-#λ
