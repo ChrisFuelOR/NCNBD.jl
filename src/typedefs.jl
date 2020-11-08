@@ -64,6 +64,8 @@ mutable struct Triangulation
     plrConstraints :: Vector{JuMP.ConstraintRef}
     maxOverestimation :: Vector{Float64}
     maxUnderestimation :: Vector{Float64}
+    # An extension dictionary. 
+    ext::Dict{Symbol,Any}
 end
 
 # struct for nonlinear functions

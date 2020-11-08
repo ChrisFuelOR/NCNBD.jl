@@ -30,7 +30,9 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
 
     # LOOP OVER ALL NONLINEAR FUNCTIONS AND CALL MORE SPECIFIC FUNCTIONS
     ############################################################################
-    for (nlIndex, nlFunction) in node.ext[:nlFunctions]
+    for nlIndex in 1:size(node.ext[:nlFunctions],1)
+        # Get nonlinear function
+        nlFunction = node.ext[:nlFunctions][nlIndex]
 
         # Determine Triangulation
         nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)
@@ -101,7 +103,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         @assert xgrid[number_of_simplices + 1] == upper_bound
 
         # set up triangulation
-        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Float64[], Float64[])
+        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Float64[], Float64[], Dict{Symbol,Any}())
 
         nlFunction.triangulation = triangulation
         nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
@@ -153,7 +155,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         simplices = Delaunay.delaunay(xgrid).simplices
 
         # set up triangulation
-        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Float64[], Float64[])
+        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Float64[], Float64[], Dict{Symbol,Any}())
 
         nlFunction.triangulation = triangulation
         nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
@@ -166,6 +168,8 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         # throw ErrorException(dimension, "Nonlinearities have to be one- or two-dimensional.")
     end
 
+    return triangulation
+
 end
 
 """
@@ -176,7 +180,7 @@ Currently, only allows for a disaggregated logarithmic convex combination model.
 
 """
 
-function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.subproblem)
+function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.Model)
 
     # GET REQUIRED PARAMETES
     ############################################################################
@@ -200,7 +204,7 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     # how many variables/constraints have to be added.
 
     # variable to encode function value of PLA
-    y = JuMP.@variable(linSubproblem, [k=nlIndex], base_name="y")
+    y = JuMP.@variable(linSubproblem, [k=nlIndex], base_name="y$nlIndex")
     push!(triangulation.plrVariables, y)
 
     # variable to encode convex combination
@@ -231,8 +235,8 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
 
     # log modeling constraints
     for l in 1:number_log
-        logConst1 = JuMP.@constraint(linSubproblem, sum(c[i][l]*λ[nlIndex,i,j] for i in 1:number_of_simplices, j in 1:dimension+1 <= z[nlIndex,l])
-        logConst2 = JuMP.@constraint(linSubproblem, sum((1-c[i][l])*λ[nlIndex,i,j] for i in 1:number_of_simplices, j in 1:dimension+1 <= 1 - z[nlIndex,l])
+        logConst1 = JuMP.@constraint(linSubproblem, sum(c[i][l]*λ[nlIndex,i,j] for i in 1:number_of_simplices, j in 1:dimension+1) <= z[nlIndex,l])
+        logConst2 = JuMP.@constraint(linSubproblem, sum((1-c[i][l])*λ[nlIndex,i,j] for i in 1:number_of_simplices, j in 1:dimension+1) <= 1 - z[nlIndex,l])
         push!(triangulation.plrConstraints, logConst1)
         push!(triangulation.plrConstraints, logConst2)
     end
