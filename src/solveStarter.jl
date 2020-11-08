@@ -9,8 +9,11 @@
 # SLDP.jl (bfpc)
 # and especially SDDP.jl (odow).
 
+
+const NCNBD_TIMER = TimerOutputs.TimerOutput()
+
 """
-    NCNBD.solve(model::PolicyGraph, algoParams::AlgoParams; kwargs...)
+    NCNBD.solve(model::PolicyGraph, algoParams::AlgoParams, initialAlgoParams:InitialAlgoParams; kwargs...)
 
 Solves the `model`. If used for stochastic multistage programs, this could
 be used the same way as SDDP.train.
@@ -72,11 +75,12 @@ There is also a special option for infinite horizon problems
 
 function solve(
     model::SDDP.PolicyGraph,
-    algoParams::NCNBD.AlgoParams;
+    algoParams::NCNBD.AlgoParams,
+    initialAlgoParams::NCNBD.InitialAlgoParams;
     iteration_limit::Union{Int,Nothing} = nothing,
     time_limit::Union{Real,Nothing} = nothing,
     print_level::Int = 1,
-    log_file::String = "SDDP.log",
+    log_file::String = "NCNBD.log",
     log_frequency::Int = 1,
     run_numerical_stability_report::Bool = true,
     stopping_rules = SDDP.AbstractStoppingRule[],
@@ -97,17 +101,17 @@ function solve(
     # Reset the TimerOutput.
     TimerOutputs.reset_timer!(NCNBD_TIMER)
     log_file_handle = open(log_file, "a")
-    log = Log[]
+    log = SDDP.Log[]
 
     if print_level > 0
         print_helper(print_banner, log_file_handle)
     end
 
-    if run_numerical_stability_report
-        report =
-            sprint(io -> numerical_stability_report(io, model, print = print_level > 0))
-        print_helper(print, log_file_handle, report)
-    end
+    # if run_numerical_stability_report
+    #     report =
+    #         sprint(io -> numerical_stability_report(io, model, print = print_level > 0))
+    #     print_helper(print, log_file_handle, report)
+    # end
 
     if print_level > 0
         print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), log_file_handle)
@@ -117,14 +121,14 @@ function solve(
     # Convert the vector to an AbstractStoppingRule. Otherwise if the user gives
     # something like stopping_rules = [SDDP.IterationLimit(100)], the vector
     # will be concretely typed and we can't add a TimeLimit.
-    stopping_rules = convert(Vector{AbstractStoppingRule}, stopping_rules)
+    stopping_rules = convert(Vector{SDDP.AbstractStoppingRule}, stopping_rules)
     # Add the limits as stopping rules. An IterationLimit or TimeLimit may
     # already exist in stopping_rules, but that doesn't matter.
     if iteration_limit !== nothing
-        push!(stopping_rules, IterationLimit(iteration_limit))
+        push!(stopping_rules, SDDP.IterationLimit(iteration_limit))
     end
     if time_limit !== nothing
-        push!(stopping_rules, TimeLimit(time_limit))
+        push!(stopping_rules, SDDP.TimeLimit(time_limit))
     end
     if length(stopping_rules) == 0
         @warn(
@@ -191,7 +195,7 @@ function solve(
             end
         end
 
-        if isempty(subproblem.ext[:nlFunctions])
+        if isempty(node.subproblem.ext[:nlFunctions])
         else
             counter_nonlinear_functions += 1
         end
@@ -203,13 +207,13 @@ function solve(
     try
         if counter_nonlinear_functions > 0
             # call ordinary NC-NBD with outer and inner loop
-            status = solve_ncnbd(parallel_scheme, model, options, algoParams)
+            status = solve_ncnbd(parallel_scheme, model, sddpOptions, algoParams)
         elseif counter_integer_variables > 0
             # call NC-NBD with only inner loop
-            status = solve_ncnbd_inner(parallel_scheme, model, options, algoParams)
+            status = solve_ncnbd_inner(parallel_scheme, model, sddpOptions, algoParams)
         else
             # call SDDP
-            status = SDDP.solve_sddp(parallel_scheme, model, options)
+            status = SDDP.solve_sddp(parallel_scheme, model, sddpOptions)
         end
     catch ex
         if isa(ex, InterruptException)
@@ -242,18 +246,18 @@ function solve(
 end
 
 function solve_ncnbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.algoParams) where {T}
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
 
     # SHIFT LINEARIZED SUBPROBLEM AND NONLINEAR FUNCTION LIST TO NODES
     ############################################################################
     for (node_index, children) in model.nodes
         node = model.nodes[node_index]
 
-        node.ext[:nlFunctions] = subproblem.ext[:nlFunctions]
-        subproblem.ext[:nlFunctions] = Nothing
+        node.ext[:nlFunctions] = node.subproblem.ext[:nlFunctions]
+        node.subproblem.ext[:nlFunctions] = Nothing
 
-        node.ext[:linSubproblem] = subproblem.ext[:linSubproblem]
-        subproblem.ext[:linSubproblem] = Nothing
+        node.ext[:linSubproblem] = node.subproblem.ext[:linSubproblem]
+        node.subproblem.ext[:linSubproblem] = Nothing
 
         node.ext[:linSubproblem].ext[:sddp_node] = node
         node.ext[:linSubproblem].ext[:sddp_policy_graph] = model
@@ -279,7 +283,7 @@ function solve_ncnbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
 end
 
 function solve_ncnbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.algoParams) where {T}
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
 
     status = master_loop_ncbd_inner(parallel_scheme, model, options, algoParams)
     return status
@@ -294,7 +298,7 @@ function solve_sddp(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::SDDP.Opt
 end
 
 function master_loop_ncbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.algoParams) where {T}
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
     while true
         result = outer_loop(model, options)
         log_iteration(options)
@@ -305,7 +309,7 @@ function master_loop_ncbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
 end
 
 function master_loop_ncbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.algoParams) where {T}
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
     while true
         result = inner_loop(model, options)
         log_iteration(options)

@@ -33,6 +33,7 @@ mutable struct AlgoParams
     epsilon_outerLoop :: Float64 # optimality tolerance for outer loop
     epsilon_innerLoop :: Float64 # optimality tolerance for inner loop
     binaryPrecision :: Vector{Float64} # Epsilons for latest/current binary expansion (better vector?)
+    plaPrecision :: Vector{Float64} # usually should not change
     sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)
 end
 
@@ -65,7 +66,7 @@ mutable struct Triangulation
 end
 
 # struct for nonlinear functions
-struct NonlinearFunction
+mutable struct NonlinearFunction
     nonlinearExpression :: Any # function?
     auxVariable :: JuMP.VariableRef
     refToNonlinearConstraint :: JuMP.ConstraintRef

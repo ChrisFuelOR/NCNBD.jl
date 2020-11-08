@@ -6,6 +6,7 @@ import Delaunay
 import Gurobi
 import PiecewiseLinearOpt
 import Revise
+import TimerOutputs
 
 # Write your package code here.
 include("typedefs.jl")
