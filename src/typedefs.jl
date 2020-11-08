@@ -33,7 +33,6 @@ mutable struct AlgoParams
     epsilon_outerLoop :: Float64 # optimality tolerance for outer loop
     epsilon_innerLoop :: Float64 # optimality tolerance for inner loop
     binaryPrecision :: Vector{Float64} # Epsilons for latest/current binary expansion (better vector?)
-    plaPrecision :: Vector{Float64} # usually should not change
     sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)
 end
 
@@ -57,7 +56,9 @@ end
 mutable struct Triangulation
     vertices :: Union{Vector{Float64}, Array{Float64,2}}
     verticeValues :: Vector{Float64}
-    simplices :: Vector{Simplex}
+    # TODO: simplices as own struct?
+    # simplices :: Vector{Simplex}
+    simplices :: Array{Int64, 2}
     precision :: Float64
     plrVariables :: Vector{JuMP.VariableRef}
     plrConstraints :: Vector{JuMP.ConstraintRef}

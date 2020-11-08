@@ -7,7 +7,8 @@
 # This file is inspired by and re-uses parts from the source code of
 # SDDiP.jl (lkapelevich),
 # SLDP.jl (bfpc)
-# and especially SDDP.jl (odow).
+# and especially SDDP.jl (odow)
+# and piecewiseLinearOpt.jl (joehuchette).
 
 
 """
@@ -17,25 +18,24 @@ Determines a piecewise linear relaxation for all nonlinear functions in node.
 
 """
 
-function piecewiseLinearRelaxation!(node::SDDP.Node, algoParams::AlgoParams)
+function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
 
     # MILP subproblem
     linearizedSubproblem = node.ext[:linSubproblem]
 
     # LOOP OVER ALL NONLINEAR FUNCTIONS AND CALL MORE SPECIFIC FUNCTIONS
     ############################################################################
-    for nlFunction in node.ext[:nlFunctions]
+    for (nlIndex, nlFunction) in node.ext[:nlFunctions]
 
         # Determine Triangulation
-        nlFunction.triangulation = triangulate!(nlFunction, node, algoParams)
-        triang = nlFunction.triangulation
+        nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)
 
         # Determine Piecewise Linear Approximation
-        #piecewiseLinearApproximation!(triang, linearizedSubproblem)
+        piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem)
 
         # Shift approximation to obtain a relaxation
         #for simplex in triang.simplices
-        #    shiftApproximation(simplex, triang, linearizedSubproblem)
+        #    shiftApproximation(simplex, nlFunction.triangulation, linearizedSubproblem)
         #end
     end
 
@@ -43,13 +43,13 @@ end
 
 
 """
-    NCNBD.piecewiseLinearRelaxation!(node::SDDP.Node, algoParams::AlgoParams)
+    NCNBD.piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
 
 Determines a piecewise linear relaxation for all nonlinear functions in node.
 
 """
 
-function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, algoParams::AlgoParams)
+function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaPrecision::Float64)
 
     # CHECK FOR ONE- OR TWO-DIMENSIONAL CASE
     ############################################################################
@@ -59,14 +59,14 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, algo
     ############################################################################
     if dimension == 1
         # get interval to be considered
-        lower_bound = JuMP.lower_bound(variablesContained[1])
-        upper_bound = JuMP.upper_bound(variablesContained[1])
+        lower_bound = JuMP.lower_bound(nlFunction.variablesContained[1])
+        upper_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
         interval_length = upper_bound - lower_bound
 
         # determine uniform grid based on user-given precision
         # note: if precision is no exact divisor of interval_length, the precision
         # is decreased to obtain a uniform grid
-        number_of_simplices = ceil(interval_length / algoParams.plaPrecision)
+        number_of_simplices = ceil(Int64, interval_length / plaPrecision)
         simplex_length = interval_length / number_of_simplices
 
         # pre-allocate storage for simplices and points
@@ -86,39 +86,39 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, algo
         # determine simplices
         for simplexIndex = 1 : number_of_simplices
             # add next breakpoint
-            xgrid[simplexIndex] = lower_bound + simplexIndex * simplex_length
+            xgrid[1+simplexIndex] = lower_bound + simplexIndex * simplex_length
             # add function value
-            values_grid[simplexIndex] = nlFunction.nonlinearExpression(xgrid[simplexIndex])
+            values_grid[1+simplexIndex] = nlFunction.nonlinearExpression(xgrid[simplexIndex])
             # add simplex
-            simplices[simplexIndex, :] = [simplexIndex-1, simplexIndex]
+            simplices[simplexIndex, :] = [simplexIndex, simplexIndex+1]
         end
 
-        @assert xgrid[number_of_simplices + 1] = upper_bound
+        @assert xgrid[number_of_simplices + 1] == upper_bound
 
         # set up triangulation
-        triangulation = Triangulation(xgrid, values_grid, simplices,
-        algoParams.plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[],
-        Float64[], Float64[])
+        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Float64[], Float64[])
 
         nlFunction.triangulation = triangulation
+        nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
+        nlFunction.triangulation.ext[:node] = node
 
     # 2D
     ############################################################################
     elseif dimension == 2
         # get interval to be considered
-        lower_bound_1 = JuMP.lower_bound(variablesContained[1])
-        upper_bound_1 = JuMP.upper_bound(variablesContained[1])
+        lower_bound_1 = JuMP.lower_bound(nlFunction.variablesContained[1])
+        upper_bound_1 = JuMP.upper_bound(nlFunction.variablesContained[1])
         interval_length_1 = upper_bound_1 - lower_bound_1
 
-        lower_bound_2 = JuMP.lower_bound(variablesContained[2])
-        upper_bound_2 = JuMP.upper_bound(variablesContained[2])
+        lower_bound_2 = JuMP.lower_bound(nlFunction.variablesContained[2])
+        upper_bound_2 = JuMP.upper_bound(nlFunction.variablesContained[2])
         interval_length_2 = upper_bound_2 - lower_bound_2
 
         # determine uniform grid based on user-given precision
         # note: if precision is no exact divisor of interval_length, the precision
         # is decreased to obtain a uniform grid
-        number_of_points_1 = ceil(interval_length_1 / algoParams.plaPrecision) + 1
-        number_of_points_2 = ceil(interval_length_2 / algoParams.plaPrecision) + 1
+        number_of_points_1 = ceil(Int64, interval_length_1 / plaPrecision) + 1
+        number_of_points_2 = ceil(Int64, interval_length_2 / plaPrecision) + 1
         number_of_points = number_of_points_1 * number_of_points_2
 
         # length of grid elements
@@ -130,50 +130,92 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, algo
         values_grid = Array{Float64}(undef, number_of_points)
 
         # determine all points in the grid
-        for ind_1 in number_of_points_1
-            for ind_2 in number_of_points_2
+        for ind_1 in 1:number_of_points_1
+            for ind_2 in 1:number_of_points_2
                 coord_1 = lower_bound_1 + (ind_1 - 1) * length_points_1
                 coord_2 = lower_bound_2 + (ind_2 - 1) * length_points_2
 
                 ind = ind_2 + (ind_1 - 1) * number_of_points_2
                 xgrid[ind, :] = [coord_1 coord_2]
-                values_grid = nlFunction.nonlinearExpression(xgrid[ind, 1], xgrid[ind, 2])
+                values_grid[ind] = nlFunction.nonlinearExpression(xgrid[ind, 1], xgrid[ind, 2])
             end
         end
 
-        @assert xgrid[number_of_points, 1] = upper_bound_1
-        @assert xgrid[number_of_points, 2] = upper_bound_2
+        @assert xgrid[number_of_points, 1] == upper_bound_1
+        @assert xgrid[number_of_points, 2] == upper_bound_2
 
         # determine the simplices
         simplices = Delaunay.delaunay(xgrid).simplices
 
         # set up triangulation
-        triangulation = Triangulation(xgrid, values_grid, simplices,
-        algoParams.plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[],
-        Float64[], Float64[])
+        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Float64[], Float64[])
 
         nlFunction.triangulation = triangulation
+        nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
+        nlFunction.triangulation.ext[:node] = node
 
     # OTHER CASES
     ############################################################################
     else
-        print("blubb")
-        #throw ErrorException("Nonlinearities have to be one- or two-dimensional.")
+        Print("TODO: Error message and stopping")
+        # throw ErrorException(dimension, "Nonlinearities have to be one- or two-dimensional.")
     end
-
-
-
-
 
 end
 
+"""
+    NCNBD.piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.subproblem)
+
+Determines an MILP model for the piecewise linear approximation given by the triangulation.
+Currently, only allows for a disaggregated logarithmic convex combination model.
+
+"""
+
+function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.subproblem)
+
+    # GET REQUIRED PARAMETES
+    ############################################################################
+    number_of_simplices = size(triangulation.simplices, 1)
+    dimension = size(triangulation.ext[:nonlinearFunction].variablesContained, 1)
+
+    # ADD VARIABLES
+    ############################################################################
+    # TODO: e = ... oder @variable(linSubproblem, e)
+
+    # normal variables
+    x = linSubproblem[:x]
+    JuMP.@variable(linSubproblem, y[k=nlIndex]) # encodes the function value of the PLA
+    JuMP.@variable(linSubproblem, λ[k=nlIndex, i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1)
+
+    # log modeling
+    number_log = ceil(Int, log2(number_of_simplices))
+    z = JuMP.@variable(linSubproblem, [k=nlIndex, l=1:number_log], Bin)
+
+    # shift
+    e = JuMP.@variable(linSubproblem, [k=nlIndex])
+
+    # constraint to identify simplex
+    JuMP.@constraint(linSubproblem, )
 
 
 
+    # push new variables to plr variable list of triangulation
+    push!(triangulation.plrVariables, y)
+    push!(triangulation.plrVariables, e)
+    push!(triangulation.plrVariables, λ)
+
+    # push new constraint to plr constraint list of triangulation
 
 
+            JuMP.@constraint(m, sum(γ) == 1)
+            JuMP.@constraint(m, γ[1,1]* d[1] + sum((γ[i,i-1]+γ[i,i])* d[i] for i in 2:n-1) + γ[n,n-1]* d[n] == x)
+            JuMP.@constraint(m, γ[1,1]*fd[1] + sum((γ[i,i-1]+γ[i,i])*fd[i] for i in 2:n-1) + γ[n,n-1]*fd[n] == z)
 
-
+            H = reflected_gray_codes(r)
+            for j in 1:r
+                JuMP.@constraint(m, sum((γ[i,i]+γ[i+1,i])*H[i][j] for i in 1:(n-1)) == y[j])
+            end
+end
 
 
 #for nonlinfunc in nonlinearFunctionList

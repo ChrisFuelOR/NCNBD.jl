@@ -207,7 +207,7 @@ function solve(
     try
         if counter_nonlinear_functions > 0
             # call ordinary NC-NBD with outer and inner loop
-            status = solve_ncnbd(parallel_scheme, model, sddpOptions, algoParams)
+            status = solve_ncnbd(parallel_scheme, model, sddpOptions, algoParams, initialAlgoParams)
         elseif counter_integer_variables > 0
             # call NC-NBD with only inner loop
             status = solve_ncnbd_inner(parallel_scheme, model, sddpOptions, algoParams)
@@ -245,8 +245,9 @@ function solve(
     return
 end
 
-function solve_ncnbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
+function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams,
+    initialAlgoParams::NCNBD.InitialAlgoParams) where {T}
 
     # SHIFT LINEARIZED SUBPROBLEM AND NONLINEAR FUNCTION LIST TO NODES
     ############################################################################
@@ -269,20 +270,23 @@ function solve_ncnbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
     for (node_index, children) in model.nodes
         node = model.nodes[node_index]
 
+        # get corresponding pla precision (node_index is stage for non-Markovian policy graphs)
+        plaPrecision = initialAlgoParams.plaPrecision[node_index]
+
         # determines a piecewise linear relaxation for all nonlinear functions
         # in this node
-        piecewiseLinearRelaxation!(node, algoParams)
+        piecewiseLinearRelaxation!(node, plaPrecision)
 
     end
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################
-    status = master_loop_ncbd(parallel_scheme, model, options, algoParams)
-    return status
+    # status = master_loop_ncbd(parallel_scheme, model, options, algoParams)
+    # return status
 
 end
 
-function solve_ncnbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T},
+function solve_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
 
     status = master_loop_ncbd_inner(parallel_scheme, model, options, algoParams)
@@ -290,14 +294,14 @@ function solve_ncnbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
 end
 
-function solve_sddp(::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::SDDP.Options) where {T}
+function solve_sddp(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::SDDP.Options) where {T}
 
     status = SDDP.master_loop(parallel_scheme, model, options)
     return status
 
 end
 
-function master_loop_ncbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
+function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
     while true
         result = outer_loop(model, options)
@@ -308,7 +312,7 @@ function master_loop_ncbd(::SDDP.Serial, model::SDDP.PolicyGraph{T},
     end
 end
 
-function master_loop_ncbd_inner(::SDDP.Serial, model::SDDP.PolicyGraph{T},
+function master_loop_ncbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
     while true
         result = inner_loop(model, options)

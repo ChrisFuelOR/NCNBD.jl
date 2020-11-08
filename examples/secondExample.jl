@@ -46,21 +46,21 @@ function exampleModel()
         ########################################################################
         # define nonlinear expressions
         nonlinearexp_1(y) = y^2
-        nonlinearexp_2(y) = sqrt(y)
+        nonlinearexp_2(y,z) = sqrt(y) + sqrt(z)
 
         # register nonlinear expressions
         register(subproblem, :nonlinearexp_1, 1, nonlinearexp_1, autodiff=true)
-        register(subproblem, :nonlinearexp_2, 1, nonlinearexp_2, autodiff=true)
+        register(subproblem, :nonlinearexp_2, 2, nonlinearexp_2, autodiff=true)
 
         # defining nonlinear constraints using auxiliary variables
         nonlinearAux = subproblem[:nonlinearAux]
         x = subproblem[:x]
         @NLconstraint(subproblem, nlcon_1, nonlinearAux[1] == nonlinearexp_1(x[2]))
-        @NLconstraint(subproblem, nlcon_2, nonlinearAux[2] == nonlinearexp_2(x[2]))
+        @NLconstraint(subproblem, nlcon_2, nonlinearAux[2] == nonlinearexp_2(x[2], x[1]))
 
         # construct nonlinearFunction objects for both constraints
         nlf_1 = NCNBD.NonlinearFunction(nonlinearexp_1, nonlinearAux[1], nlcon_1, [x[2]])
-        nlf_2 = NCNBD.NonlinearFunction(nonlinearexp_2, nonlinearAux[2], nlcon_2, [x[2]])
+        nlf_2 = NCNBD.NonlinearFunction(nonlinearexp_2, nonlinearAux[2], nlcon_2, [x[2], x[1]])
 
         # push both nonlinearFunction objects to list
         push!(nonlinearFunctionList, nlf_1)
@@ -88,7 +88,7 @@ function exampleModel()
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision, sigma)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, plaPrecision, sigma)
+                                      binaryPrecision, sigma)
 
     # SET-UP NONLINEARITIES
     ############################################################################
