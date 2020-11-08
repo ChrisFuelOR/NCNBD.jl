@@ -88,13 +88,11 @@ function exampleModel()
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision, sigma)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, sigma)
+                                      binaryPrecision, plaPrecision, sigma)
 
     # SET-UP NONLINEARITIES
     ############################################################################
-    NCNBD.solve_ncnbd()
-
-    NCNBD.solve(model, algoParams=algoParameters, initialAlgoParams=initialAlgoParameters,
+    NCNBD.solve(model, algoParameters, initialAlgoParameters,
                 iteration_limit = 100, print_level = 0)
 
     #TODO: AppliedSolvers muss man noch immer mit übergeben
