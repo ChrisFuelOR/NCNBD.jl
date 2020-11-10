@@ -7,6 +7,7 @@ import Gurobi
 import PiecewiseLinearOpt
 import Revise
 import TimerOutputs
+import GAMS
 
 # Write your package code here.
 include("typedefs.jl")

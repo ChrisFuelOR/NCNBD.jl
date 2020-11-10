@@ -43,10 +43,15 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
         # Determine Piecewise Linear Approximation
         piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
 
+        # Determine number of simplices in triangulation
+        number_of_simplices = size(nlFunction.triangulation.simplices, 1)
+
         # Shift approximation to obtain a relaxation
-        #for simplex in triang.simplices
-        #    shiftApproximation(simplex, nlFunction.triangulation, linearizedSubproblem)
-        #end
+        for simplex_index in 1:number_of_simplices
+            shifts = determineShifts!(simplex_index, nlFunction.triangulation, estimationProblem)
+            nlFunction.triangulation.maxOverestimation[simplex_index] = shifts[1]
+            nlFunction.triangulation.maxUnderestimation[simplex_index] = shifts[2]
+        end
     end
 
 end
@@ -245,6 +250,7 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     z = JuMP.@variable(linSubproblem, [l=1:number_log], Bin, base_name="z_$nlIndex")
     append!(triangulation.plrVariables, z)
     z_est = JuMP.@variable(estimationProblem, [l=1:number_log], Bin, base_name="z_est")
+    estimationProblem[:z_est] = z_est
 
     # variable for shift
     e = JuMP.@variable(linSubproblem, base_name="e_$nlIndex")
@@ -260,6 +266,7 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
 
     # reflected gray codes provide the unique identification of the logarithmic binary encoding
     c = PiecewiseLinearOpt.reflected_gray_codes(number_log)
+    triangulation.ext[:grayCode] = c
 
     # log modeling constraints
     for l in 1:number_log
@@ -298,7 +305,56 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
         xConst2 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.vertices[triangulation.simplices[i,j], 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2 )
         push!(triangulation.plrConstraints, xConst2)
         xConst2_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.vertices[triangulation.simplices[i,j], 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2_est )
-        
+    end
+
+    # objective function expression for estimationProblem
+    nonlinearexp = triangulation.ext[:nonlinearFunction].nonlinearExpression
+
+    if dimension == 1
+        JuMP.@NLexpression(estimationProblem, est_error, y_est - nonlinearExpression(x_1_est))
+    elseif dimension == 2
+        JuMP.@NLexpression(estimationProblem, est_error, y_est - nonlinearExpression(x_1_est, x_2_est))
+    end
+end
+
+
+"""
+    NCNBD.determineShifts!(simplex_index::Int64, triangulation::NCNBD.Triangulation, estimationProblem::JuMP.Model)
+
+Determines an up and down shift based on the maximum overestimation and underestimation errors of the PLA determined before.
+Return both shifts in a vector.
+
+"""
+
+function determineShifts!(simplex_index::Int64, triangulation::NCNBD.Triangulation, estimationProblem::JuMP.Model)
+
+    # DEFINE SIMPLEX CONSTRAINTS BY SETTING LOG VARIABLES TO SPECIFIC GRAY CODE
+    ############################################################################
+    # log number
+    number_log = ceil(Int, log2(size(triangulation.simplices, 1)))
+
+    # Get z variable
+    z = estimationProblem[:z_est]
+
+    # set values of z to gray_code of given simplex
+    for l = 1:number_log
+        JuMP.fix_value(z[l]) = triangulation.ext[:gray_code][simplex_index][l]
+    end
+    # ; force = true
+
+    # SOLVE MAXIMUM OVERESTIMATION
+    ############################################################################
+    
+
+    # SOLVE MAXIMUM UNDERESTIMATION
+    ############################################################################
+
+
+
+    # UNFIX VARIABLES AGAIN
+    ############################################################################
+    for l = 1:number_log
+        JuMP.unfix(z[l])
     end
 
 end
