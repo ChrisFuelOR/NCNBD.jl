@@ -59,6 +59,8 @@ function exampleModel()
         @NLconstraint(subproblem, nlcon_2, nonlinearAux[2] == nonlinearexp_2(x[2], x[1]))
 
         # construct nonlinearFunction objects for both constraints
+        x = linearizedSubproblem[:x]
+        nonlinearAux = linearizedSubproblem[:nonlinearAux]
         nlf_1 = NCNBD.NonlinearFunction(nonlinearexp_1, nonlinearAux[1], nlcon_1, [x[2]])
         nlf_2 = NCNBD.NonlinearFunction(nonlinearexp_2, nonlinearAux[2], nlcon_2, [x[2], x[1]])
 

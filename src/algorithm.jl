@@ -37,8 +37,11 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
         # Determine Triangulation
         nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)
 
+        # Define overestimation/underestimation problem
+        estimationProblem = JuMP.Model()
+
         # Determine Piecewise Linear Approximation
-        piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem)
+        piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
 
         # Shift approximation to obtain a relaxation
         #for simplex in triang.simplices
@@ -102,8 +105,12 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         @assert xgrid[number_of_simplices + 1] == upper_bound
 
+        # initialize maxOverestimation and maxUnderestimation
+        maxOverestimation = fill(Inf, number_of_simplices)
+        maxUnderestimation = fill(Inf, number_of_simplices)
+
         # set up triangulation
-        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Float64[], Float64[], Dict{Symbol,Any}())
+        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], maxOverestimation, maxUnderestimation, Dict{Symbol,Any}())
 
         nlFunction.triangulation = triangulation
         nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
@@ -173,14 +180,15 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 end
 
 """
-    NCNBD.piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.subproblem)
+    NCNBD.piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.Model, estimationProblem::JuMP.Model)
 
 Determines an MILP model for the piecewise linear approximation given by the triangulation.
 Currently, only allows for a disaggregated logarithmic convex combination model.
+Note that also the over-/underestimation problem is set up using these constraints.
 
 """
 
-function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.Model)
+function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.Model, estimationProblem::JuMP.Model)
 
     # GET REQUIRED PARAMETES
     ############################################################################
@@ -195,67 +203,102 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     # variables associated with nonlinear function
     if dimension == 1
         x_1 = triangulation.ext[:nonlinearFunction].variablesContained[1]
+
+        # set up variables required for estimationProblem (we cannot use x_1 here)
+        x_1_est = JuMP.@variable(estimationProblem, base_name="x_1_est")
+        JuMP.set_lower_bound(x_1_est, lower_bound(x_1))
+        JuMP.set_upper_bound(x_1_est, upper_bound(x_1))
+
     elseif dimension == 2
         x_1 = triangulation.ext[:nonlinearFunction].variablesContained[1]
         x_2 = triangulation.ext[:nonlinearFunction].variablesContained[2]
+
+        # set up variables required for estimationProblem (we cannot use x_1 here)
+        x_1_est = JuMP.@variable(estimationProblem, base_name="x_1_est")
+        JuMP.set_lower_bound(x_1_est, lower_bound(x_1))
+        JuMP.set_upper_bound(x_1_est, upper_bound(x_1))
+
+        # set up variables required for estimationProblem (we cannot use x_1 here)
+        x_2_est = JuMP.@variable(estimationProblem, base_name="x_2_est")
+        JuMP.set_lower_bound(x_2_est, lower_bound(x_2))
+        JuMP.set_upper_bound(x_2_est, upper_bound(x_2))
     end
 
     # TODO: Pre-allocation instead of push. But then I have to determine
     # how many variables/constraints have to be added.
 
     # variable to encode function value of PLA
-    y = JuMP.@variable(linSubproblem, [k=nlIndex], base_name="y$nlIndex")
+    y = JuMP.@variable(linSubproblem, base_name="y_$nlIndex")
     push!(triangulation.plrVariables, y)
+    y_est = JuMP.@variable(estimationProblem, base_name="y_est")
+
+    # get auxVariable to encode function value of PLA
+    auxVar = triangulation.ext[:nonlinearFunction].auxVariable
 
     # variable to encode convex combination
-    λ = JuMP.@variable(linSubproblem, [k=nlIndex, i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1, base_name="λ")
+    λ = JuMP.@variable(linSubproblem, [i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1, base_name="λ_$nlIndex")
     append!(triangulation.plrVariables, λ)
+    λ_est = JuMP.@variable(estimationProblem, [i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1, base_name="λ_est")
 
     # variables for log modeling
     number_log = ceil(Int, log2(number_of_simplices))
-    z = JuMP.@variable(linSubproblem, [k=nlIndex, l=1:number_log], Bin, base_name="z")
+    z = JuMP.@variable(linSubproblem, [l=1:number_log], Bin, base_name="z_$nlIndex")
     append!(triangulation.plrVariables, z)
+    z_est = JuMP.@variable(estimationProblem, [l=1:number_log], Bin, base_name="z_est")
 
     # variable for shift
-    e = JuMP.@variable(linSubproblem, [k=nlIndex], base_name="e")
+    e = JuMP.@variable(linSubproblem, base_name="e_$nlIndex")
     push!(triangulation.plrVariables, e)
 
     # ADD CONSTRAINTS
     ############################################################################
     # constraints to identify simplex
     # sum of convex coefficients must be 1
-
-    # not required, since it's simply all the values stored in lambda currently
-    # convexSum = JuMP.@constraint(linSubproblem, sum(λ[nlIndex, i, j] for i in 1:number_of_simplices, j in 1:dimension+1) == 1)
     convexSum = JuMP.@constraint(linSubproblem, sum(λ) == 1)
     push!(triangulation.plrConstraints, convexSum)
+    convexSum_est = JuMP.@constraint(estimationProblem, sum(λ_est) == 1)
 
     # reflected gray codes provide the unique identification of the logarithmic binary encoding
     c = PiecewiseLinearOpt.reflected_gray_codes(number_log)
 
     # log modeling constraints
     for l in 1:number_log
-        logConst1 = JuMP.@constraint(linSubproblem, sum(c[i][l]*λ[nlIndex,i,j] for i in 1:number_of_simplices, j in 1:dimension+1) <= z[nlIndex,l])
-        logConst2 = JuMP.@constraint(linSubproblem, sum((1-c[i][l])*λ[nlIndex,i,j] for i in 1:number_of_simplices, j in 1:dimension+1) <= 1 - z[nlIndex,l])
+        exp = JuMP.@expression(linSubproblem, sum(c[i][l] * λ[i,j] for i in 1:number_of_simplices, j in 1:dimension + 1) - z[l])
+        logConst1 = JuMP.@constraint(linSubproblem, exp <= 0)
+        exp2 = JuMP.@expression(linSubproblem, sum((1-c[i][l])* λ[i,j] for i in 1:number_of_simplices, j in 1:dimension + 1) - 1 + z[l])
+        logConst2 = JuMP.@constraint(linSubproblem, exp2 <= 0)
         push!(triangulation.plrConstraints, logConst1)
         push!(triangulation.plrConstraints, logConst2)
+
+        exp_est = JuMP.@expression(estimationProblem, sum(c[i][l] * λ_est[i,j] for i in 1:number_of_simplices, j in 1:dimension + 1) - z_est[l])
+        logConst1_est = JuMP.@constraint(estimationProblem, exp_est <= 0)
+        exp2_est = JuMP.@expression(estimationProblem, sum((1-c[i][l])* λ_est[i,j] for i in 1:number_of_simplices, j in 1:dimension + 1) - 1 + z_est[l])
+        logConst2_est = JuMP.@constraint(estimationProblem, exp2_est <= 0)
     end
 
     # function value encoding
-    yConst = JuMP.@constraint(linSubproblem, sum(λ[nlIndex,i,j] * triangulation.verticeValues[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) + e == y )
+    yConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.verticeValues[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) + e == y )
     push!(triangulation.plrConstraints, yConst)
+    yConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.verticeValues[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == y_est )
+
+    auxVarConst = JuMP.@constraint(linSubproblem, auxVar == y)
+    push!(triangulation.plrConstraints, auxVarConst)
 
     # original variable encoding
     if dimension == 1
-        xConst = JuMP.@constraint(linSubproblem, sum(λ[nlIndex,i,j] * triangulation.vertices[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
+        xConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.vertices[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
         push!(triangulation.plrConstraints, xConst)
+
+        xConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.vertices[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1_est )
     elseif dimension == 2
-        xConst1 = JuMP.@constraint(linSubproblem, sum(λ[nlIndex,i,j] * triangulation.vertices[triangulation.simplices[i,j]][1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
+        xConst1 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.vertices[triangulation.simplices[i,j], 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
         push!(triangulation.plrConstraints, xConst1)
+        xConst1_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.vertices[triangulation.simplices[i,j], 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1_est )
 
-        xConst2 = JuMP.@constraint(linSubproblem, sum(λ[nlIndex,i,j] * triangulation.vertices[triangulation.simplices[i,j]][2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
+        xConst2 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.vertices[triangulation.simplices[i,j], 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2 )
         push!(triangulation.plrConstraints, xConst2)
+        xConst2_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.vertices[triangulation.simplices[i,j], 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2_est )
+        
     end
-
 
 end

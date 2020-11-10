@@ -4,8 +4,10 @@ authors = ["Christian Fuellner"]
 version = "0.1.0"
 
 [deps]
+Debugger = "31a5f54b-26ea-5ae9-a837-f05ce5417438"
 Delaunay = "07eb4e4e-0c6d-46ef-bc4e-83d5e5d860a9"
 Gurobi = "2e9cd046-0924-5485-92f1-d5272153d98b"
+Infiltrator = "5903a43b-9cc3-4c30-8d17-598619ec4e9b"
 JuMP = "4076af6c-e467-56ae-b986-b466b2749572"
 PiecewiseLinearOpt = "0f51c51e-adfa-5141-8a04-d40246b8977c"
 Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
