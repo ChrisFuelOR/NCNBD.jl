@@ -37,32 +37,41 @@ function exampleModel()
             @constraint(problem, actual_nlcon_1, x[2] - nonlinearAux[1] <= 0)
             @constraint(problem, actual_nlcon_2, -x[2] + nonlinearAux[2] <= 0)
         end
+
         x = subproblem[:x]
         @stageobjective(subproblem, sum(x[i] for i in 1:2))
+        # why does SDDP.@stageobjective not work anymore?
+
         x = linearizedSubproblem[:x]
         @objective(linearizedSubproblem, MOI.MIN_SENSE, sum(x[i] for i in 1:2))
 
         # SET-UP NONLINEARITIES
         ########################################################################
-        # define nonlinear expressions
-        nonlinearexp_1(y) = y^2
-        nonlinearexp_2(y,z) = sqrt(y) + sqrt(z)
+        # define nonlinear expressions (once as user-defined function)
+        nlexp_func_1(y) = y^2
+        nlexp_func_2(y,z) = sqrt(y) + sqrt(z)
 
         # register nonlinear expressions
-        register(subproblem, :nonlinearexp_1, 1, nonlinearexp_1, autodiff=true)
-        register(subproblem, :nonlinearexp_2, 2, nonlinearexp_2, autodiff=true)
+        #register(subproblem, :nonlinearexp_1, 1, nonlinearexp_1, autodiff=true)
+        #register(subproblem, :nonlinearexp_2, 2, nonlinearexp_2, autodiff=true)
+
+        # define nonlinear expressions (once as Julia expression)
+        x = subproblem[:x]
+        nonlinearexp_1 = :($(x[2])^2)
+        nonlinearexp_2 = :(sqrt($(x[1])) + sqrt($(x[2])))
 
         # defining nonlinear constraints using auxiliary variables
         nonlinearAux = subproblem[:nonlinearAux]
-        x = subproblem[:x]
-        @NLconstraint(subproblem, nlcon_1, nonlinearAux[1] == nonlinearexp_1(x[2]))
-        @NLconstraint(subproblem, nlcon_2, nonlinearAux[2] == nonlinearexp_2(x[2], x[1]))
+        #@NLconstraint(subproblem, nlcon_1, nonlinearAux[1] == nonlinearexp_1(x[2]))
+        #@NLconstraint(subproblem, nlcon_2, nonlinearAux[2] == nonlinearexp_2(x[2], x[1]))
+        add_NL_constraint(subproblem, :($(nonlinearAux[1]) == $(nonlinearexp_1)))
+        add_NL_constraint(subproblem, :($(nonlinearAux[2]) == $(nonlinearexp_2)))
 
         # construct nonlinearFunction objects for both constraints
         x = linearizedSubproblem[:x]
         nonlinearAux = linearizedSubproblem[:nonlinearAux]
-        nlf_1 = NCNBD.NonlinearFunction(nonlinearexp_1, nonlinearAux[1], nlcon_1, [x[2]])
-        nlf_2 = NCNBD.NonlinearFunction(nonlinearexp_2, nonlinearAux[2], nlcon_2, [x[2], x[1]])
+        nlf_1 = NCNBD.NonlinearFunction(nlexp_func_1, nonlinearexp_1, nonlinearAux[1], [x[2]])
+        nlf_2 = NCNBD.NonlinearFunction(nlexp_func_2, nonlinearexp_2, nonlinearAux[2], [x[1], x[2]])
 
         # push both nonlinearFunction objects to list
         push!(nonlinearFunctionList, nlf_1)
@@ -74,6 +83,8 @@ function exampleModel()
         #model.nodes[t].ext[:nlFunctions] = nonlinearFunctionList
         subproblem.ext[:nlFunctions] = nonlinearFunctionList
         subproblem.ext[:linSubproblem] = linearizedSubproblem
+
+        #print(subproblem)
 
     end
 
@@ -94,8 +105,8 @@ function exampleModel()
 
     # SET-UP NONLINEARITIES
     ############################################################################
-    NCNBD.solve(model, algoParameters, initialAlgoParameters,
-                iteration_limit = 100, print_level = 0)
+    #NCNBD.solve(model, algoParameters, initialAlgoParameters,
+#                iteration_limit = 100, print_level = 0)
 
     #TODO: AppliedSolvers muss man noch immer mit übergeben
 

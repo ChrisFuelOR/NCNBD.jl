@@ -64,28 +64,32 @@ mutable struct Triangulation
     plrConstraints :: Vector{JuMP.ConstraintRef}
     maxOverestimation :: Vector{Float64}
     maxUnderestimation :: Vector{Float64}
-    # An extension dictionary. 
+    # An extension dictionary.
     ext::Dict{Symbol,Any}
 end
 
 # struct for nonlinear functions
+# Specify first argument to type of user-defined function?
 mutable struct NonlinearFunction
-    nonlinearExpression :: Any # function?
-    auxVariable :: JuMP.VariableRef
-    refToNonlinearConstraint :: JuMP.ConstraintRef
-    variablesContained :: Vector{JuMP.VariableRef}
-    triangulation :: Union{Triangulation, Nothing}
+    nonlinearExpFunction :: Any # for evaluation
+    nonlinearExpression :: Expr # for constraint building
+    auxVariable :: JuMP.VariableRef # for definition of (PLA) constraints
+    # refToNonlinearConstraint :: JuMP.ConstraintRef # just for allocation # not used anymore and does not work for add_NL_constraint
+    variablesContained :: Vector{JuMP.VariableRef} # for getting bounds for Triangulation
+    triangulation :: Union{Triangulation, Nothing} # to store related Triangulation
 
     function NonlinearFunction(
-        nonlinearExpression::Any,
+        nonlinearExpFunction::Any,
+        nonlinearExpression::Expr,
         auxVariable::JuMP.VariableRef,
-        refToNonlinearConstraint::JuMP.ConstraintRef,
+        #refToNonlinearConstraint::JuMP.ConstraintRef,
         variablesContained::Vector{JuMP.VariableRef}
          )
         return new(
+            nonlinearExpFunction,
             nonlinearExpression,
             auxVariable,
-            refToNonlinearConstraint,
+            #refToNonlinearConstraint,
             variablesContained,
             nothing
         )

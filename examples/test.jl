@@ -197,7 +197,6 @@ function exampleModelTest()
     @variable(problem, 0 <= x[i=1:2] <= 1)
     @objective(problem, Max, x[2])
     @constraint(problem, x[2] - x[1] <= 0)
-    nonlinearexp(x,y) = x*y
     express1 = :($(x[1])*$(x[2]))
     express2 = :($(express1) <= 1)
     add_NL_constraint(problem, express2)
