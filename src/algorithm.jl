@@ -38,7 +38,10 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
         nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)
 
         # Define overestimation/underestimation problem
-        estimationProblem = JuMP.Model()
+        estimationProblem = JuMP.Model(SCIP.Optimizer)
+        #estimationProblem = JuMP.Model(GAMS.Optimizer)
+        #JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
+        #JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
 
         # Determine Piecewise Linear Approximation
         piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
@@ -211,8 +214,8 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
 
         # set up variables required for estimationProblem (we cannot use x_1 here)
         x_1_est = JuMP.@variable(estimationProblem, base_name="x_1_est")
-        JuMP.set_lower_bound(x_1_est, lower_bound(x_1))
-        JuMP.set_upper_bound(x_1_est, upper_bound(x_1))
+        JuMP.set_lower_bound(x_1_est, JuMP.lower_bound(x_1))
+        JuMP.set_upper_bound(x_1_est, JuMP.upper_bound(x_1))
 
     elseif dimension == 2
         x_1 = triangulation.ext[:nonlinearFunction].variablesContained[1]
@@ -220,13 +223,13 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
 
         # set up variables required for estimationProblem (we cannot use x_1 here)
         x_1_est = JuMP.@variable(estimationProblem, base_name="x_1_est")
-        JuMP.set_lower_bound(x_1_est, lower_bound(x_1))
-        JuMP.set_upper_bound(x_1_est, upper_bound(x_1))
+        JuMP.set_lower_bound(x_1_est, JuMP.lower_bound(x_1))
+        JuMP.set_upper_bound(x_1_est, JuMP.upper_bound(x_1))
 
         # set up variables required for estimationProblem (we cannot use x_1 here)
         x_2_est = JuMP.@variable(estimationProblem, base_name="x_2_est")
-        JuMP.set_lower_bound(x_2_est, lower_bound(x_2))
-        JuMP.set_upper_bound(x_2_est, upper_bound(x_2))
+        JuMP.set_lower_bound(x_2_est, JuMP.lower_bound(x_2))
+        JuMP.set_upper_bound(x_2_est, JuMP.upper_bound(x_2))
     end
 
     # TODO: Pre-allocation instead of push. But then I have to determine
@@ -236,6 +239,7 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     y = JuMP.@variable(linSubproblem, base_name="y_$nlIndex")
     push!(triangulation.plrVariables, y)
     y_est = JuMP.@variable(estimationProblem, base_name="y_est")
+    estimationProblem[:y_est] = y_est
 
     # get auxVariable to encode function value of PLA
     auxVar = triangulation.ext[:nonlinearFunction].auxVariable
@@ -266,7 +270,7 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
 
     # reflected gray codes provide the unique identification of the logarithmic binary encoding
     c = PiecewiseLinearOpt.reflected_gray_codes(number_log)
-    triangulation.ext[:grayCode] = c
+    triangulation.ext[:gray_code] = c
 
     # log modeling constraints
     for l in 1:number_log
@@ -309,12 +313,25 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
 
     # objective function expression for estimationProblem
     nonlinearexp = triangulation.ext[:nonlinearFunction].nonlinearExpression
+    JuMP.register(estimationProblem, :nonlinearexp, 1, nonlinearexp, autodiff=true)
 
+    #JuMP.@variable(estimationProblem, est_var)
+    JuMP.@variable(estimationProblem, nlAuxVar)
     if dimension == 1
-        JuMP.@NLexpression(estimationProblem, est_error, y_est - nonlinearExpression(x_1_est))
+        JuMP.add_NL_constraint(estimationProblem, :($(Expr(:call, :nonlinearexp, x_1_est)) == $(nlAuxVar) ))
+        #JuMP.@NLconstraint(estimationProblem, est_error, nlexp(x_1_est) == nlAuxVar)
+        #JuMP.@NLconstraint(estimationProblem, est_error, y_est - nlexp(x_1_est) == est_var)
+        #JuMP.@NLexpression(estimationProblem, est_error, y_est - nlexp(x_1_est))
     elseif dimension == 2
-        JuMP.@NLexpression(estimationProblem, est_error, y_est - nonlinearExpression(x_1_est, x_2_est))
+        JuMP.add_NL_constraint(estimationProblem, :($(Expr(:call, :nonlinearexp, x_1_est, x_2_est)) == $(nlAuxVar) ))
+        #JuMP.@NLconstraint(estimationProblem, est_error, nlexp(x_1_est, x_2_est) == nlAuxVar)
+        #JuMP.@NLexpression(estimationProblem, est_error, y_est - nlexp(x_1_est, x_2_est))
+        #JuMP.@NLconstraint(estimationProblem, est_error, y_est - nlexp(x_1_est, x_2_est) == est_var)
     end
+
+    print("blubb")
+
+
 end
 
 
@@ -338,23 +355,38 @@ function determineShifts!(simplex_index::Int64, triangulation::NCNBD.Triangulati
 
     # set values of z to gray_code of given simplex
     for l = 1:number_log
-        JuMP.fix_value(z[l]) = triangulation.ext[:gray_code][simplex_index][l]
+        JuMP.fix(z[l], triangulation.ext[:gray_code][simplex_index][l])
     end
     # ; force = true
 
     # SOLVE MAXIMUM OVERESTIMATION
     ############################################################################
-    
+    #est_error = estimationProblem[:est_error]
+    #est_var = estimationProblem[:est_var]
+    nlAuxVar = estimationProblem[:nlAuxVar]
+    y_est = estimationProblem[:y_est]
+    JuMP.@objective(estimationProblem, Max, y_est - nlAuxVar)
+    #JuMP.@objective(estimationProblem, Max, est_var)
+    #JuMP.@NLobjective(estimationProblem, Max, est_error)
+    JuMP.optimize!(estimationProblem)
+    # TODO: Check if globally optimal solution
+    overestimation = objective_value(estimationProblem)
 
     # SOLVE MAXIMUM UNDERESTIMATION
     ############################################################################
-
-
+    JuMP.@objective(estimationProblem, Max, nlAuxVar - y_est)
+    #JuMP.@NLobjective(estimationProblem, Max, -est_var)
+    #JuMP.@NLobjective(estimationProblem, Max, -est_error)
+    JuMP.optimize!(estimationProblem)
+    # TODO: Check if globally optimal solution
+    underestimation = objective_value(estimationProblem)
 
     # UNFIX VARIABLES AGAIN
     ############################################################################
     for l = 1:number_log
         JuMP.unfix(z[l])
     end
+
+    return [overestimation underestimation]
 
 end

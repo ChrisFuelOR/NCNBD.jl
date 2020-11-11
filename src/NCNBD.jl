@@ -8,6 +8,7 @@ import PiecewiseLinearOpt
 import Revise
 import TimerOutputs
 import GAMS
+import SCIP
 
 # Write your package code here.
 include("typedefs.jl")
