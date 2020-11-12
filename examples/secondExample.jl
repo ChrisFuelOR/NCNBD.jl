@@ -3,6 +3,7 @@ using SDDP
 using NCNBD
 using Revise
 using Gurobi
+using GAMS
 
 function exampleModel()
 
@@ -38,12 +39,12 @@ function exampleModel()
             @constraint(problem, actual_nlcon_2, -x[2] + nonlinearAux[2] <= 0)
         end
 
+        x = linearizedSubproblem[:x]
+        @objective(linearizedSubproblem, MOI.MIN_SENSE, sum(x[i] for i in 1:2))
+
         x = subproblem[:x]
         @stageobjective(subproblem, sum(x[i] for i in 1:2))
         # why does SDDP.@stageobjective not work anymore?
-
-        x = linearizedSubproblem[:x]
-        @objective(linearizedSubproblem, MOI.MIN_SENSE, sum(x[i] for i in 1:2))
 
         # SET-UP NONLINEARITIES
         ########################################################################
@@ -84,13 +85,11 @@ function exampleModel()
         subproblem.ext[:nlFunctions] = nonlinearFunctionList
         subproblem.ext[:linSubproblem] = linearizedSubproblem
 
-        #print(subproblem)
-
     end
 
     # SET-UP PARAMETERS
     ############################################################################
-    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, Gurobi.Optimizer)
+    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, GAMS.Optimizer)
 
     epsilon_outerLoop = 0.0
     epsilon_innerLoop = 0.0
@@ -105,11 +104,8 @@ function exampleModel()
 
     # SET-UP NONLINEARITIES
     ############################################################################
-    #NCNBD.solve(model, algoParameters, initialAlgoParameters,
-#                iteration_limit = 100, print_level = 0)
-
-    #TODO: AppliedSolvers muss man noch immer mit übergeben
-
+    NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
+                iteration_limit = 100, print_level = 0)
 
 end
 
