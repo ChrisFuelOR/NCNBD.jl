@@ -71,23 +71,23 @@ end
 # struct for nonlinear functions
 # Specify first argument to type of user-defined function?
 mutable struct NonlinearFunction
-    nonlinearExpFunction :: Any # for evaluation
-    nonlinearExpression :: Expr # for constraint building
+    nonlinfunc_eval :: Any # for evaluation
+    nonlinfunc_exp :: Any # for constraint building
     auxVariable :: JuMP.VariableRef # for definition of (PLA) constraints
     # refToNonlinearConstraint :: JuMP.ConstraintRef # just for allocation # not used anymore and does not work for add_NL_constraint
     variablesContained :: Vector{JuMP.VariableRef} # for getting bounds for Triangulation
     triangulation :: Union{Triangulation, Nothing} # to store related Triangulation
 
     function NonlinearFunction(
-        nonlinearExpFunction::Any,
-        nonlinearExpression::Expr,
+        nonlinfunc_eval::Any, # Function
+        nonlinfunc_exp::Any, #Function
         auxVariable::JuMP.VariableRef,
         #refToNonlinearConstraint::JuMP.ConstraintRef,
         variablesContained::Vector{JuMP.VariableRef}
          )
         return new(
-            nonlinearExpFunction,
-            nonlinearExpression,
+            nonlinfunc_eval,
+            nonlinfunc_exp,
             auxVariable,
             #refToNonlinearConstraint,
             variablesContained,
@@ -105,16 +105,6 @@ struct AppliedSolvers
     MILP :: Any
     MINLP :: Any
 end
-
-
-
-
-
-
-
-
-
-
 
 # Struct to store information on a nonlinear cut
 struct NonlinearCut
