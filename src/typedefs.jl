@@ -47,8 +47,8 @@ end
 
 # struct for Simplex
 mutable struct Simplex
-    vertices :: Array{Float64,1}
-    vertice_values :: Array{Float64,1}
+    vertices :: Array{Float64,2}
+    vertice_values :: Vector{Float64}
     maxOverestimation :: Float64
     maxUnderestimation :: Float64
 end

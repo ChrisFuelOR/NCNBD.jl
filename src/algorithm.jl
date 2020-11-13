@@ -60,15 +60,13 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         # Add relaxation constraints to linearizedSubproblem
         λ = linearizedSubproblem[:λ]
         e = linearizedSubproblem[:e]
-        relax_1 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.simplices[i].maximumOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
-        relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.simplices[i].maximumUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
+
+        relax_1 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
+        relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
         push!(nlFunction.triangulation.plrConstraints, relax_1)
         push!(nlFunction.triangulation.plrConstraints, relax_2)
 
     end
-
-    print("blubb")
-
 end
 
 
@@ -101,7 +99,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         # pre-allocate storage for simplice
         simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
-        vertices = Vector{Float64}(undef, dimension+1)
+        vertices = Array{Float64,2}(undef, dimension+1, 1)
         vertice_values = Vector{Float64}(undef, dimension+1)
 
         # add first values to vectors
@@ -184,7 +182,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         # pre-allocate storage for simplices
         simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
-        vertices = Vector{Float64}(undef, dimension+1)
+        vertices = Vector{Float64}(undef, dimension+1, 2)
         vertice_values = Vector{Float64}(undef, dimension+1)
 
         # CREATE SIMPLICES AND TRIANGULATION IN OUR FORMATS
@@ -193,7 +191,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         for simplex_index in 1:number_of_simplices
             simplex_delaunay = simplices_delaunay[simplex_index, :]
             for i in 1:dimension+1
-                vertices[i] = xgrid[simplex_delaunay[i]]
+                vertices[i, :] = xgrid[simplex_delaunay[i]]
                 vertice_values[i] = values_grid[simplex_delaunay[i]]
             end
             simplices[simplexIndex] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
@@ -409,7 +407,7 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
     println("optimal value: ", overestimation)
 
-    @infiltrate
+    #@infiltrate
     # x_opt = JuMP.value(estimationProblem[:x_1_est])
     # y_opt = JuMP.value(estimationProblem[:y_est])
     # l_opt_1 = JuMP.value(estimationProblem[:λ_est][simplex_index,1])
