@@ -16,6 +16,7 @@ using Infiltrator
 include("typedefs.jl")
 include("solveStarter.jl")
 include("algorithm.jl")
+include("simplexOperations.jl")
 
 
 end

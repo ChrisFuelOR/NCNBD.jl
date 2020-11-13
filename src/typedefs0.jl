@@ -45,21 +45,17 @@ struct InitialAlgoParams
     sigma :: Vector{Float64}
 end
 
-# struct for Simplex
-mutable struct Simplex
-    vertices :: Array{Float64,1}
-    vertice_values :: Array{Float64,1}
-    maxOverestimation :: Float64
-    maxUnderestimation :: Float64
-end
-
 # struct for Triangulation
 # better to use dicts instead of vectors without index?
 mutable struct Triangulation
-    simplices :: Vector{Simplex}
+    vertices :: Union{Vector{Float64}, Array{Float64,2}}
+    verticeValues :: Vector{Float64}
+    simplices :: Array{Int64, 2}
     precision :: Float64
     plrVariables :: Vector{JuMP.VariableRef}
     plrConstraints :: Vector{JuMP.ConstraintRef}
+    maxOverestimation :: Vector{Float64}
+    maxUnderestimation :: Vector{Float64}
     # An extension dictionary.
     ext::Dict{Symbol,Any}
 end

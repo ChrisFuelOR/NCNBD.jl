@@ -51,8 +51,14 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
 
         # Shift approximation to obtain a relaxation
         for simplex_index in 1:number_of_simplices
-            determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
+            shifts = determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
+            nlFunction.triangulation.maxOverestimation[simplex_index] = shifts[1]
+            nlFunction.triangulation.maxUnderestimation[simplex_index] = shifts[2]
         end
+
+        # Get shifts
+        overest_list = nlFunction.triangulation.maxOverestimation
+        underest_list = nlFunction.triangulation.maxUnderestimation
 
         # Get dimension
         dimension = size(nlFunction.variablesContained, 1)
@@ -60,8 +66,8 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         # Add relaxation constraints to linearizedSubproblem
         λ = linearizedSubproblem[:λ]
         e = linearizedSubproblem[:e]
-        relax_1 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.simplices[i].maximumOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
-        relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.simplices[i].maximumUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
+        relax_1 = JuMP.@constraint(linearizedSubproblem, sum(overest_list[i] * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
+        relax_2 = JuMP.@constraint(linearizedSubproblem, sum(underest_list[i] * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
         push!(nlFunction.triangulation.plrConstraints, relax_1)
         push!(nlFunction.triangulation.plrConstraints, relax_2)
 
@@ -100,34 +106,38 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         simplex_length = interval_length / number_of_simplices
 
         # pre-allocate storage for simplice
-        simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
-        vertices = Vector{Float64}(undef, dimension+1)
-        vertice_values = Vector{Float64}(undef, dimension+1)
+        simplices = Array{Int64}(undef, number_of_simplices, 2)
+        xgrid = Array{Float64}(undef, number_of_simplices + 1)
+        values_grid = Array{Float64}(undef, number_of_simplices + 1)
 
         # add first values to vectors
-        xcoord = lower_bound
-        func_value = nlFunction.nonlinfunc_eval(xcoord)
+        xgrid[1] = lower_bound
+        values_grid[1] = nlFunction.nonlinfunc_eval(xgrid[1])
+
+        # TODO: Maybe it is more efficient to use a dict here, with a
+        # vertex index as key and a tuple of point and values as content.
+        # At least, in such case, the points and function values were always
+        # related to each other.
 
         # determine simplices
         for simplexIndex = 1 : number_of_simplices
-            # add both vertices
-            vertices[1] = xcoord
-            xcoord += simplex_length
-            vertices[2] = xcoord
+            # add next breakpoint
+            xgrid[1+simplexIndex] = lower_bound + simplexIndex * simplex_length
+            # add function value
+            values_grid[1+simplexIndex] = nlFunction.nonlinfunc_eval(xgrid[1+simplexIndex])
+            # add simplex
+            simplices[simplexIndex, :] = [simplexIndex, simplexIndex+1]
 
-            # add function values
-            vertice_values[1] = func_value
-            func_value =  nlFunction.nonlinfunc_eval(xcoord)
-            vertice_values[2] = func_value
-
-            # add simplex to list
-            simplices[simplexIndex] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
         end
 
-        @assert xcoord == upper_bound
+        @assert xgrid[number_of_simplices + 1] == upper_bound
+
+        # initialize maxOverestimation and maxUnderestimation
+        maxOverestimation = fill(Inf, number_of_simplices)
+        maxUnderestimation = fill(Inf, number_of_simplices)
 
         # set up triangulation
-        triangulation = Triangulation(simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())
+        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], maxOverestimation, maxUnderestimation, Dict{Symbol,Any}())
 
         nlFunction.triangulation = triangulation
         nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
@@ -136,8 +146,6 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
     # 2D
     ############################################################################
     elseif dimension == 2
-        # DETERMINE UNIFORM GRID
-        ########################################################################
         # get interval to be considered
         lower_bound_1 = JuMP.lower_bound(nlFunction.variablesContained[1])
         upper_bound_1 = JuMP.upper_bound(nlFunction.variablesContained[1])
@@ -177,30 +185,11 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         @assert xgrid[number_of_points, 1] == upper_bound_1
         @assert xgrid[number_of_points, 2] == upper_bound_2
 
-        # DETERMINE TRIANGULATION
-        ########################################################################
-        # determine the simplices using Delaunay package
-        simplices_delaunay = Delaunay.delaunay(xgrid).simplices
-
-        # pre-allocate storage for simplices
-        simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
-        vertices = Vector{Float64}(undef, dimension+1)
-        vertice_values = Vector{Float64}(undef, dimension+1)
-
-        # CREATE SIMPLICES AND TRIANGULATION IN OUR FORMATS
-        ########################################################################
-        # create Simplex structs in our format
-        for simplex_index in 1:number_of_simplices
-            simplex_delaunay = simplices_delaunay[simplex_index, :]
-            for i in 1:dimension+1
-                vertices[i] = xgrid[simplex_delaunay[i]]
-                vertice_values[i] = values_grid[simplex_delaunay[i]]
-            end
-            simplices[simplexIndex] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
-        end
+        # determine the simplices
+        simplices = Delaunay.delaunay(xgrid).simplices
 
         # set up triangulation
-        triangulation = Triangulation(simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())
+        triangulation = Triangulation(xgrid, values_grid, simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Float64[], Float64[], Dict{Symbol,Any}())
 
         nlFunction.triangulation = triangulation
         nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
@@ -322,24 +311,24 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     end
 
     # function value encoding
-    yConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertice_values[j] for  i in 1:number_of_simplices, j in 1:dimension+1) + e == y )
+    yConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.verticeValues[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) + e == y )
     push!(triangulation.plrConstraints, yConst)
-    yConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertice_values[j] for  i in 1:number_of_simplices, j in 1:dimension+1) == y_est )
+    yConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.verticeValues[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == y_est )
 
     # original variable encoding
     if dimension == 1
-        xConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
+        xConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.vertices[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
         push!(triangulation.plrConstraints, xConst)
 
-        xConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1_est )
+        xConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.vertices[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1_est )
     elseif dimension == 2
-        xConst1 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
+        xConst1 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.vertices[triangulation.simplices[i,j], 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
         push!(triangulation.plrConstraints, xConst1)
-        xConst1_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1_est )
+        xConst1_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.vertices[triangulation.simplices[i,j], 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1_est )
 
-        xConst2 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2 )
+        xConst2 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.vertices[triangulation.simplices[i,j], 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2 )
         push!(triangulation.plrConstraints, xConst2)
-        xConst2_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertices[j, 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2_est )
+        xConst2_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.vertices[triangulation.simplices[i,j], 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2_est )
     end
 
 end
@@ -455,9 +444,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
         JuMP.unfix(z[l])
     end
 
-    # STORE ESTIMATION ERRORS
-    ############################################################################
-    nlfunction.triangulation.simplices[simplex_index].maxOverestimation = overestimation
-    nlfunction.triangulation.simplices[simplex_index].maxUnderestimation = underestimation
+    return [overestimation underestimation]
 
 end
