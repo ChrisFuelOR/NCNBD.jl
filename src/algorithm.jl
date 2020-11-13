@@ -39,9 +39,9 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
 
         # Define overestimation/underestimation problem
         estimationProblem = JuMP.Model(appliedSolvers.MINLP)
-        #estimationProblem = JuMP.Model(GAMS.Optimizer)
+        estimationProblem = JuMP.Model(GAMS.Optimizer)
         JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
-        JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
+        #JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
 
         # Determine Piecewise Linear Approximation
         piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
@@ -51,10 +51,26 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
 
         # Shift approximation to obtain a relaxation
         for simplex_index in 1:number_of_simplices
-            shifts = determineShifts!(simplex_index, nlFunction.triangulation, estimationProblem, appliedSolvers)
+            shifts = determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
             nlFunction.triangulation.maxOverestimation[simplex_index] = shifts[1]
             nlFunction.triangulation.maxUnderestimation[simplex_index] = shifts[2]
         end
+
+        # Get shifts
+        overest_list = nlFunction.triangulation.maxOverestimation
+        underest_list = nlFunction.triangulation.maxUnderestimation
+
+        # Get dimension
+        dimension = size(nlFunction.variablesContained, 1)
+
+        # Add relaxation constraints to linearizedSubproblem
+        λ = linearizedSubproblem[:λ]
+        e = linearizedSubproblem[:e]
+        relax_1 = JuMP.@constraint(linearizedSubproblem, sum(overest_list[i] * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
+        relax_2 = JuMP.@constraint(linearizedSubproblem, sum(underest_list[i] * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
+        push!(nlFunction.triangulation.plrConstraints, relax_1)
+        push!(nlFunction.triangulation.plrConstraints, relax_2)
+
     end
 
     print("blubb")
@@ -96,7 +112,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         # add first values to vectors
         xgrid[1] = lower_bound
-        values_grid[1] = nlFunction.nonlinearExpFunction(xgrid[1])
+        values_grid[1] = nlFunction.nonlinfunc_eval(xgrid[1])
 
         # TODO: Maybe it is more efficient to use a dict here, with a
         # vertex index as key and a tuple of point and values as content.
@@ -108,7 +124,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
             # add next breakpoint
             xgrid[1+simplexIndex] = lower_bound + simplexIndex * simplex_length
             # add function value
-            values_grid[1+simplexIndex] = nlFunction.nonlinearExpFunction(xgrid[simplexIndex])
+            values_grid[1+simplexIndex] = nlFunction.nonlinfunc_eval(xgrid[1+simplexIndex])
             # add simplex
             simplices[simplexIndex, :] = [simplexIndex, simplexIndex+1]
         end
@@ -161,7 +177,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
                 ind = ind_2 + (ind_1 - 1) * number_of_points_2
                 xgrid[ind, :] = [coord_1 coord_2]
-                values_grid[ind] = nlFunction.nonlinearExpFunction(xgrid[ind, 1], xgrid[ind, 2])
+                values_grid[ind] = nlFunction.nonlinfunc_eval(xgrid[ind, 1], xgrid[ind, 2])
             end
         end
 
@@ -246,23 +262,24 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     y_est = JuMP.@variable(estimationProblem, base_name="y_est")
     estimationProblem[:y_est] = y_est
 
-    # get auxVariable to encode function value of PLA
-    auxVar = triangulation.ext[:nonlinearFunction].auxVariable
-
     # variable to encode convex combination
     λ = JuMP.@variable(linSubproblem, [i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1, base_name="λ_$nlIndex")
     append!(triangulation.plrVariables, λ)
+    linSubproblem[:λ] = λ
     λ_est = JuMP.@variable(estimationProblem, [i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1, base_name="λ_est")
+    estimationProblem[:λ_est] = λ_est
 
     # variables for log modeling
     number_log = ceil(Int, log2(number_of_simplices))
     z = JuMP.@variable(linSubproblem, [l=1:number_log], Bin, base_name="z_$nlIndex")
     append!(triangulation.plrVariables, z)
-    z_est = JuMP.@variable(estimationProblem, [l=1:number_log], Bin, base_name="z_est")
+    # note z_est is not binary, as we will fix these values in the estimation problem anyway
+    z_est = JuMP.@variable(estimationProblem, [l=1:number_log], base_name="z_est")
     estimationProblem[:z_est] = z_est
 
     # variable for shift
     e = JuMP.@variable(linSubproblem, base_name="e_$nlIndex")
+    linSubproblem[:e] = e
     push!(triangulation.plrVariables, e)
 
     # ADD CONSTRAINTS
@@ -297,9 +314,6 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     push!(triangulation.plrConstraints, yConst)
     yConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.verticeValues[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == y_est )
 
-    auxVarConst = JuMP.@constraint(linSubproblem, auxVar == y)
-    push!(triangulation.plrConstraints, auxVarConst)
-
     # original variable encoding
     if dimension == 1
         xConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.vertices[triangulation.simplices[i,j]] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
@@ -320,7 +334,7 @@ end
 
 
 """
-    NCNBD.determineShifts!(simplex_index::Int64, triangulation::NCNBD.Triangulation,
+    NCNBD.determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunction,
     estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers)
 
 Determines an up and down shift based on the maximum overestimation and underestimation errors of the PLA determined before.
@@ -328,62 +342,106 @@ Return both shifts in a vector.
 
 """
 
-function determineShifts!(simplex_index::Int64, triangulation::NCNBD.Triangulation, estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers)
+function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunction, estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers)
 
     # DEFINE SIMPLEX CONSTRAINTS BY SETTING LOG VARIABLES TO SPECIFIC GRAY CODE
     ############################################################################
     # log number
-    number_log = ceil(Int, log2(size(triangulation.simplices, 1)))
+    number_log = ceil(Int, log2(size(nlfunction.triangulation.simplices, 1)))
 
     # Get z variable
     z = estimationProblem[:z_est]
 
     # set values of z to gray_code of given simplex
     for l = 1:number_log
-        JuMP.fix(z[l], triangulation.ext[:gray_code][simplex_index][l])
+        JuMP.fix(z[l], nlfunction.triangulation.ext[:gray_code][simplex_index][l], force=true)
     end
     # ; force = true
 
     # INITIALIZATION
     ############################################################################
     # dimension
-    dimension = size(triangulation.ext[:nonlinearFunction].variablesContained, 1)
-
-    nonlinearexp = triangulation.ext[:nonlinearFunction].nonlinearExpression
+    dimension = size(nlfunction.variablesContained, 1)
+    # required variable representing PLA function value
     y_est = estimationProblem[:y_est]
 
-    variablesContained = triangulation.ext[:nonlinearFunction].variablesContained
-    refCache = variablesContained
+    # variableRefs to insert into nonlinear expression
+    # variablesContained = nlfunction.variablesContained
+    # note that we cannot insert nlfunction.variablesContained, since those variables
+    # belong to the linearized subproblem. We have to use x_1_est and x_2_est
 
     if dimension == 1
-        variablesContained[1] = estimationProblem[:x_1_est]
+        x_1 = estimationProblem[:x_1_est]
+        nonlinearobj = nlfunction.nonlinfunc_exp(x_1)
     elseif dimension == 2
-        variablesContained[1] = estimationProblem[:x_1_est]
-        variablesContained[2] = estimationProblem[:x_2_est]
+        x_1 = estimationProblem[:x_1_est]
+        x_2 = estimationProblem[:x_2_est]
+        nonlinearobj = nlfunction.nonlinfunc_exp(x_1, x_2)
     end
 
     # DETERMINE AND SOLVE MAXIMUM OVERESTIMATION PROBLEM
     ############################################################################
     # nonlinear expression describing the approximated function
-    JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(y_est) - $(nonlinearexp)))
+    JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(y_est) - $(nonlinearobj)))
+
+    println("###################################################################")
+    println("Simplex: ", simplex_index)
+    println("Max overestimation error")
+    println(estimationProblem)
+
     JuMP.optimize!(estimationProblem)
     # TODO: Check if globally optimal solution
-    overestimation = objective_value(estimationProblem)
+    overestimation = JuMP.objective_value(estimationProblem)
+
+    println("optimal x: ", JuMP.value(estimationProblem[:x_1_est]))
+    println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
+    println("optimal value: ", overestimation)
+
+    @infiltrate
+    # x_opt = JuMP.value(estimationProblem[:x_1_est])
+    # y_opt = JuMP.value(estimationProblem[:y_est])
+    # l_opt_1 = JuMP.value(estimationProblem[:λ_est][simplex_index,1])
+    # l_opt_2 = JuMP.value(estimationProblem[:λ_est][simplex_index,2])
+    # l_opt_r = JuMP.value(estimationProblem[:λ_est][simplex_index+1,1])
+    # println(l_opt_1)
+    # println(l_opt_2)
+    # println(l_opt_r)
+
+    # vertex_indices = nlfunction.triangulation.simplices[simplex_index, :]
+    # x_val = 0
+    # y_val = 0
+    #
+    # for i in 1:dimension+1
+    #     vertex_index = vertex_indices[i]
+    #     vertex = nlfunction.triangulation.vertices[vertex_index]
+    #     vertex_value = nlfunction.triangulation.verticeValues[vertex_index]
+    #     x_val += JuMP.value(estimationProblem[:λ_est][simplex_index,i]) * vertex
+    #     y_val += JuMP.value(estimationProblem[:λ_est][simplex_index,i]) * vertex_value
+    # end
+    # println("calculated x: ", x_val)
+    # println("calculated y: ", y_val)
+    # @infiltrate
 
     # DETERMINE AND SOLVE MAXIMUM UNDERESTIMATION PROBLEM
     ############################################################################
-    JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(nonlinearexp) - $(y_est)))
+    JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(nonlinearobj) - $(y_est)))
+    # println("Max underestimation error")
+    # println(estimationProblem)
+
     JuMP.optimize!(estimationProblem)
     # TODO: Check if globally optimal solution
-    underestimation = objective_value(estimationProblem)
+    underestimation = JuMP.objective_value(estimationProblem)
+
+    # println("optimal x: ", JuMP.value(estimationProblem[:x_1_est]))
+    # println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
+    # println("optimal value: ", underestimation)
+    # println("###################################################################")
 
     # UNFIX VARIABLES AGAIN
     ############################################################################
     for l = 1:number_log
         JuMP.unfix(z[l])
     end
-
-    triangulation.ext[:nonlinearFunction].variablesContained = refCache
 
     return [overestimation underestimation]
 

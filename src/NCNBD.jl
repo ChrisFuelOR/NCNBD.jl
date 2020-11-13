@@ -10,6 +10,7 @@ import TimerOutputs
 import GAMS
 import SCIP
 import MathOptInterface
+using Infiltrator
 
 # Write your package code here.
 include("typedefs.jl")

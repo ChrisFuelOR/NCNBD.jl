@@ -234,6 +234,10 @@ function exampleModelTest()
         return x*y
     end
 
+    function christian3(y::JuMP.VariableRef)
+        return :($(y)^2)
+    end
+
     expi = christian(x[1])
     expo = christian(x[2])
 
@@ -255,11 +259,15 @@ function exampleModelTest()
     println(expe)
     println(typeof(expe))
 
+    expu = christian3(x[2])
+    println(expu)
+    println(typeof(expu))
+
     println(a(3.0))
 
     b = NCNBD.solve_ncnbd
     println(b)
-    b(2)
+    # b(2)
 
     #println(express2)
     #println(typeof(express2))
@@ -270,11 +278,11 @@ function exampleModelTest()
     #println(typeof(nlexp3))
 
     add_NL_constraint(problem, :($(expi) <= 1))
-    add_NL_constraint(problem, :($(expe) <= 1))
+    add_NL_constraint(problem, :($(expu) <= 1))
     #print(problem)
     add_NL_constraint(problem2, :($(expa) <= 1))
     #print(problem2)
-    #JuMP.optimize!(problem)
+    JuMP.optimize!(problem)
     println()
     #println("optimal value: ", objective_value(problem))
     #println("optimal point: ", value.(x))
