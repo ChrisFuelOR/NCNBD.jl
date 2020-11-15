@@ -21,7 +21,8 @@ using Infiltrator
 include("typedefs.jl")
 include("solveStarter.jl")
 include("algorithm.jl")
-include("simplexOperations.jl")
+include("piecewiseLinearRelaxation.jl")
+include("algorithm.jl")
 
 
 end
