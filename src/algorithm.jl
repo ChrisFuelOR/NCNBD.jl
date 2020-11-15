@@ -1,461 +1,174 @@
-# Copyright Christian Füllner (Karlsruhe Institute of Technology) 2020
-#
-# This source code form is subject to the terms of the Mozilla Public License, v. x.x.
-# If a copy of the MPL was not distributed with this file, you can obtain one
-# at https://mozilla.org/MPL/x.x.
+function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-# This file is inspired by and re-uses parts from the source code of
-# SDDiP.jl (lkapelevich),
-# SLDP.jl (bfpc)
-# and especially SDDP.jl (odow)
-# and piecewiseLinearOpt.jl (joehuchette).
-
-
-"""
-    NCNBD.piecewiseLinearRelaxation!(node::SDDP.Node, algoParams::AlgoParams, appliedSolvers::AppliedSolvers)
-
-Determines a piecewise linear relaxation for all nonlinear functions in node.
-
-"""
-
-function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appliedSolvers::NCNBD.AppliedSolvers)
-
-    # MILP subproblem
-    linearizedSubproblem = node.ext[:linSubproblem]
-
-    # TODO: Alternative: Define dicts for lists for storing variable
-    # and constraint references in linearizedSubproblem.ext.
-    #linearizedSubproblem.ext[:varReferences]
-    #linearizedSubproblem.ext[:constrReferences]
-
-    # LOOP OVER ALL NONLINEAR FUNCTIONS AND CALL MORE SPECIFIC FUNCTIONS
+    # CALL THE INNER LOOP AND GET BACK RESULTS IF CONVERGED
     ############################################################################
-    for nlIndex in 1:size(node.ext[:nlFunctions],1)
-        # Get nonlinear function
-        nlFunction = node.ext[:nlFunctions][nlIndex]
+    # TODO: TO BE IMPLEMENTED
+    #TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
+    #    inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
+    #end
 
-        # Determine Triangulation
-        nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)
-
-        # Define overestimation/underestimation problem
-        estimationProblem = JuMP.Model(appliedSolvers.MINLP)
-        estimationProblem = JuMP.Model(GAMS.Optimizer)
-        JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
-        #JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
-
-        # Determine Piecewise Linear Approximation
-        piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
-
-        # Determine number of simplices in triangulation
-        number_of_simplices = size(nlFunction.triangulation.simplices, 1)
-
-        # Shift approximation to obtain a relaxation
-        for simplex_index in 1:number_of_simplices
-            determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
-        end
-
-        # Get dimension
-        dimension = size(nlFunction.variablesContained, 1)
-
-        # Add relaxation constraints to linearizedSubproblem
-        λ = linearizedSubproblem[:λ]
-        e = linearizedSubproblem[:e]
-
-        relax_1 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
-        relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
-        push!(nlFunction.triangulation.plrConstraints, relax_1)
-        push!(nlFunction.triangulation.plrConstraints, relax_2)
-
+    # START AN OUTER LOOP FORWARD PASS
+    ############################################################################
+    TimerOutputs.@timeit NCNBD_TIMER "outer_loop_solution" begin
+        forward_results = NCNBD.outer_loop_forward_pass(model, options, algoParams, appliedSolvers)
     end
+    # forward_pass options?
+    # TODO: values of which variables to return in optimal solution? Only states or all?
+
+    # DETERMINE AN ALTERNATIVE LOWER BOUND
+    ############################################################################
+    # TODO: TO BE IMPLEMENTED
+    # This can just be determined as the solution of the first stage from forward_results
+
+    # LOGGING RESULTS?
+    ############################################################################
+    # push!(
+    #     options.log,
+    #     Log(
+    #         length(options.log) + 1,
+    #         bound,
+    #         forward_trajectory.cumulative_value,
+    #         time() - options.start_time,
+    #         Distributed.myid(),
+    #         model.ext[:total_solves],
+    #     ),
+    # )
+
+    # CONVERGENCE TEST
+    ############################################################################
+    # TODO: Here we should use a classical convergence test
+    # Later on, also SDDP stopping rules should be considered
+    #has_converged, status = convergence_test(model, options.log, options.stopping_rules)
+
+    # RETURN RESULTS
+    ############################################################################
+    return OuterLoopResult(
+        Distributed.myid(),
+        bound,
+        forward_trajectory.cumulative_value,
+        has_converged,
+        status,
+        cuts,
+    )
 end
 
+function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-"""
-    NCNBD.piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
-
-Determines a piecewise linear relaxation for all nonlinear functions in node.
-
-"""
-
-function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaPrecision::Float64)
-
-    # CHECK FOR ONE- OR TWO-DIMENSIONAL CASE
+    # SAMPLING AND INITIALIZATION (JUST LIKE IN SDDP)
     ############################################################################
-    dimension = size(nlFunction.variablesContained, 1)
+    # First up, sample a scenario. Note that if a cycle is detected, this will
+    # return the cycle node as well.
+    TimerOutputs.@timeit NCBD_TIMER "sample_scenario_outer" begin
+        scenario_path, terminated_due_to_cycle =
+            SDDP.sample_scenario(model, options.sampling_scheme)
+    end
+    # Storage for the list of outgoing states that we visit on the forward pass.
+    sampled_states = Dict{Symbol,Float64}[]
+    # Storage for the belief states: partition index and the belief dictionary.
+    belief_states = Tuple{Int,Dict{T,Float64}}[]
+    current_belief = SDDP.initialize_belief(model)
+    # Our initial incoming state.
+    incoming_state_value = copy(options.initial_state)
+    # A cumulator for the stage-objectives.
+    cumulative_value = 0.0
+    # Objective state interpolation.
+    objective_state_vector, N = SDDP.initialize_objective_state(model[scenario_path[1][1]])
+    objective_states = NTuple{N,Float64}[]
 
-    # 1D
+    # ACTUAL ITERATION
     ############################################################################
-    if dimension == 1
-        # get interval to be considered
-        lower_bound = JuMP.lower_bound(nlFunction.variablesContained[1])
-        upper_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
-        interval_length = upper_bound - lower_bound
-
-        # determine uniform grid based on user-given precision
-        # note: if precision is no exact divisor of interval_length, the precision
-        # is decreased to obtain a uniform grid
-        number_of_simplices = ceil(Int64, interval_length / plaPrecision)
-        simplex_length = interval_length / number_of_simplices
-
-        # pre-allocate storage for simplice
-        simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
-        vertices = Array{Float64,2}(undef, dimension+1, 1)
-        vertice_values = Vector{Float64}(undef, dimension+1)
-
-        # add first values to vectors
-        xcoord = lower_bound
-        func_value = nlFunction.nonlinfunc_eval(xcoord)
-
-        # determine simplices
-        for simplexIndex = 1 : number_of_simplices
-            # add both vertices
-            vertices[1] = xcoord
-            xcoord += simplex_length
-            vertices[2] = xcoord
-
-            # add function values
-            vertice_values[1] = func_value
-            func_value =  nlFunction.nonlinfunc_eval(xcoord)
-            vertice_values[2] = func_value
-
-            # add simplex to list
-            simplices[simplexIndex] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
+    # Iterate down the scenario.
+    for (depth, (node_index, noise)) in enumerate(scenario_path)
+        node = model[node_index]
+        # Objective state interpolation.
+        objective_state_vector =
+            update_objective_state(node.objective_state, objective_state_vector, noise)
+        if objective_state_vector !== nothing
+            push!(objective_states, objective_state_vector)
         end
-
-        @assert xcoord == upper_bound
-
-        # set up triangulation
-        triangulation = Triangulation(simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())
-
-        nlFunction.triangulation = triangulation
-        nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
-        nlFunction.triangulation.ext[:node] = node
-
-    # 2D
-    ############################################################################
-    elseif dimension == 2
-        # DETERMINE UNIFORM GRID
-        ########################################################################
-        # get interval to be considered
-        lower_bound_1 = JuMP.lower_bound(nlFunction.variablesContained[1])
-        upper_bound_1 = JuMP.upper_bound(nlFunction.variablesContained[1])
-        interval_length_1 = upper_bound_1 - lower_bound_1
-
-        lower_bound_2 = JuMP.lower_bound(nlFunction.variablesContained[2])
-        upper_bound_2 = JuMP.upper_bound(nlFunction.variablesContained[2])
-        interval_length_2 = upper_bound_2 - lower_bound_2
-
-        # determine uniform grid based on user-given precision
-        # note: if precision is no exact divisor of interval_length, the precision
-        # is decreased to obtain a uniform grid
-        number_of_points_1 = ceil(Int64, interval_length_1 / plaPrecision) + 1
-        number_of_points_2 = ceil(Int64, interval_length_2 / plaPrecision) + 1
-        number_of_points = number_of_points_1 * number_of_points_2
-
-        # length of grid elements
-        length_points_1 = interval_length_1 / (number_of_points_1 - 1)
-        length_points_2 = interval_length_2 / (number_of_points_2 - 1)
-
-        # pre-allocate storage for simplices and points
-        xgrid = Array{Float64}(undef, number_of_points, 2)
-        values_grid = Array{Float64}(undef, number_of_points)
-
-        # determine all points in the grid
-        for ind_1 in 1:number_of_points_1
-            for ind_2 in 1:number_of_points_2
-                coord_1 = lower_bound_1 + (ind_1 - 1) * length_points_1
-                coord_2 = lower_bound_2 + (ind_2 - 1) * length_points_2
-
-                ind = ind_2 + (ind_1 - 1) * number_of_points_2
-                xgrid[ind, :] = [coord_1 coord_2]
-                values_grid[ind] = nlFunction.nonlinfunc_eval(xgrid[ind, 1], xgrid[ind, 2])
+        # Update belief state, etc.
+        if node.belief_state !== nothing
+            belief = node.belief_state::BeliefState{T}
+            partition_index = belief.partition_index
+            current_belief =
+                belief.updater(belief.belief, current_belief, partition_index, noise)
+            push!(belief_states, (partition_index, copy(current_belief)))
+        end
+        # ===== Begin: starting state for infinite horizon =====
+        starting_states = options.starting_states[node_index]
+        if length(starting_states) > 0
+            # There is at least one other possible starting state. If our
+            # incoming state is more than δ away from the other states, add it
+            # as a possible starting state.
+            if distance(starting_states, incoming_state_value) >
+               options.cycle_discretization_delta
+                push!(starting_states, incoming_state_value)
             end
+            # TODO(odow):
+            # - A better way of randomly sampling a starting state.
+            # - Is is bad that we splice! here instead of just sampling? For
+            #   convergence it is probably bad, since our list of possible
+            #   starting states keeps changing, but from a computational
+            #   perspective, we don't want to keep a list of discretized points
+            #   in the state-space δ distance apart...
+            incoming_state_value = splice!(starting_states, rand(1:length(starting_states)))
         end
+        # ===== End: starting state for infinite horizon =====
 
-        @assert xgrid[number_of_points, 1] == upper_bound_1
-        @assert xgrid[number_of_points, 2] == upper_bound_2
+        # Set optimizer to MINLP optimizer
+        set_optimizer(model, appliedSolvers['MINLP'])
 
-        # DETERMINE TRIANGULATION
-        ########################################################################
-        # determine the simplices using Delaunay package
-        simplices_delaunay = Delaunay.delaunay(xgrid).simplices
-
-        # pre-allocate storage for simplices
-        simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
-        vertices = Vector{Float64}(undef, dimension+1, 2)
-        vertice_values = Vector{Float64}(undef, dimension+1)
-
-        # CREATE SIMPLICES AND TRIANGULATION IN OUR FORMATS
-        ########################################################################
-        # create Simplex structs in our format
-        for simplex_index in 1:number_of_simplices
-            simplex_delaunay = simplices_delaunay[simplex_index, :]
-            for i in 1:dimension+1
-                vertices[i, :] = xgrid[simplex_delaunay[i]]
-                vertice_values[i] = values_grid[simplex_delaunay[i]]
-            end
-            simplices[simplexIndex] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
+        # Solve the subproblem, note that `require_duals = false`.
+        TimerOutputs.@timeit SDDP_TIMER "solve_subproblem" begin
+            subproblem_results = solve_subproblem(
+                model,
+                node,
+                incoming_state_value,
+                noise,
+                scenario_path[1:depth],
+                require_duals = false,
+            )
         end
+        # Cumulate the stage_objective.
+        cumulative_value += subproblem_results.stage_objective
+        # Set the outgoing state value as the incoming state value for the next
+        # node.
+        incoming_state_value = copy(subproblem_results.state)
+        # Add the outgoing state variable to the list of states we have sampled
+        # on this forward pass.
+        push!(sampled_states, incoming_state_value)
 
-        # set up triangulation
-        triangulation = Triangulation(simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())
+        # Save
 
-        nlFunction.triangulation = triangulation
-        nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction
-        nlFunction.triangulation.ext[:node] = node
-
-    # OTHER CASES
-    ############################################################################
-    else
-        Print("TODO: Error message and stopping")
-        # throw ErrorException(dimension, "Nonlinearities have to be one- or two-dimensional.")
+    end
+    if terminated_due_to_cycle
+        # Get the last node in the scenario.
+        final_node_index = scenario_path[end][1]
+        # We terminated due to a cycle. Here is the list of possible starting
+        # states for that node:
+        starting_states = options.starting_states[final_node_index]
+        # We also need the incoming state variable to the final node, which is
+        # the outgoing state value of the last node:
+        incoming_state_value = sampled_states[end]
+        # If this incoming state value is more than δ away from another state,
+        # add it to the list.
+        if distance(starting_states, incoming_state_value) >
+           options.cycle_discretization_delta
+            push!(starting_states, incoming_state_value)
+        end
     end
 
-    return triangulation
-
-end
-
-"""
-    NCNBD.piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.Model, estimationProblem::JuMP.Model)
-
-Determines an MILP model for the piecewise linear approximation given by the triangulation.
-Currently, only allows for a disaggregated logarithmic convex combination model.
-Note that also the over-/underestimation problem is set up using these constraints.
-
-"""
-
-function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.Model, estimationProblem::JuMP.Model)
-
-    # GET REQUIRED PARAMETES
-    ############################################################################
-    number_of_simplices = size(triangulation.simplices, 1)
-    dimension = size(triangulation.ext[:nonlinearFunction].variablesContained, 1)
-
-    @assert dimension <= 2
-    @assert dimension >= 1
-
-    # ADD VARIABLES
-    ############################################################################
-    # variables associated with nonlinear function
-    if dimension == 1
-        x_1 = triangulation.ext[:nonlinearFunction].variablesContained[1]
-
-        # set up variables required for estimationProblem (we cannot use x_1 here)
-        x_1_est = JuMP.@variable(estimationProblem, base_name="x_1_est")
-        JuMP.set_lower_bound(x_1_est, JuMP.lower_bound(x_1))
-        JuMP.set_upper_bound(x_1_est, JuMP.upper_bound(x_1))
-        estimationProblem[:x_1_est] = x_1_est
-
-    elseif dimension == 2
-        x_1 = triangulation.ext[:nonlinearFunction].variablesContained[1]
-        x_2 = triangulation.ext[:nonlinearFunction].variablesContained[2]
-
-        # set up variables required for estimationProblem (we cannot use x_1 here)
-        x_1_est = JuMP.@variable(estimationProblem, base_name="x_1_est")
-        JuMP.set_lower_bound(x_1_est, JuMP.lower_bound(x_1))
-        JuMP.set_upper_bound(x_1_est, JuMP.upper_bound(x_1))
-        estimationProblem[:x_1_est] = x_1_est
-
-        # set up variables required for estimationProblem (we cannot use x_1 here)
-        x_2_est = JuMP.@variable(estimationProblem, base_name="x_2_est")
-        JuMP.set_lower_bound(x_2_est, JuMP.lower_bound(x_2))
-        JuMP.set_upper_bound(x_2_est, JuMP.upper_bound(x_2))
-        estimationProblem[:x_2_est] = x_2_est
+    # ===== End: drop off starting state if terminated due to cycle =====
+    return (
+        scenario_path = scenario_path,
+        sampled_states = sampled_states,
+        objective_states = objective_states,
+        belief_states = belief_states,
+        cumulative_value = cumulative_value,
+    )
     end
 
-    # TODO: Pre-allocation instead of push. But then I have to determine
-    # how many variables/constraints have to be added.
-
-    # variable to encode function value of PLA
-    y = JuMP.@variable(linSubproblem, base_name="y_$nlIndex")
-    push!(triangulation.plrVariables, y)
-    y_est = JuMP.@variable(estimationProblem, base_name="y_est")
-    estimationProblem[:y_est] = y_est
-
-    # variable to encode convex combination
-    λ = JuMP.@variable(linSubproblem, [i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1, base_name="λ_$nlIndex")
-    append!(triangulation.plrVariables, λ)
-    linSubproblem[:λ] = λ
-    λ_est = JuMP.@variable(estimationProblem, [i=1:number_of_simplices, j=1:dimension+1], lower_bound=0, upper_bound=1, base_name="λ_est")
-    estimationProblem[:λ_est] = λ_est
-
-    # variables for log modeling
-    number_log = ceil(Int, log2(number_of_simplices))
-    z = JuMP.@variable(linSubproblem, [l=1:number_log], Bin, base_name="z_$nlIndex")
-    append!(triangulation.plrVariables, z)
-    # note z_est is not binary, as we will fix these values in the estimation problem anyway
-    z_est = JuMP.@variable(estimationProblem, [l=1:number_log], base_name="z_est")
-    estimationProblem[:z_est] = z_est
-
-    # variable for shift
-    e = JuMP.@variable(linSubproblem, base_name="e_$nlIndex")
-    linSubproblem[:e] = e
-    push!(triangulation.plrVariables, e)
-
-    # ADD CONSTRAINTS
-    ############################################################################
-    # constraints to identify simplex
-    # sum of convex coefficients must be 1
-    convexSum = JuMP.@constraint(linSubproblem, sum(λ) == 1)
-    push!(triangulation.plrConstraints, convexSum)
-    convexSum_est = JuMP.@constraint(estimationProblem, sum(λ_est) == 1)
-
-    # reflected gray codes provide the unique identification of the logarithmic binary encoding
-    c = PiecewiseLinearOpt.reflected_gray_codes(number_log)
-    triangulation.ext[:gray_code] = c
-
-    # log modeling constraints
-    for l in 1:number_log
-        exp = JuMP.@expression(linSubproblem, sum(c[i][l] * λ[i,j] for i in 1:number_of_simplices, j in 1:dimension + 1) - z[l])
-        logConst1 = JuMP.@constraint(linSubproblem, exp <= 0)
-        exp2 = JuMP.@expression(linSubproblem, sum((1-c[i][l])* λ[i,j] for i in 1:number_of_simplices, j in 1:dimension + 1) - 1 + z[l])
-        logConst2 = JuMP.@constraint(linSubproblem, exp2 <= 0)
-        push!(triangulation.plrConstraints, logConst1)
-        push!(triangulation.plrConstraints, logConst2)
-
-        exp_est = JuMP.@expression(estimationProblem, sum(c[i][l] * λ_est[i,j] for i in 1:number_of_simplices, j in 1:dimension + 1) - z_est[l])
-        logConst1_est = JuMP.@constraint(estimationProblem, exp_est <= 0)
-        exp2_est = JuMP.@expression(estimationProblem, sum((1-c[i][l])* λ_est[i,j] for i in 1:number_of_simplices, j in 1:dimension + 1) - 1 + z_est[l])
-        logConst2_est = JuMP.@constraint(estimationProblem, exp2_est <= 0)
-    end
-
-    # function value encoding
-    yConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertice_values[j] for  i in 1:number_of_simplices, j in 1:dimension+1) + e == y )
-    push!(triangulation.plrConstraints, yConst)
-    yConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertice_values[j] for  i in 1:number_of_simplices, j in 1:dimension+1) == y_est )
-
-    # original variable encoding
-    if dimension == 1
-        xConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
-        push!(triangulation.plrConstraints, xConst)
-
-        xConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1_est )
-    elseif dimension == 2
-        xConst1 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
-        push!(triangulation.plrConstraints, xConst1)
-        xConst1_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1_est )
-
-        xConst2 = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2 )
-        push!(triangulation.plrConstraints, xConst2)
-        xConst2_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertices[j, 2] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_2_est )
-    end
-
-end
-
-
-"""
-    NCNBD.determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunction,
-    estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers)
-
-Determines an up and down shift based on the maximum overestimation and underestimation errors of the PLA determined before.
-Return both shifts in a vector.
-
-"""
-
-function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunction, estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers)
-
-    # DEFINE SIMPLEX CONSTRAINTS BY SETTING LOG VARIABLES TO SPECIFIC GRAY CODE
-    ############################################################################
-    # log number
-    number_log = ceil(Int, log2(size(nlfunction.triangulation.simplices, 1)))
-
-    # Get z variable
-    z = estimationProblem[:z_est]
-
-    # set values of z to gray_code of given simplex
-    for l = 1:number_log
-        JuMP.fix(z[l], nlfunction.triangulation.ext[:gray_code][simplex_index][l], force=true)
-    end
-    # ; force = true
-
-    # INITIALIZATION
-    ############################################################################
-    # dimension
-    dimension = size(nlfunction.variablesContained, 1)
-    # required variable representing PLA function value
-    y_est = estimationProblem[:y_est]
-
-    # variableRefs to insert into nonlinear expression
-    # variablesContained = nlfunction.variablesContained
-    # note that we cannot insert nlfunction.variablesContained, since those variables
-    # belong to the linearized subproblem. We have to use x_1_est and x_2_est
-
-    if dimension == 1
-        x_1 = estimationProblem[:x_1_est]
-        nonlinearobj = nlfunction.nonlinfunc_exp(x_1)
-    elseif dimension == 2
-        x_1 = estimationProblem[:x_1_est]
-        x_2 = estimationProblem[:x_2_est]
-        nonlinearobj = nlfunction.nonlinfunc_exp(x_1, x_2)
-    end
-
-    # DETERMINE AND SOLVE MAXIMUM OVERESTIMATION PROBLEM
-    ############################################################################
-    # nonlinear expression describing the approximated function
-    JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(y_est) - $(nonlinearobj)))
-
-    println("###################################################################")
-    println("Simplex: ", simplex_index)
-    println("Max overestimation error")
-    println(estimationProblem)
-
-    JuMP.optimize!(estimationProblem)
-    # TODO: Check if globally optimal solution
-    overestimation = JuMP.objective_value(estimationProblem)
-
-    println("optimal x: ", JuMP.value(estimationProblem[:x_1_est]))
-    println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
-    println("optimal value: ", overestimation)
-
-    #@infiltrate
-    # x_opt = JuMP.value(estimationProblem[:x_1_est])
-    # y_opt = JuMP.value(estimationProblem[:y_est])
-    # l_opt_1 = JuMP.value(estimationProblem[:λ_est][simplex_index,1])
-    # l_opt_2 = JuMP.value(estimationProblem[:λ_est][simplex_index,2])
-    # l_opt_r = JuMP.value(estimationProblem[:λ_est][simplex_index+1,1])
-    # println(l_opt_1)
-    # println(l_opt_2)
-    # println(l_opt_r)
-
-    # vertex_indices = nlfunction.triangulation.simplices[simplex_index, :]
-    # x_val = 0
-    # y_val = 0
-    #
-    # for i in 1:dimension+1
-    #     vertex_index = vertex_indices[i]
-    #     vertex = nlfunction.triangulation.vertices[vertex_index]
-    #     vertex_value = nlfunction.triangulation.verticeValues[vertex_index]
-    #     x_val += JuMP.value(estimationProblem[:λ_est][simplex_index,i]) * vertex
-    #     y_val += JuMP.value(estimationProblem[:λ_est][simplex_index,i]) * vertex_value
-    # end
-    # println("calculated x: ", x_val)
-    # println("calculated y: ", y_val)
-    # @infiltrate
-
-    # DETERMINE AND SOLVE MAXIMUM UNDERESTIMATION PROBLEM
-    ############################################################################
-    JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(nonlinearobj) - $(y_est)))
-    # println("Max underestimation error")
-    # println(estimationProblem)
-
-    JuMP.optimize!(estimationProblem)
-    # TODO: Check if globally optimal solution
-    underestimation = JuMP.objective_value(estimationProblem)
-
-    # println("optimal x: ", JuMP.value(estimationProblem[:x_1_est]))
-    # println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
-    # println("optimal value: ", underestimation)
-    # println("###################################################################")
-
-    # UNFIX VARIABLES AGAIN
-    ############################################################################
-    for l = 1:number_log
-        JuMP.unfix(z[l])
-    end
-
-    # STORE ESTIMATION ERRORS
-    ############################################################################
-    nlfunction.triangulation.simplices[simplex_index].maxOverestimation = overestimation
-    nlfunction.triangulation.simplices[simplex_index].maxUnderestimation = underestimation
 
 end
