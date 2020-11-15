@@ -247,6 +247,13 @@ function solve(
     return
 end
 
+"""
+    NCNBD.solve_ncnbd(parallel_scheme::SDDP.Serial, model::PolicyGraph, options:SDDP.Options,
+    algoParams::AlgoParams, initialAlgoParams:InitialAlgoParams, appliedSolvers::AppliedSolvers ; kwargs...)
+
+Solves the `model` using NCNBD in a serial scheme.
+"""
+
 function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams,
     initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
@@ -283,10 +290,17 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################
-    # status = master_loop_ncbd(parallel_scheme, model, options, algoParams, appliedSolvers)
-    # return status
+    status = master_loop_ncbd(parallel_scheme, model, options, algoParams, appliedSolvers)
+    return status
 
 end
+
+"""
+    NCNBD.solve_ncnbd_inner(parallel_scheme::SDDP.Serial, model::PolicyGraph, options:SDDP.Options,
+    algoParams::AlgoParams, initialAlgoParams:InitialAlgoParams, appliedSolvers::AppliedSolvers ; kwargs...)
+
+Solves the `model` (MILP) using the inner loop of NCNBD in a serial scheme.
+"""
 
 function solve_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
@@ -296,6 +310,12 @@ function solve_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
 
 end
 
+"""
+    NCNBD.solve_sddp(parallel_scheme::SDDP.Serial, model::PolicyGraph, options:SDDP.Options)
+
+Solves the `model` (LP) using SDDP in a serial scheme.
+"""
+
 function solve_sddp(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::SDDP.Options) where {T}
 
     status = SDDP.master_loop(parallel_scheme, model, options)
@@ -303,24 +323,64 @@ function solve_sddp(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T}, op
 
 end
 
+"""
+    NCNBD.master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
+        options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers)
+
+Outer loop function of NCNBD.
+"""
+
 function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams) where {T}
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
     while true
-        result = outer_loop(model, options)
+        result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
         log_iteration(options)
-        if result.has_converged
-            return result.status
+        if result_outer.has_converged
+            return result_outer.status
+        else
+            piecewise_linear_refinement(model, options, algoParams, appliedSolvers)
+            # also give solution from result_outer
+        #TODO: When to increase sigma? Every other iteration?
         end
     end
 end
 
+"""
+    NCNBD.master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
+        options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers)
+
+Inner loop function of NCNBD, if only inner loop is used.
+"""
+
 function master_loop_ncbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
     while true
-        result = inner_loop(model, options)
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
         log_iteration(options)
-        if result.has_converged
-            return result.status
+        if result_inner.has_converged
+            return result_inner.status
+        end
+    end
+end
+
+"""
+    NCNBD.master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
+        options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers)
+
+Inner loop function of NCNBD, if also outer loop is used.
+"""
+
+function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
+    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+    while true
+        # start an inner loop
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
+        # logging preparation (in contrast to SDDP here instead of inner_loop_iteration?)
+        # logging
+        log_iteration(options)
+        if result_inner.has_converged
+            # return all results here to keep them accessible in outer pass
+            return result_inner
         end
     end
 end

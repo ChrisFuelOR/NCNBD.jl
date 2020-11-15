@@ -73,6 +73,7 @@ mutable struct NonlinearFunction
     # refToNonlinearConstraint :: JuMP.ConstraintRef # just for allocation # not used anymore and does not work for add_NL_constraint
     variablesContained :: Vector{JuMP.VariableRef} # for getting bounds for Triangulation
     triangulation :: Union{Triangulation, Nothing} # to store related Triangulation
+    ext::Dict{Symbol,Any} # required to store solutions later
 
     function NonlinearFunction(
         nonlinfunc_eval::Any, # Function
@@ -87,7 +88,8 @@ mutable struct NonlinearFunction
             auxVariable,
             #refToNonlinearConstraint,
             variablesContained,
-            nothing
+            nothing,
+            Dict{Symbol,Any}()
         )
     end
 
@@ -114,12 +116,14 @@ end
     # do we need to store the trial point also in binary? I think not because
     # we can always convert it. Do we really need binaryNum and binaryEps?
 
-
-
-#nlf1 = NonlinearFunction(variables_nfl1, nonlinearAux, nlcon, quadr)
-
-#struct PiecewiseLinearRelaxation
-#    triangulation
-#    simplices
-#    errorToShift        ::  #Must be related to triangulation simplices (ggf. in PWL)
-#end
+# struct for outer loop iteration results
+struct OuterLoopIterationResult
+    # pid
+    lower_bound :: Float64 # here the inner or outer loop lower bound can be used
+    upper_bound :: Float64 # should be renamed as cumulative_value as in SDDP if we solve stochastic problems
+    current_sol :: Vector{Dict{JuMP.VariableRef, Float64}}
+    has_converged :: Bool
+    status :: Symbol # solution status (i.e. number of iterations)
+    nonlinearCuts :: Dict{T, Vector{Any}} # only required for logging, binary explanation
+    # however, then also binary precision / K should be stored for interpretability
+end
