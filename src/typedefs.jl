@@ -127,3 +127,15 @@ struct OuterLoopIterationResult
     nonlinearCuts :: Dict{T, Vector{Any}} # only required for logging, binary explanation
     # however, then also binary precision / K should be stored for interpretability
 end
+
+# struct for inner loop iteration results
+struct InnerLoopIterationResult
+    # pid
+    lower_bound :: Float64
+    upper_bound :: Float64 # should be renamed as cumulative_value as in SDDP if we solve stochastic problems
+    current_sol :: Vector{Dict{JuMP.VariableRef, Float64}} # current solution of state variables (also required for binary refinement)
+    has_converged :: Bool
+    status :: Symbol # solution status (i.e. number of iterations)
+    nonlinearCuts :: Dict{T, Vector{Any}} # only required for logging, binary explanation
+    # however, then also binary precision / K should be stored for interpretability
+end
