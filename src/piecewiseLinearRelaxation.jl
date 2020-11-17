@@ -457,7 +457,7 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
 
 end
 
-function piecewiseLinearRefinement!(::SDDP.PolicyGraph{T})
+function piecewiseLinearRefinement!(::SDDP.PolicyGraph{T}) where{T}
     # ITERATE OVER NODES
     ############################################################################
     for (node_index, children) in model.nodes
@@ -484,7 +484,7 @@ function piecewiseLinearRefinement!(::SDDP.PolicyGraph{T})
             if dimension == 1
                 optpoint = nlFunction.ext[:optSolution][variablesContained[1]]
             elseif dimension == 2
-                optpoint = [nlFunction.ext[:optSolution][variablesContained[1]], nlFunction.ext[:optSolution][variablesContained[2]]
+                optpoint = [nlFunction.ext[:optSolution][variablesContained[1]], nlFunction.ext[:optSolution][variablesContained[2]]]
             end
 
             # store new simplices
