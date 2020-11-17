@@ -117,7 +117,7 @@ end
     # we can always convert it. Do we really need binaryNum and binaryEps?
 
 # struct for outer loop iteration results
-struct OuterLoopIterationResult
+struct OuterLoopIterationResult{T}
     # pid
     lower_bound :: Float64 # here the inner or outer loop lower bound can be used
     upper_bound :: Float64 # should be renamed as cumulative_value as in SDDP if we solve stochastic problems
@@ -129,7 +129,7 @@ struct OuterLoopIterationResult
 end
 
 # struct for inner loop iteration results
-struct InnerLoopIterationResult
+struct InnerLoopIterationResult{T}
     # pid
     lower_bound :: Float64
     upper_bound :: Float64 # should be renamed as cumulative_value as in SDDP if we solve stochastic problems
