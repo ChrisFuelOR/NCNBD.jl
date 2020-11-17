@@ -54,7 +54,7 @@ function thirdExample()
             SDDP.@stageobjective(subproblem, y_loc)
 
             y_loc = linearizedSubproblem[:y_loc]
-            NCNBD.@stageobjective(linearizedSubproblem, y_loc)
+            NCNBD.@lin_stageobjective(linearizedSubproblem, y_loc)
 
             # DEFINE NONLINEARITY
             # ------------------------------------------------------------------
@@ -113,7 +113,7 @@ function thirdExample()
             SDDP.@stageobjective(subproblem, y_loc[1])
 
             y_loc = linearizedSubproblem[:y_loc]
-            NCNBD.@stageobjective(linearizedSubproblem, y_loc[1])
+            NCNBD.@lin_stageobjective(linearizedSubproblem, y_loc[1])
 
             # DEFINE NONLINEARITY
             # ------------------------------------------------------------------

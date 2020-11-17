@@ -279,7 +279,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
         # set objective function
         JuMP.set_objective_sense(node.ext[:linSubproblem], model.objective_sense)
-        set_objective(node.ext[:linSubproblem])
+        set_lin_objective(node.ext[:linSubproblem])
 
         # place holder for state variable refs of linearized problem
         node.ext[:lin_states] = Dict{Symbol,State{JuMP.VariableRef}}()

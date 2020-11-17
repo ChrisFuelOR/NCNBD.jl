@@ -1,6 +1,6 @@
-macro stageobjective(subproblem, expr)
+macro lin_stageobjective(subproblem, expr)
     code = quote
-        set_stage_objective(
+        set_lin_stage_objective(
             $(esc(subproblem)),
             $(Expr(
                 :macrocall,
@@ -15,7 +15,7 @@ macro stageobjective(subproblem, expr)
 end
 
 
-function set_stage_objective(subproblem::JuMP.Model, stage_objective)
+function set_lin_stage_objective(subproblem::JuMP.Model, stage_objective)
     node = get_node(subproblem)
     node.ext[:stage_objective] = stage_objective
     node.ext[:stage_objective_set] = false
@@ -24,7 +24,7 @@ end
 
 # Internal function: set the objective of node to the stage objective, plus the
 # cost/value-to-go term.
-function set_objective(subproblem::JuMP.Model)
+function set_lin_objective(subproblem::JuMP.Model)
     node = get_node(subproblem)
     objective_state_component = get_objective_state_component(node)
     belief_state_component = get_belief_state_component(node)
