@@ -258,6 +258,9 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams,
     initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
+    # initial root state storage for linearized problem
+    model.ext[:lin_initial_root_state] = Dict{Symbol,Float64}()
+
     # SHIFT LINEARIZED SUBPROBLEM AND NONLINEAR FUNCTION LIST TO NODES
     ############################################################################
     for (node_index, children) in model.nodes
@@ -272,6 +275,14 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         node.ext[:linSubproblem].ext[:sddp_node] = node
         node.ext[:linSubproblem].ext[:sddp_policy_graph] = model
 
+        # TODO: set Bellman function
+
+        # set objective function
+        JuMP.set_objective_sense(node.ext[:linSubproblem], model.objective_sense)
+        set_objective(node.ext[:linSubproblem])
+
+        # place holder for state variable refs of linearized problem
+        node.ext[:lin_states] = Dict{Symbol,State{JuMP.VariableRef}}()
     end
 
     # INITIALIZE PIECEWISE LINEAR RELAXATION
@@ -308,6 +319,11 @@ function solve_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
     status = master_loop_ncbd_inner(parallel_scheme, model, options, algoParams)
     return status
 
+    # TODO: Hier muss man linearizedSubproblem = subproblem setzen.
+    # TODO: Hier muss man node.ext[:lin_states] auf Node.states setzen.
+    # TODO: Hier muss man model.ext[:lin_initial_root_state] auf model.initial_root_state setzen.
+    # Dann ist sichergestellt, dass in der inner_loop auch subproblem anstelle
+    # von linearizedSubproblem richtig gelöst wird
 end
 
 """
