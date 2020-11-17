@@ -8,11 +8,8 @@ struct State{T}
     # The upper bound
     ub::Float64
 
-    function State(
-        in::T,
-        out::T
-         ) where{T}
-        return new(
+    function State(in::T, out::T) where {T}
+        return new{T}(
             in,
             out,
             -Inf,
@@ -33,7 +30,7 @@ function setup_state(
     state::State,
     state_info::StateInfo,
     name::String,
-    ::ContinuousRelaxation,
+    ::SDDP.ContinuousRelaxation,
 )
     node = get_node(subproblem)
     sym_name = Symbol(name)
@@ -46,9 +43,9 @@ end
 
 # Internal function: set the incoming state variables of node to the values
 # contained in state.
-function set_incoming_state(node::Node, state::Dict{Symbol,Float64})
+function set_incoming_state(node::SDDP.Node, state::Dict{Symbol,Float64})
     for (state_name, value) in state
-        JuMP.fix(node.ext.[:lin_states][state_name].in, value)
+        JuMP.fix(node.ext[:lin_states][state_name].in, value)
     end
     return
 end
@@ -56,9 +53,9 @@ end
 # Internal function: get the values of the outgoing state variables in node.
 # Requires node.subproblem to have been solved with PrimalStatus ==
 # FeasiblePoint.
-function get_outgoing_state(node::Node)
+function get_outgoing_state(node::SDDP.Node)
     values = Dict{Symbol,Float64}()
-    for (name, state) in node.ext.[:lin_states]
+    for (name, state) in node.ext[:lin_states]
         # To fix some cases of numerical infeasiblities, if the outgoing value
         # is outside its bounds, project the value back onto the bounds. There
         # is a pretty large (×5) penalty associated with this check because it

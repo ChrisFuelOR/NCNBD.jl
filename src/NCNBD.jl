@@ -1,6 +1,6 @@
 module NCNBD
 
-import JuMP
+#import JuMP
 import SDDP
 import Delaunay
 import Gurobi
@@ -12,6 +12,8 @@ import SCIP
 import MathOptInterface
 import Distances
 
+import Reexport
+Reexport.@reexport using JuMP
 
 using Infiltrator
 

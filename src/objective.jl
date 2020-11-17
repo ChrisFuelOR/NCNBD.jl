@@ -14,7 +14,6 @@ macro lin_stageobjective(subproblem, expr)
     return code
 end
 
-
 function set_lin_stage_objective(subproblem::JuMP.Model, stage_objective)
     node = get_node(subproblem)
     node.ext[:stage_objective] = stage_objective
@@ -37,7 +36,7 @@ function set_lin_objective(subproblem::JuMP.Model)
             subproblem,
             JuMP.objective_sense(subproblem),
             @expression(
-                subproblem
+                subproblem,
                 node.stage_objective +
                 objective_state_component +
                 belief_state_component +

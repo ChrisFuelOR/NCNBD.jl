@@ -483,8 +483,8 @@ end
 # noise term noise. If require_duals=true, also return the dual variables
 # associated with the fixed constraint of the incoming state variables.
 function solve_subproblem(
-    model::PolicyGraph{T},
-    node::Node{T},
+    model::SDDP.PolicyGraph{T},
+    node::SDDP.Node{T},
     state::Dict{Symbol,Float64},
     noise,
     scenario_path::Vector{Tuple{T,S}};
