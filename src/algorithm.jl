@@ -85,13 +85,13 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         node = model[node_index]
         # Objective state interpolation.
         objective_state_vector =
-            update_objective_state(node.objective_state, objective_state_vector, noise)
+            SDDP.update_objective_state(node.objective_state, objective_state_vector, noise)
         if objective_state_vector !== nothing
             push!(objective_states, objective_state_vector)
         end
         # Update belief state, etc.
         if node.belief_state !== nothing
-            belief = node.belief_state::BeliefState{T}
+            belief = node.belief_state::SDDP.BeliefState{T}
             partition_index = belief.partition_index
             current_belief =
                 belief.updater(belief.belief, current_belief, partition_index, noise)
@@ -119,13 +119,13 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # ===== End: starting state for infinite horizon =====
 
         # Set optimizer to MINLP optimizer
-        set_optimizer(model, appliedSolvers['MINLP'])
+        set_optimizer(model, appliedSolvers[:MINLP])
 
         # SUBPROBLEM SOLUTION
         ############################################################################
         # Solve the subproblem, note that `require_duals = false`.
         TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
-            subproblem_results = solve_subproblem(
+            subproblem_results = SDDP.solve_subproblem(
                 model,
                 node,
                 incoming_state_value,
@@ -171,13 +171,10 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         belief_states = belief_states,
         cumulative_value = cumulative_value,
     )
-    end
-
-
 end
 
 
-function inner_loop_iteration(model::PolicyGraph{T}, options::Options,
+function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
     algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     # FORWARD PASS
@@ -247,139 +244,137 @@ function inner_loop_iteration(model::PolicyGraph{T}, options::Options,
 end
 
 
-function inner_loop_forward_pass(model::PolicyGraph{T}, options::Options,
+function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
     algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
     ::SDDP.DefaultForwardPass) where {T}
 
     # SAMPLING AND INITIALIZATION (JUST LIKE IN SDDP)
     ############################################################################
     # First up, sample a scenario. Note that if a cycle is detected, this will
-        # return the cycle node as well.
-        TimerOutputs.@timeit SDDP_TIMER "sample_scenario" begin
-            scenario_path, terminated_due_to_cycle =
-                SDDP.sample_scenario(model, options.sampling_scheme)
-        end
+    # return the cycle node as well.
+    TimerOutputs.@timeit SDDP_TIMER "sample_scenario" begin
+        scenario_path, terminated_due_to_cycle =
+            SDDP.sample_scenario(model, options.sampling_scheme)
+    end
 
-        #TODO: Has something here to be adapted such that it relates to the linearizedSubproblem?
-        # Storage for the list of outgoing states that we visit on the forward pass.
-        sampled_states = Dict{Symbol,Float64}[]
-        # Storage for the belief states: partition index and the belief dictionary.
-        belief_states = Tuple{Int,Dict{T,Float64}}[]
-        current_belief = SDDP.initialize_belief(model)
-        # Our initial incoming state.
-        incoming_state_value = copy(options.initial_state)
-        # A cumulator for the stage-objectives.
-        cumulative_value = 0.0
+    #TODO: Has something here to be adapted such that it relates to the linearizedSubproblem?
+    # Storage for the list of outgoing states that we visit on the forward pass.
+    sampled_states = Dict{Symbol,Float64}[]
+    # Storage for the belief states: partition index and the belief dictionary.
+    belief_states = Tuple{Int,Dict{T,Float64}}[]
+    current_belief = SDDP.initialize_belief(model)
+    # Our initial incoming state.
+    incoming_state_value = copy(model.ext[:lin_initial_root_state])
+    # A cumulator for the stage-objectives.
+    cumulative_value = 0.0
+    # Objective state interpolation.
+    objective_state_vector, N = SDDP.initialize_objective_state(model[scenario_path[1][1]])
+    objective_states = NTuple{N,Float64}[]
+
+    # ACTUAL ITERATION
+    ########################################################################
+    # Iterate down the scenario.
+    for (depth, (node_index, noise)) in enumerate(scenario_path)
+        node = model[node_index]
+
         # Objective state interpolation.
-        objective_state_vector, N = SDDP.initialize_objective_state(model[scenario_path[1][1]])
-        objective_states = NTuple{N,Float64}[]
-
-        # ACTUAL ITERATION
-        ########################################################################
-        # Iterate down the scenario.
-        for (depth, (node_index, noise)) in enumerate(scenario_path)
-            node = model[node_index]
-
-            # Objective state interpolation.
-            objective_state_vector =
-                SDDP.update_objective_state(node.objective_state, objective_state_vector, noise)
-            if objective_state_vector !== nothing
-                push!(objective_states, objective_state_vector)
-            end
-            # Update belief state, etc.
-            if node.belief_state !== nothing
-                belief = node.belief_state::SDDP.BeliefState{T}
-                partition_index = belief.partition_index
-                current_belief =
-                    belief.updater(belief.belief, current_belief, partition_index, noise)
-                push!(belief_states, (partition_index, copy(current_belief)))
-            end
-            # ===== Begin: starting state for infinite horizon =====
-            starting_states = options.starting_states[node_index]
-            if length(starting_states) > 0
-                # There is at least one other possible starting state. If our
-                # incoming state is more than δ away from the other states, add it
-                # as a possible starting state.
-                if distance(starting_states, incoming_state_value) >
-                   options.cycle_discretization_delta
-                    push!(starting_states, incoming_state_value)
-                end
-                # TODO(odow):
-                # - A better way of randomly sampling a starting state.
-                # - Is is bad that we splice! here instead of just sampling? For
-                #   convergence it is probably bad, since our list of possible
-                #   starting states keeps changing, but from a computational
-                #   perspective, we don't want to keep a list of discretized points
-                #   in the state-space δ distance apart...
-                incoming_state_value = splice!(starting_states, rand(1:length(starting_states)))
-            end
-            # ===== End: starting state for infinite horizon =====
-
-            # Set optimizer to MINLP optimizer
-            set_optimizer(model, appliedSolvers['MINLP'])
-
-            # REGULARIZE SUBPROBLEM
-            ############################################################################
-            linearizedSubproblem = node.ext[:linearizedSubproblem]
-            # storage for regularization data
-            node.ext[:regularization_data] = Dict{Symbol,Any}
-            # sigma for this stage
-            sigma = algoParams.sigma[node_index]
-            regularize_subproblem!(node, linearizedSubproblem, sigma)
-
-            # SUBPROBLEM SOLUTION
-            ############################################################################
-            # Solve the subproblem, note that `require_duals = false`.
-            TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
-                subproblem_results = solve_subproblem(
-                    model,
-                    node,
-                    incoming_state_value,
-                    noise,
-                    scenario_path[1:depth],
-                    require_duals = false,
-                )
-            end
-            # Cumulate the stage_objective.
-            cumulative_value += subproblem_results.stage_objective
-            # Set the outgoing state value as the incoming state value for the next
-            # node.
-            incoming_state_value = copy(subproblem_results.state)
-            # Add the outgoing state variable to the list of states we have sampled
-            # on this forward pass.
-            push!(sampled_states, incoming_state_value)
-
-            # DE-REGULARIZE SUBPROBLEM
-            ############################################################################
-            deregularize_subproblem!(node, linearizedSubproblem)
-
+        objective_state_vector =
+            SDDP.update_objective_state(node.objective_state, objective_state_vector, noise)
+        if objective_state_vector !== nothing
+            push!(objective_states, objective_state_vector)
         end
-        if terminated_due_to_cycle
-            # Get the last node in the scenario.
-            final_node_index = scenario_path[end][1]
-            # We terminated due to a cycle. Here is the list of possible starting
-            # states for that node:
-            starting_states = options.starting_states[final_node_index]
-            # We also need the incoming state variable to the final node, which is
-            # the outgoing state value of the last node:
-            incoming_state_value = sampled_states[end]
-            # If this incoming state value is more than δ away from another state,
-            # add it to the list.
+        # Update belief state, etc.
+        if node.belief_state !== nothing
+            belief = node.belief_state::SDDP.BeliefState{T}
+            partition_index = belief.partition_index
+            current_belief =
+                belief.updater(belief.belief, current_belief, partition_index, noise)
+            push!(belief_states, (partition_index, copy(current_belief)))
+        end
+        # ===== Begin: starting state for infinite horizon =====
+        starting_states = options.starting_states[node_index]
+        if length(starting_states) > 0
+            # There is at least one other possible starting state. If our
+            # incoming state is more than δ away from the other states, add it
+            # as a possible starting state.
             if distance(starting_states, incoming_state_value) >
                options.cycle_discretization_delta
                 push!(starting_states, incoming_state_value)
             end
+            # TODO(odow):
+            # - A better way of randomly sampling a starting state.
+            # - Is is bad that we splice! here instead of just sampling? For
+            #   convergence it is probably bad, since our list of possible
+            #   starting states keeps changing, but from a computational
+            #   perspective, we don't want to keep a list of discretized points
+            #   in the state-space δ distance apart...
+            incoming_state_value = splice!(starting_states, rand(1:length(starting_states)))
         end
-        # ===== End: drop off starting state if terminated due to cycle =====
-        return (
-            scenario_path = scenario_path,
-            sampled_states = sampled_states,
-            objective_states = objective_states,
-            belief_states = belief_states,
-            cumulative_value = cumulative_value,
-        )
-    end
+        # ===== End: starting state for infinite horizon =====
 
+        # Set optimizer to MINLP optimizer
+        set_optimizer(model, appliedSolvers[:MILP])
+
+        # REGULARIZE SUBPROBLEM
+        ############################################################################
+        linearizedSubproblem = node.ext[:linearizedSubproblem]
+        # storage for regularization data
+        node.ext[:regularization_data] = Dict{Symbol,Any}
+        # sigma for this stage
+        sigma = algoParams.sigma[node_index]
+        regularize_subproblem!(node, linearizedSubproblem, sigma)
+
+        # SUBPROBLEM SOLUTION
+        ############################################################################
+        # Solve the subproblem, note that `require_duals = false`.
+        TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
+            subproblem_results = solve_subproblem(
+                model,
+                node,
+                incoming_state_value,
+                noise,
+                scenario_path[1:depth],
+                require_duals = false,
+            )
+        end
+        # Cumulate the stage_objective.
+        cumulative_value += subproblem_results.stage_objective
+        # Set the outgoing state value as the incoming state value for the next
+        # node.
+        incoming_state_value = copy(subproblem_results.state)
+        # Add the outgoing state variable to the list of states we have sampled
+        # on this forward pass.
+        push!(sampled_states, incoming_state_value)
+
+        # DE-REGULARIZE SUBPROBLEM
+        ############################################################################
+        deregularize_subproblem!(node, linearizedSubproblem)
+
+    end
+    if terminated_due_to_cycle
+        # Get the last node in the scenario.
+        final_node_index = scenario_path[end][1]
+        # We terminated due to a cycle. Here is the list of possible starting
+        # states for that node:
+        starting_states = options.starting_states[final_node_index]
+        # We also need the incoming state variable to the final node, which is
+        # the outgoing state value of the last node:
+        incoming_state_value = sampled_states[end]
+        # If this incoming state value is more than δ away from another state,
+        # add it to the list.
+        if distance(starting_states, incoming_state_value) >
+           options.cycle_discretization_delta
+            push!(starting_states, incoming_state_value)
+        end
+    end
+    # ===== End: drop off starting state if terminated due to cycle =====
+    return (
+        scenario_path = scenario_path,
+        sampled_states = sampled_states,
+        objective_states = objective_states,
+        belief_states = belief_states,
+        cumulative_value = cumulative_value,
+    )
 end
 
 
@@ -453,7 +448,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     push!(reg_data[:reg_constraints], const_plus)
     push!(reg_data[:reg_constraints], const_minus)
 
-    plus_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states] slack[i] = slack_plus[i] - slack_minus[i])
+    plus_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack[i] == slack_plus[i] - slack_minus[i])
     push!(reg_data[:reg_constraints], plus_minus)
 
     const_norm = JuMP.@constraint(linearizedSubproblem, v >= sum(slack_plus[i] + slack_minus[i] for i in 1:number_of_states))
@@ -480,4 +475,70 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
     delete(linearizedSubproblem, reg_data[:reg_variables])
     delete(linearizedSubproblem, reg_data[:reg_constraints])
 
+end
+
+
+# Internal function: solve the subproblem associated with node given the
+# incoming state variables state and realization of the stagewise-independent
+# noise term noise. If require_duals=true, also return the dual variables
+# associated with the fixed constraint of the incoming state variables.
+function solve_subproblem(
+    model::PolicyGraph{T},
+    node::Node{T},
+    state::Dict{Symbol,Float64},
+    noise,
+    scenario_path::Vector{Tuple{T,S}};
+    require_duals::Bool,
+) where {T,S}
+
+    linearizedSubproblem = node.ext[:linearizedSubproblem]
+
+    # Parameterize the model. First, fix the value of the incoming state
+    # variables. Then parameterize the model depending on `noise`. Finally,
+    # set the objective.
+    set_incoming_state(node, state)
+    SDDP.parameterize(node, noise)
+
+    # pre_optimize_ret = if node.pre_optimize_hook !== nothing
+    #     node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
+    # else
+    #     nothing
+    # end
+
+    JuMP.optimize!(linearizedSubproblem)
+
+    if haskey(model.ext, :total_solves)
+        model.ext[:total_solves] += 1
+    else
+        model.ext[:total_solves] = 1
+    end
+
+    if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
+        SDDP.attempt_numerical_recovery(node)
+    end
+
+    state = get_outgoing_state(node)
+    stage_objective = stage_objective_value(node.stage_objective)
+    objective = JuMP.objective_value(node.subproblem)
+
+    # If require_duals = true, check for dual feasibility and return a dict with
+    # the dual on the fixed constraint associated with each incoming state
+    # variable. If require_duals=false, return an empty dictionary for
+    # type-stability.
+    dual_values = if require_duals
+        get_dual_variables(node, node.integrality_handler)
+    else
+        Dict{Symbol,Float64}()
+    end
+
+    if node.post_optimize_hook !== nothing
+        node.post_optimize_hook(pre_optimize_ret)
+    end
+
+    return (
+        state = state,
+        duals = dual_values,
+        objective = objective,
+        stage_objective = stage_objective,
+    )
 end
