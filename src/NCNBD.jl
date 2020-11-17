@@ -16,6 +16,7 @@ import Distances
 using Infiltrator
 
 
+export @lin_stageobjective
 
 # Write your package code here.
 include("typedefs.jl")
