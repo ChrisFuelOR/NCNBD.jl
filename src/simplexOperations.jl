@@ -117,11 +117,11 @@ function pointInTriangle(vertices::Array{Float64,2}, point::Vector{Float64})
 
     @assert size(vertices, 1) == 3
     @assert size(vertices, 2) == 2
-    @assert size(point, 1) = 2
+    @assert size(point, 1) == 2
 
-    denominator = ((vertices[2,2] - vertices[3,2])*(vertices[1][1] - vertices[3][1]) + (vertices[3,1] - vertices[2,1])*(vertices[1][2]] - vertices[3][2]))
-    weight_1 = ((vertices[2,2] - vertices[3,2])*(point[1] - vertices[3][1]) + (vertices[3,1] - vertices[2,1])*(point[2] - vertices[3][2])) / denominator
-    weight_2 = ((vertices[3,2] - vertices[1,2])*(point[1] - vertices[3][1]) + (vertices[1,1] - vertices[3,1])*(point[2] - vertices[3][2])) / denominator
+    denominator = ((vertices[2,2] - vertices[3,2])*(vertices[1,1] - vertices[3,1]) + (vertices[3,1] - vertices[2,1])*(vertices[1,2] - vertices[3,2]))
+    weight_1 = ((vertices[2,2] - vertices[3,2])*(point[1] - vertices[3,1]) + (vertices[3,1] - vertices[2,1])*(point[2] - vertices[3,2])) / denominator
+    weight_2 = ((vertices[3,2] - vertices[1,2])*(point[1] - vertices[3,1]) + (vertices[1,1] - vertices[3,1])*(point[2] - vertices[3,2])) / denominator
     weight_3 = 1 - weight_1 - weight_2
 
     return 0 <= weight_1 && weight_1 <= 1 && 0 <= weight_2 && weight_2 <= 1 && 0 <= weight_3 && weight_3 <= 1
