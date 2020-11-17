@@ -19,10 +19,12 @@ using Infiltrator
 
 # Write your package code here.
 include("typedefs.jl")
+include("state.jl")
+include("objective.jl")
 include("solveStarter.jl")
 include("algorithm.jl")
 include("piecewiseLinearRelaxation.jl")
-include("algorithm.jl")
+include("simplexOperations.jl")
 
 
 end
