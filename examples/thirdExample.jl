@@ -20,12 +20,18 @@ function thirdExample()
         # DEFINE LINEARIZED PROBLEM (MILP)
         # ------------------------------------------------------------------
         linearizedSubproblem = JuMP.Model()
+        node = subproblem.ext[:sddp_node]
+        model = subproblem.ext[:sddp_policy_graph]
+        linearizedSubproblem.ext[:sddp_node] = node
+        linearizedSubproblem.ext[:sddp_policy_graph] = model
+        # place holder for state variable refs of linearized problem
+        node.ext[:lin_states] = Dict{Symbol,NCNBD.State{JuMP.VariableRef}}()
+        model.ext[:lin_initial_root_state] = Dict{Symbol,Float64}()
 
         # DEFINE STATE VARIABLES
         # ------------------------------------------------------------------
-        for problem in [subproblem, linearizedSubproblem]
-            JuMP.@variable(problem, 0 <= x <= 2, SDDP.State, initial_value = 0)
-        end
+        JuMP.@variable(subproblem, 0 <= x <= 2, SDDP.State, initial_value = 0)
+        JuMP.@variable(linearizedSubproblem, 0 <= x <= 2, NCNBD.State, initial_value = 0)
 
         # DEFINE STAGE 1 MODEL
         ########################################################################
@@ -33,19 +39,20 @@ function thirdExample()
 
             # DEFINE STORAGE FOR NONLINEAR DATA
             # ------------------------------------------------------------------
-            nonlinearFunctionList = Vector{NCNBD.NonlinearFunction}(undef, 1)
-            numberOfNonlinearFunctions = size(nonlinearFunctionList, 1)
+            nonlinearFunctionList = NCNBD.NonlinearFunction[]
+            numberOfNonlinearFunctions = 1
 
             # DEFINE LINEAR PART OF MODEL
             # ------------------------------------------------------------------
             for problem in [subproblem, linearizedSubproblem]
+                x = problem[:x]
                 JuMP.@variable(problem, 0 <= y_loc <= 2)
                 JuMP.@constraint(problem, lin_con, y_loc + 3/2*x.out >= 3 + x.in)
 
                 # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
                 # --------------------------------------------------------------
                 JuMP.@variable(problem, nonlinearAux[1:numberOfNonlinearFunctions])
-                JuMP.@constraint(problem, actual_nlcon, y_loc - nonlinearAux >= 0)
+                JuMP.@constraint(problem, actual_nlcon, y_loc - nonlinearAux[1] >= 0)
             end
 
             # DEFINE STAGE OBJECTIVE
@@ -70,7 +77,7 @@ function thirdExample()
 
             # define nonlinear expression
             x = subproblem[:x]
-            nonlinear_exp = nlf_expr(x)
+            nonlinear_exp = nlf_expr(x.out)
 
             # nonlinear constraint
             nonlinearAux = subproblem[:nonlinearAux]
@@ -79,12 +86,12 @@ function thirdExample()
             # define nonlinearFunction struct for PLA
             x = linearizedSubproblem[:x]
             nonlinearAux = linearizedSubproblem[:nonlinearAux]
-            nlf = NCNBD.NonlinearFunction(nlf_eval, nlf_expr, nonlinearAux[1], [x])
+            nlf = NCNBD.NonlinearFunction(nlf_eval, nlf_expr, nonlinearAux[1], [x.out])
             push!(nonlinearFunctionList, nlf)
 
             # store in ext of subproblem
             subproblem.ext[:nlFunctions] = nonlinearFunctionList
-            subproble.ext[:linSubproblem] = linearizedSubproblem
+            subproblem.ext[:linSubproblem] = linearizedSubproblem
 
         # DEFINE STAGE 2 MODEL
         ########################################################################
@@ -92,19 +99,20 @@ function thirdExample()
 
             # DEFINE STORAGE FOR NONLINEAR DATA
             # ------------------------------------------------------------------
-            nonlinearFunctionList = Vector{NCNBD.NonlinearFunction}(undef, 1)
-            numberOfNonlinearFunctions = size(nonlinearFunctionList, 1)
+            nonlinearFunctionList = NCNBD.NonlinearFunction[]
+            numberOfNonlinearFunctions = 1
 
             # DEFINE LINEAR PART OF MODEL
             # ------------------------------------------------------------------
             for problem in [subproblem, linearizedSubproblem]
+                x = problem[:x]
                 JuMP.@variable(problem, 0 <= y_loc[i=1:2] <= 4)
                 JuMP.@constraint(problem, lin_con, sum(y_loc[i] for i in 1:2) == 2 * x.in)
 
                 # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
                 # --------------------------------------------------------------
                 JuMP.@variable(problem, nonlinearAux[1:numberOfNonlinearFunctions])
-                JuMP.@constraint(problem, actual_nlcon, y_loc[1] - nonlinearAux >= 0)
+                JuMP.@constraint(problem, actual_nlcon, y_loc[1] - nonlinearAux[1] >= 0)
             end
 
             # DEFINE STAGE OBJECTIVE
@@ -143,7 +151,7 @@ function thirdExample()
 
             # store in ext of subproblem
             subproblem.ext[:nlFunctions] = nonlinearFunctionList
-            subproble.ext[:linSubproblem] = linearizedSubproblem
+            subproblem.ext[:linSubproblem] = linearizedSubproblem
 
         end
     end
@@ -154,16 +162,14 @@ function thirdExample()
 
     epsilon_outerLoop = 0.0
     epsilon_innerLoop = 0.0
-    binaryPrecision = [0.5 0.5]
-    plaPrecision = [0.5 0.5]
-    sigma = [1.0 1.0]
+    binaryPrecision = [0.5, 0.5]
+    plaPrecision = [2, 4]
+    sigma = [1.0, 1.0]
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision, sigma)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma)
-
-    @infiltrate
 
     # SET-UP NONLINEARITIES
     ############################################################################
