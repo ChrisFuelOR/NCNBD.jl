@@ -258,10 +258,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams,
     initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-    # initial root state storage for linearized problem
-    model.ext[:lin_initial_root_state] = Dict{Symbol,Float64}()
-
-    # SHIFT LINEARIZED SUBPROBLEM AND NONLINEAR FUNCTION LIST TO NODES
+    # SET UP LINEARIZED SUBPROBLEM DATA
     ############################################################################
     for (node_index, children) in model.nodes
         node = model.nodes[node_index]
@@ -272,17 +269,29 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         node.ext[:linSubproblem] = node.subproblem.ext[:linSubproblem]
         node.subproblem.ext[:linSubproblem] = Nothing
 
-        node.ext[:linSubproblem].ext[:sddp_node] = node
-        node.ext[:linSubproblem].ext[:sddp_policy_graph] = model
-
-        # TODO: set Bellman function
-
-        # set objective function
+        # Set objective sense
         JuMP.set_objective_sense(node.ext[:linSubproblem], model.objective_sense)
-        set_lin_objective(node.ext[:linSubproblem])
 
-        # place holder for state variable refs of linearized problem
-        node.ext[:lin_states] = Dict{Symbol,State{JuMP.VariableRef}}()
+        # Initialize Bellman function
+        node.ext[:lin_bellman_function] = nothing
+        if node_index != model.root_node
+
+            if model.objective_sense == MOI.MIN_SENSE
+                lower_bound = JuMP.lower_bound(node.bellman_function.global_theta.theta)
+                upper_bound = Inf
+            elseif model.objective_sense == MOI.MAX_SENSE
+                upper_bound = JuMP.upper_bound(node.bellman_function.global_theta.theta)
+                lower_bound = -Inf
+            end
+
+            bellman_function = SDDP.BellmanFunction(lower_bound = lower_bound, upper_bound = upper_bound)
+            node.ext[:lin_bellman_function] = initialize_bellman_function(bellman_function, model, node)
+            node.ext[:lin_bellman_function].cut_type = node.bellman_function.cut_type
+            node.ext[:lin_bellman_function].global_theta.cut_oracle.deletion_minimum = node.bellman_function.global_theta.cut_oracle.deletion_minimum
+            for oracle in node.ext[:lin_bellman_function].local_thetas
+                oracle.cut_oracle.deletion_minimum = node.oracle.cut_oracle.deletion_minimum
+            end
+        end
     end
 
     # INITIALIZE PIECEWISE LINEAR RELAXATION
@@ -295,6 +304,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
         # determines a piecewise linear relaxation for all nonlinear functions
         # in this node
+
         piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
 
     end
