@@ -1,3 +1,5 @@
+const NCNBD_TIMER = TimerOutputs.TimerOutput()
+
 function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
@@ -7,6 +9,8 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     #TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
     #    inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
     #end
+
+    @infiltrate
 
     # START AN OUTER LOOP FORWARD PASS
     ############################################################################
@@ -41,6 +45,16 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     # Later on, also SDDP stopping rules should be considered
     #has_converged, status = convergence_test(model, options.log, options.stopping_rules)
 
+    @infiltrate
+
+    has_converged = false
+    status = :Blubb
+    cuts = Dict{Symbol, Vector{Float64}}()
+    current_sol = forward_trajectory.sampled_states
+    lower_bound = 0.0
+
+    @infiltrate
+
     # RETURN RESULTS
     ############################################################################
     return NCNBD.OuterLoopIterationResult(
@@ -61,7 +75,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
     ############################################################################
     # First up, sample a scenario. Note that if a cycle is detected, this will
     # return the cycle node as well.
-    TimerOutputs.@timeit NCBD_TIMER "sample_scenario_outer" begin
+    TimerOutputs.@timeit NCNBD_TIMER "sample_scenario_outer" begin
         scenario_path, terminated_due_to_cycle =
             SDDP.sample_scenario(model, options.sampling_scheme)
     end
@@ -77,6 +91,8 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
     # Objective state interpolation.
     objective_state_vector, N = SDDP.initialize_objective_state(model[scenario_path[1][1]])
     objective_states = NTuple{N,Float64}[]
+
+    @infiltrate
 
     # ACTUAL ITERATION
     ############################################################################
@@ -119,7 +135,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # ===== End: starting state for infinite horizon =====
 
         # Set optimizer to MINLP optimizer
-        set_optimizer(model, appliedSolvers[:MINLP])
+        set_optimizer(model, appliedSolvers.MINLP)
 
         # SUBPROBLEM SOLUTION
         ############################################################################
@@ -143,7 +159,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # on this forward pass.
         push!(sampled_states, incoming_state_value)
 
-        # Save
+        @infiltrate
 
     end
     if terminated_due_to_cycle
@@ -313,7 +329,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
         # ===== End: starting state for infinite horizon =====
 
         # Set optimizer to MINLP optimizer
-        set_optimizer(model, appliedSolvers[:MILP])
+        set_optimizer(model, appliedSolvers.MILP)
 
         # REGULARIZE SUBPROBLEM
         ############################################################################
@@ -497,7 +513,7 @@ function solve_subproblem(
     # variables. Then parameterize the model depending on `noise`. Finally,
     # set the objective.
     set_incoming_state(node, state)
-    SDDP.parameterize(node, noise)
+    parameterize(node, noise)
 
     # pre_optimize_ret = if node.pre_optimize_hook !== nothing
     #     node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
