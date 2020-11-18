@@ -99,8 +99,6 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         # pre-allocate storage for simplices
         simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
-        vertices = Array{Float64,2}(undef, dimension+1, 1)
-        vertice_values = Vector{Float64}(undef, dimension+1)
 
         # add first values to vectors
         xcoord = lower_bound
@@ -108,18 +106,19 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         # determine simplices
         for simplexIndex = 1 : number_of_simplices
+            # add empty Simplex
+            simplices[simplexIndex] = NCNBD.Simplex(Array{Float64,2}(undef, dimension+1, 1), Vector{Float64}(undef, dimension+1), Inf, Inf)
+
             # add both vertices
-            vertices[1,1] = xcoord
+            simplices[simplexIndex].vertices[1,1] = xcoord
             xcoord += simplex_length
-            vertices[2,1] = xcoord
+            simplices[simplexIndex].vertices[2,1] = xcoord
 
             # add function values
-            vertice_values[1] = func_value
+            simplices[simplexIndex].vertice_values[1] = func_value
             func_value =  nlFunction.nonlinfunc_eval(xcoord)
-            vertice_values[2] = func_value
+            simplices[simplexIndex].vertice_values[2] = func_value
 
-            # add simplex to list
-            simplices[simplexIndex] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
         end
 
         @assert xcoord == upper_bound
@@ -182,19 +181,19 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         # pre-allocate storage for simplices
         simplices = Vector{NCNBD.Simplex}(undef, size(simplices_delaunay,1))
-        vertices = Array{Float64,2}(undef, dimension+1, 2)
-        vertice_values = Vector{Float64}(undef, dimension+1)
 
         # CREATE SIMPLICES AND TRIANGULATION IN OUR FORMATS
         ########################################################################
         # create Simplex structs in our format
         for simplex_index in 1:size(simplices_delaunay,1)
+            simplices[simplex_index] = NCNBD.Simplex(Array{Float64,2}(undef, dimension+1, 2), Vector{Float64}(undef, dimension+1), Inf, Inf)
+
             simplex_delaunay = simplices_delaunay[simplex_index, :]
             for i in 1:dimension+1
-                vertices[i, :] = xgrid[simplex_delaunay[i], :]
-                vertice_values[i] = values_grid[simplex_delaunay[i]]
+                simplices[simplex_index].vertices[i, :] = xgrid[simplex_delaunay[i], :]
+                simplices[simplex_index].vertice_values[i] = values_grid[simplex_delaunay[i]]
             end
-            simplices[simplex_index] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
+
         end
 
         # set up triangulation
@@ -391,18 +390,18 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     # nonlinear expression describing the approximated function
     JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(y_est) - $(nonlinearobj)))
 
-    println("###################################################################")
-    println("Simplex: ", simplex_index)
-    println("Max overestimation error")
-    println(estimationProblem)
+    #println("###################################################################")
+    #println("Simplex: ", simplex_index)
+    #println("Max overestimation error")
+    #println(estimationProblem)
 
     JuMP.optimize!(estimationProblem)
     # TODO: Check if globally optimal solution
     overestimation = JuMP.objective_value(estimationProblem)
 
-    println("optimal x: ", JuMP.value(estimationProblem[:x_1_est]))
-    println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
-    println("optimal value: ", overestimation)
+    #println("optimal x: ", JuMP.value(estimationProblem[:x_1_est]))
+    #println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
+    #println("optimal value: ", overestimation)
 
     #@infiltrate
     # x_opt = JuMP.value(estimationProblem[:x_1_est])
