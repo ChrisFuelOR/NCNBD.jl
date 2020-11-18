@@ -21,9 +21,12 @@ using Infiltrator
 export @lin_stageobjective
 
 # Write your package code here.
-include("typedefs.jl")
 include("state.jl")
+include("JuMP.jl")
+include("typedefs.jl")
 include("objective.jl")
+include("bellman.jl")
+
 include("solveStarter.jl")
 include("algorithm.jl")
 include("piecewiseLinearRelaxation.jl")

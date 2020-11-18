@@ -1,7 +1,7 @@
 function JuMP.build_variable(
     _error::Function,
     info::JuMP.VariableInfo,
-    ::Type{State};
+    ::Type{NCNBD.State};
     initial_value = NaN,
     kwargs...,
 )
@@ -36,7 +36,7 @@ function JuMP.add_variable(problem::JuMP.Model, state_info::StateInfo, name::Str
         JuMP.add_variable(problem, JuMP.ScalarVariable(state_info.in), name * "_in"),
         JuMP.add_variable(problem, JuMP.ScalarVariable(state_info.out), name * "_out"),
     )
-    integrality_handler = get_integrality_handler(problem)
+    integrality_handler = SDDP.get_integrality_handler(problem)
     setup_state(problem, state, state_info, name, integrality_handler)
     return state
 end

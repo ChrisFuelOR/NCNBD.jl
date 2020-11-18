@@ -30,13 +30,13 @@ function setup_state(
     state::State,
     state_info::StateInfo,
     name::String,
-    ::SDDP.ContinuousRelaxation,
+    ::SDDP.ContinuousRelaxation
 )
-    node = get_node(subproblem)
+    node = SDDP.get_node(subproblem)
     sym_name = Symbol(name)
-    @assert !haskey(node.states, sym_name)  # JuMP prevents duplicate names.
+    @assert !haskey(node.ext[:lin_states], sym_name)  # JuMP prevents duplicate names.
     node.ext[:lin_states][sym_name] = state
-    graph = get_policy_graph(subproblem)
+    graph = SDDP.get_policy_graph(subproblem)
     graph.ext[:lin_initial_root_state][sym_name] = state_info.initial_value
     return
 end
