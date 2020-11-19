@@ -37,8 +37,8 @@ function set_lin_objective(subproblem::JuMP.Model)
             JuMP.objective_sense(subproblem),
             @expression(
                 subproblem,
-                node.ext[:stage_objective] +
-                SDDP.bellman_term(node.ext[:bellman_function])
+                node.ext[:lin_stage_objective] +
+                SDDP.bellman_term(node.ext[:lin_bellman_function])
             )
         )
     end

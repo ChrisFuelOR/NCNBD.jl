@@ -26,7 +26,7 @@ function initialize_bellman_function(
     if length(node.children) == 0
         lower_bound = upper_bound = 0.0
     end
-    Θᴳ = JuMP.@variable(node.ext[:linSubproblem])
+    Θᴳ = JuMP.@variable(node.ext[:linSubproblem], base_name="Θᴳ")
     lower_bound > -Inf && JuMP.set_lower_bound(Θᴳ, lower_bound)
     upper_bound < Inf && JuMP.set_upper_bound(Θᴳ, upper_bound)
     # Initialize bounds for the objective states. If objective_state==nothing,
