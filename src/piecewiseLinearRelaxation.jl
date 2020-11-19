@@ -45,7 +45,6 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
 
         # Determine Piecewise Linear Approximation
         piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
-
         # Determine number of simplices in triangulation
         number_of_simplices = size(nlFunction.triangulation.simplices, 1)
 
@@ -65,7 +64,6 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
         push!(nlFunction.triangulation.plrConstraints, relax_1)
         push!(nlFunction.triangulation.plrConstraints, relax_2)
-
     end
 end
 
@@ -320,6 +318,10 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     push!(triangulation.plrConstraints, yConst)
     yConst_est = JuMP.@constraint(estimationProblem, sum(λ_est[i,j] * triangulation.simplices[i].vertice_values[j] for  i in 1:number_of_simplices, j in 1:dimension+1) == y_est )
 
+    auxVariable = triangulation.ext[:nonlinearFunction].auxVariable
+    auxConst = JuMP.@constraint(linSubproblem, auxVariable == y)
+    push!(triangulation.plrConstraints, auxConst)
+    
     # original variable encoding
     if dimension == 1
         xConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
@@ -456,7 +458,7 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
 
 end
 
-function piecewiseLinearRefinement!(::SDDP.PolicyGraph{T}) where{T}
+function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers::NCNBD.AppliedSolvers) where{T}
     # ITERATE OVER NODES
     ############################################################################
     for (node_index, children) in model.nodes
@@ -488,6 +490,8 @@ function piecewiseLinearRefinement!(::SDDP.PolicyGraph{T}) where{T}
 
             # store new simplices
             new_simplices_list = NCNBD.Simplex[]
+
+            @infiltrate
 
             # Iterate over all simplices of current triangulation
             for simplex_index in 1:size(nlFunction.triangulation.simplices,1)
