@@ -8,14 +8,14 @@ struct State{T}
     # The upper bound
     ub::Float64
 
-    function State(in::T, out::T) where {T}
-        return new{T}(
-            in,
-            out,
-            -Inf,
-            Inf
-        )
-    end
+    # function State(in::T, out::T) where {T}
+    #     return new{T}(
+    #         in,
+    #         out,
+    #         -Inf,
+    #         Inf
+    #     )
+    # end
 end
 
 struct StateInfo
@@ -45,7 +45,7 @@ end
 # contained in state.
 function set_incoming_state(node::SDDP.Node, state::Dict{Symbol,Float64})
     for (state_name, value) in state
-        JuMP.fix(node.ext[:lin_states][state_name].in, value)
+        JuMP.fix(node.ext[:lin_states][state_name].in, value, force=true)
     end
     return
 end
