@@ -30,8 +30,8 @@ function thirdExample()
 
         # DEFINE STATE VARIABLES
         # ------------------------------------------------------------------
-        JuMP.@variable(subproblem, 0 <= x <= 2, SDDP.State, initial_value = 0)
-        JuMP.@variable(linearizedSubproblem, 0 <= x <= 2, NCNBD.State, initial_value = 0)
+        JuMP.@variable(subproblem, 0.0 <= x <= 2.0, SDDP.State, initial_value = 0)
+        JuMP.@variable(linearizedSubproblem, 0.0 <= x <= 2.0, NCNBD.State, initial_value = 0)
 
         # DEFINE STAGE 1 MODEL
         ########################################################################
@@ -46,7 +46,7 @@ function thirdExample()
             # ------------------------------------------------------------------
             for problem in [subproblem, linearizedSubproblem]
                 x = problem[:x]
-                JuMP.@variable(problem, 0 <= y_loc <= 2)
+                JuMP.@variable(problem, 0.0 <= y_loc <= 2.0)
                 JuMP.@constraint(problem, lin_con, y_loc + 3/2*x.out >= 3 + x.in)
 
                 # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
@@ -106,7 +106,7 @@ function thirdExample()
             # ------------------------------------------------------------------
             for problem in [subproblem, linearizedSubproblem]
                 x = problem[:x]
-                JuMP.@variable(problem, 0 <= y_loc[i=1:2] <= 4)
+                JuMP.@variable(problem, 0.0 <= y_loc[i=1:2] <= 4.0)
                 JuMP.@constraint(problem, lin_con, sum(y_loc[i] for i in 1:2) == 2 * x.in)
 
                 # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
