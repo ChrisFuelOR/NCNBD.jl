@@ -5,6 +5,7 @@ function JuMP.build_variable(
     initial_value = NaN,
     kwargs...,
 )
+
     if isnan(initial_value)
         _error(
             "When creating a state variable, you must set the " *
@@ -14,10 +15,10 @@ function JuMP.build_variable(
     end
     return StateInfo(
         JuMP.VariableInfo(
-            false,
-            NaN,  # lower bound
-            false,
-            NaN,  # upper bound
+            info.has_lb,
+            info.lower_bound,  # lower bound
+            info.has_ub,
+            info.upper_bound,  # upper bound
             false,
             NaN,  # fixed value
             false,
@@ -32,10 +33,27 @@ function JuMP.build_variable(
 end
 
 function JuMP.add_variable(problem::JuMP.Model, state_info::StateInfo, name::String)
+
+    # Store bounds also in state, since they have to be relaxed and readded later
+    if state_info.in.has_lb
+        lb = state_info.in.lower_bound
+    else
+        lb = -Inf
+    end
+
+    if state_info.in.has_ub
+        ub = state_info.in.upper_bound
+    else
+        ub = Inf
+    end
+
     state = State(
         JuMP.add_variable(problem, JuMP.ScalarVariable(state_info.in), name * "_in"),
         JuMP.add_variable(problem, JuMP.ScalarVariable(state_info.out), name * "_out"),
+        lb,
+        ub
     )
+
     integrality_handler = SDDP.get_integrality_handler(problem)
     setup_state(problem, state, state_info, name, integrality_handler)
     return state
