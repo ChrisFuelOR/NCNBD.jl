@@ -9,9 +9,6 @@
 # SLDP.jl (bfpc)
 # and especially SDDP.jl (odow).
 
-
-const NCNBD_TIMER = TimerOutputs.TimerOutput()
-
 """
     NCNBD.solve(model::PolicyGraph, algoParams::AlgoParams, initialAlgoParams:InitialAlgoParams,
     appliedSolvers::AppliedSolvers ; kwargs...)
@@ -360,11 +357,11 @@ function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
     while true
         result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
-        log_iteration(options)
+        #log_iteration(options)
         if result_outer.has_converged
             return result_outer.status
         else
-            piecewise_linear_refinement(model, options, algoParams, appliedSolvers)
+            piecewise_linear_refinement(model, appliedSolvers)
             # also give solution from result_outer
         #TODO: When to increase sigma? Every other iteration?
         end
@@ -403,7 +400,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
         # logging preparation (in contrast to SDDP here instead of inner_loop_iteration?)
         # logging
-        log_iteration(options)
+        #log_iteration(options)
         if result_inner.has_converged
             # return all results here to keep them accessible in outer pass
             return result_inner

@@ -117,25 +117,25 @@ end
     # we can always convert it. Do we really need binaryNum and binaryEps?
 
 # struct for outer loop iteration results
-struct OuterLoopIterationResult{T}
+struct OuterLoopIterationResult#{T}
     # pid
     lower_bound :: Float64 # here the inner or outer loop lower bound can be used
     upper_bound :: Float64 # should be renamed as cumulative_value as in SDDP if we solve stochastic problems
-    current_sol :: Vector{Dict{JuMP.VariableRef, Float64}}
+    current_sol :: Array{Dict{Symbol,Float64},1} #Vector{Dict{Symbol, Float64}}
     has_converged :: Bool
     status :: Symbol # solution status (i.e. number of iterations)
-    nonlinearCuts :: Dict{T, Vector{Any}} # only required for logging, binary explanation
+    #nonlinearCuts :: Dict{T, Vector{Any}} # only required for logging, binary explanation
     # however, then also binary precision / K should be stored for interpretability
 end
 
 # struct for inner loop iteration results
-struct InnerLoopIterationResult{T}
+struct InnerLoopIterationResult#{T}
     # pid
     lower_bound :: Float64
     upper_bound :: Float64 # should be renamed as cumulative_value as in SDDP if we solve stochastic problems
-    current_sol :: Vector{Dict{JuMP.VariableRef, Float64}} # current solution of state variables (also required for binary refinement)
+    current_sol :: Array{Dict{Symbol,Float64},1} #Vector{Dict{Symbol, Float64}} # current solution of state variables (also required for binary refinement)
     has_converged :: Bool
     status :: Symbol # solution status (i.e. number of iterations)
-    nonlinearCuts :: Dict{T, Vector{Any}} # only required for logging, binary explanation
+    #nonlinearCuts :: Dict{T, Vector{Any}} # only required for logging, binary explanation
     # however, then also binary precision / K should be stored for interpretability
 end

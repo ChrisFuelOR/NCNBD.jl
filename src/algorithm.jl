@@ -5,12 +5,9 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
 
     # CALL THE INNER LOOP AND GET BACK RESULTS IF CONVERGED
     ############################################################################
-    # TODO: TO BE IMPLEMENTED
-    #TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
-    #    inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
-    #end
-
-    @infiltrate
+    TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
+        inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
+    end
 
     # START AN OUTER LOOP FORWARD PASS
     ############################################################################
@@ -45,12 +42,10 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     # Later on, also SDDP stopping rules should be considered
     #has_converged, status = convergence_test(model, options.log, options.stopping_rules)
 
-    @infiltrate
-
     has_converged = false
     status = :Blubb
     cuts = Dict{Symbol, Vector{Float64}}()
-    current_sol = forward_trajectory.sampled_states
+    current_sol = forward_results.sampled_states
     lower_bound = 0.0
 
     @infiltrate
@@ -60,11 +55,11 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     return NCNBD.OuterLoopIterationResult(
         #Distributed.myid(),
         lower_bound,
-        forward_trajectory.cumulative_value,
+        forward_results.cumulative_value,
         current_sol,
         has_converged,
-        status,
-        cuts,
+        status
+        #cuts,
     )
 end
 
@@ -91,8 +86,6 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
     # Objective state interpolation.
     objective_state_vector, N = SDDP.initialize_objective_state(model[scenario_path[1][1]])
     objective_states = NTuple{N,Float64}[]
-
-    @infiltrate
 
     # ACTUAL ITERATION
     ############################################################################
@@ -158,8 +151,6 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # Add the outgoing state variable to the list of states we have sampled
         # on this forward pass.
         push!(sampled_states, incoming_state_value)
-
-        @infiltrate
 
     end
     if terminated_due_to_cycle
@@ -248,6 +239,14 @@ function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
     # TODO: To be implemented
     #has_converged, status = convergence_test(model, options.log, options.stopping_rules)
 
+    has_converged = false
+    status = :Blubb
+    cuts = Dict{Symbol, Vector{Float64}}()
+    current_sol = forward_results.sampled_states
+    lower_bound = 0.0
+
+    @infiltrate
+
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
         lower_bound,
@@ -255,7 +254,7 @@ function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
         forward_trajectory.cumulative_value,
         has_converged,
         status,
-        cuts,
+        #cuts,
     )
 end
 
@@ -268,7 +267,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
     ############################################################################
     # First up, sample a scenario. Note that if a cycle is detected, this will
     # return the cycle node as well.
-    TimerOutputs.@timeit SDDP_TIMER "sample_scenario" begin
+    TimerOutputs.@timeit NCNBD_TIMER "sample_scenario" begin
         scenario_path, terminated_due_to_cycle =
             SDDP.sample_scenario(model, options.sampling_scheme)
     end
@@ -328,20 +327,17 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
         end
         # ===== End: starting state for infinite horizon =====
 
-        # Set optimizer to MINLP optimizer
-        set_optimizer(model, appliedSolvers.MILP)
-
-        # REGULARIZE SUBPROBLEM
-        ############################################################################
-        linearizedSubproblem = node.ext[:linearizedSubproblem]
-        # storage for regularization data
-        node.ext[:regularization_data] = Dict{Symbol,Any}
-        # sigma for this stage
+        # Set sigma for regularization
         sigma = algoParams.sigma[node_index]
-        regularize_subproblem!(node, linearizedSubproblem, sigma)
+
+        # Set optimizer to MILP optimizer
+        linearizedSubproblem = node.ext[:linSubproblem]
+        set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
 
         # SUBPROBLEM SOLUTION
         ############################################################################
+        @infiltrate
+
         # Solve the subproblem, note that `require_duals = false`.
         TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
             subproblem_results = solve_subproblem(
@@ -350,6 +346,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
                 incoming_state_value,
                 noise,
                 scenario_path[1:depth],
+                sigma,
                 require_duals = false,
             )
         end
@@ -362,9 +359,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
         # on this forward pass.
         push!(sampled_states, incoming_state_value)
 
-        # DE-REGULARIZE SUBPROBLEM
-        ############################################################################
-        deregularize_subproblem!(node, linearizedSubproblem)
+        @infiltrate
 
     end
     if terminated_due_to_cycle
@@ -405,19 +400,25 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
 
     reg_data = node.ext[:regularization_data]
     reg_data[:fixed_state_value] = Float64[]
+    reg_data[:slacks] = Any[]
     reg_data[:reg_variables] = JuMP.VariableRef[]
     reg_data[:reg_constraints] = JuMP.ConstraintRef[]
 
     number_of_states = 0
 
+    # Storage for upper and lower bounds
+    UB = Float64[]
+
     # UNFIX THE STATE VARIABLES
     ############################################################################
-    for (i, (name, state)) in enumerate(node.states)
-        reg_data[:fixed_state_value][i] = JuMP.fix_value(state.in)
-        reg_data[:slacks][i] = reg_data[:fixed_state_value][i] - state.in
+    for (i, (name, state)) in enumerate(node.ext[:lin_states])
+        push!(reg_data[:fixed_state_value], JuMP.fix_value(state.in))
+        push!(reg_data[:slacks], reg_data[:fixed_state_value][i] - state.in)
         JuMP.unfix(state.in)
-        JuMP.set_lower_bound(state.in, LB)
-        JuMP.set_upper_bound(state.in, UB)
+        push!(UB, state.ub)
+
+        JuMP.set_lower_bound(state.in, state.lb)
+        JuMP.set_upper_bound(state.in, state.ub)
         # TODO: Lower and upper bounds have to be stored in the beginning
         # Also required for binary expansion determination
         # Also required for constraints below
@@ -426,7 +427,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
 
     # STORE ORIGINAL OBJECTIVE FUNCTION
     ############################################################################
-    reg_data[:old_objective] = JuMP.objective_function(linearizedSubproblem)
+    old_obj = reg_data[:old_objective] = JuMP.objective_function(linearizedSubproblem)
 
     # DEFINE NEW VARIABLES, CONSTRAINTS AND OBJECTIVE
     ############################################################################
@@ -437,35 +438,37 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     slack = reg_data[:slacks]
 
     # Variable for objective
-    v = JuMP.@variable(linearizedSubproblem)
+    v = JuMP.@variable(linearizedSubproblem, base_name = "reg_v")
     push!(reg_data[:reg_variables], v)
 
     # Get sign for regularization term
-    fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
+    fact = (JuMP.objective_sense(linearizedSubproblem) == JuMP.MOI.MIN_SENSE ? 1 : -1)
 
     # New objective
     new_obj = old_obj + sigma * v
     JuMP.set_objective_function(linearizedSubproblem, new_obj)
 
     # Variables
-    slack_plus = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states])
-    slack_minus = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states])
-    JuMP.set_lower_bound(slack_plus, 0)
-    JuMP.set_lower_bound(slack_minus, 0)
+    slack_plus = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "slack_plus")
+    slack_minus = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "slack_minus")
+    for i in 1:number_of_states
+        JuMP.set_lower_bound(slack_plus[i], 0.0)
+        JuMP.set_lower_bound(slack_minus[i], 0.0)
+    end
 
-    aux_bin = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states])
-    push!(reg_data[:reg_variables], slack_plus)
-    push!(reg_data[:reg_variables], slack_minus)
-    push!(reg_data[:reg_variables], aux_bin, Bin)
+    aux_bin = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], Bin, base_name = "reg_aux_bin")
+    append!(reg_data[:reg_variables], slack_plus)
+    append!(reg_data[:reg_variables], slack_minus)
+    append!(reg_data[:reg_variables], aux_bin)
 
     # Constraints
-    const_plus = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], slack_plus[i] <= z[i] * UB[i])
-    const_minus = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], slack_minus[i] <= (1-z[i]) * UB[i])
-    push!(reg_data[:reg_constraints], const_plus)
-    push!(reg_data[:reg_constraints], const_minus)
+    const_plus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack_plus[i] <= aux_bin[i] * UB[i])
+    const_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack_minus[i] <= (1-aux_bin[i]) * UB[i])
+    append!(reg_data[:reg_constraints], const_plus)
+    append!(reg_data[:reg_constraints], const_minus)
 
     plus_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack[i] == slack_plus[i] - slack_minus[i])
-    push!(reg_data[:reg_constraints], plus_minus)
+    append!(reg_data[:reg_constraints], plus_minus)
 
     const_norm = JuMP.@constraint(linearizedSubproblem, v >= sum(slack_plus[i] + slack_minus[i] for i in 1:number_of_states))
     push!(reg_data[:reg_constraints], const_norm)
@@ -478,7 +481,9 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
 
     # FIX THE STATE VARIABLES
     ############################################################################
-    for (i, (name, state)) in enumerate(node.states)
+    for (i, (name, state)) in enumerate(node.ext[:lin_states])
+        JuMP.delete_lower_bound(state.in)
+        JuMP.delete_upper_bound(state.in)
         JuMP.fix(state.in, reg_data[:fixed_state_value][i])
     end
 
@@ -489,7 +494,11 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
     # DELETE ALL REGULARIZATION-BASED VARIABLES AND CONSTRAINTS
     ############################################################################
     delete(linearizedSubproblem, reg_data[:reg_variables])
-    delete(linearizedSubproblem, reg_data[:reg_constraints])
+    for constraint in reg_data[:reg_constraints]
+        delete(linearizedSubproblem, constraint)
+    end
+
+    delete!(node.ext, :regularization_data)
 
 end
 
@@ -503,11 +512,14 @@ function solve_subproblem(
     node::SDDP.Node{T},
     state::Dict{Symbol,Float64},
     noise,
-    scenario_path::Vector{Tuple{T,S}};
+    scenario_path::Vector{Tuple{T,S}},
+    sigma::Float64;
     require_duals::Bool,
 ) where {T,S}
 
-    linearizedSubproblem = node.ext[:linearizedSubproblem]
+    # MODEL PARAMETRIZATION (-> LINEARIZED SUBPROBLEM!)
+    ############################################################################
+    linearizedSubproblem = node.ext[:linSubproblem]
 
     # Parameterize the model. First, fix the value of the incoming state
     # variables. Then parameterize the model depending on `noise`. Finally,
@@ -521,6 +533,18 @@ function solve_subproblem(
     #     nothing
     # end
 
+    # REGULARIZE SUBPROBLEM
+    ############################################################################
+    # storage for regularization data
+    node.ext[:regularization_data] = Dict{Symbol,Any}()
+    # sigma for this stage
+
+    regularize_subproblem!(node, linearizedSubproblem, sigma)
+
+    @infiltrate
+
+    # SOLUTION
+    ############################################################################
     JuMP.optimize!(linearizedSubproblem)
 
     if haskey(model.ext, :total_solves)
@@ -529,13 +553,14 @@ function solve_subproblem(
         model.ext[:total_solves] = 1
     end
 
-    if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
-        SDDP.attempt_numerical_recovery(node)
-    end
+    # if JuMP.primal_status(node.ext[:linSubproblem]) != JuMP.MOI.FEASIBLE_POINT
+    #     SDDP.attempt_numerical_recovery(node)
+    # end
 
     state = get_outgoing_state(node)
-    stage_objective = stage_objective_value(node.stage_objective)
-    objective = JuMP.objective_value(node.subproblem)
+    stage_objective = JuMP.value(node.ext[:lin_stage_objective])
+    #stage_objective_value(node.ext[:lin_stage_objective])
+    objective = JuMP.objective_value(node.ext[:linSubproblem])
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -547,9 +572,29 @@ function solve_subproblem(
         Dict{Symbol,Float64}()
     end
 
-    if node.post_optimize_hook !== nothing
-        node.post_optimize_hook(pre_optimize_ret)
+    # if node.post_optimize_hook !== nothing
+    #     node.post_optimize_hook(pre_optimize_ret)
+    # end
+
+    # STORE RESULTS FOR NL-CONSTRAINT VARIABLES FOR PLA REFINEMENT
+    ############################################################################
+    number_of_nonlinearities = size(node.ext[:nlFunctions], 1)
+
+    for i = 1:number_of_nonlinearities
+        nlFunction = node.ext[:nlFunctions][i]
+        dimension = size(nlFunction.variablesContained, 1)
+
+        nlFunction.ext[:optSolution] = Dict{JuMP.VariableRef, Float64}()
+
+        for j = 1:dimension
+            variableReference = nlFunction.variablesContained[j]
+            nlFunction.ext[:optSolution][variableReference] = JuMP.value(variableReference)
+        end
     end
+
+    # DE-REGULARIZE SUBPROBLEM
+    ############################################################################
+    deregularize_subproblem!(node, linearizedSubproblem)
 
     return (
         state = state,
@@ -557,4 +602,20 @@ function solve_subproblem(
         objective = objective,
         stage_objective = stage_objective,
     )
+end
+
+# Requires node.subproblem to have been solved with DualStatus == FeasiblePoint
+function get_dual_variables(node::SDDP.Node, ::SDDP.ContinuousRelaxation)
+    # Note: due to JuMP's dual convention, we need to flip the sign for
+    # maximization problems.
+    dual_values = Dict{Symbol,Float64}()
+    if JuMP.dual_status(node.ext[:linSubproblem]) != JuMP.MOI.FEASIBLE_POINT
+        write_subproblem_to_file(node, "linSubproblem.mof.json", throw_error = true)
+    end
+    dual_sign = JuMP.objective_sense(node.ext[:linSubproblem]) == MOI.MIN_SENSE ? 1.0 : -1.0
+    for (name, state) in node.ext[:lin_states]
+        ref = JuMP.FixRef(state.in)
+        dual_values[name] = dual_sign * JuMP.dual(ref)
+    end
+    return dual_values
 end
