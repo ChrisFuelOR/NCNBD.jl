@@ -36,12 +36,12 @@ function divide_simplex_by_longest_edge_1D!(simplex_index::Int64, triangulation:
     vertices = Array{Float64,2}(undef, 2, 1)
 
     # create two new simplices and add them to the triangulation
-    vertices = [simplex.vertices[1,1] midpoint]
+    vertices = [simplex.vertices[1,1], midpoint]
     vertice_values = [simplex.vertice_values[1], func_value]
     new_simplices[1]  = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
     push!(triangulation.simplices, new_simplices[1] )
 
-    vertices = [midpoint simplex.vertices[2,1]]
+    vertices = [midpoint, simplex.vertices[2,1]]
     vertice_values = [func_value, simplex.vertice_values[2]]
     new_simplices[2] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
     push!(triangulation.simplices, new_simplices[2])

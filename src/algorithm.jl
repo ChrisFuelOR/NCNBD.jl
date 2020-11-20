@@ -239,19 +239,17 @@ function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
     # TODO: To be implemented
     #has_converged, status = convergence_test(model, options.log, options.stopping_rules)
 
-    has_converged = false
+    has_converged = true
     status = :Blubb
     cuts = Dict{Symbol, Vector{Float64}}()
     current_sol = forward_trajectory.sampled_states
     lower_bound = 0.0
 
-    @infiltrate
-
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
         lower_bound,
-        current_sol,
         forward_trajectory.cumulative_value,
+        current_sol,
         has_converged,
         status,
         #cuts,
@@ -376,6 +374,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
             push!(starting_states, incoming_state_value)
         end
     end
+
     # ===== End: drop off starting state if terminated due to cycle =====
     return (
         scenario_path = scenario_path,
@@ -556,6 +555,8 @@ function solve_subproblem(
     # STORE RESULTS FOR NL-CONSTRAINT VARIABLES FOR PLA REFINEMENT
     ############################################################################
     number_of_nonlinearities = size(node.ext[:nlFunctions], 1)
+
+    @infiltrate
 
     for i = 1:number_of_nonlinearities
         nlFunction = node.ext[:nlFunctions][i]

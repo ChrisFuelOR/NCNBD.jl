@@ -324,6 +324,8 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     push!(triangulation.plrConstraints, auxConst)
 
     # original variable encoding
+    @infiltrate
+
     if dimension == 1
         xConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )
         push!(triangulation.plrConstraints, xConst)
@@ -500,34 +502,48 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
 
                 # check if the point is located in this simplex
                 if dimension == 1
-                    interval_check = NCNBD.ointInInterval(simplex.vertices, optpoint)
+                    interval_check = NCNBD.pointInInterval(simplex.vertices, optpoint)
                 elseif dimension == 2
                     interval_check = NCNBD.pointInTriangle(simplex.vertices, optpoint)
                 end
 
+                @infiltrate
+
                 # if true, then refine this simplex
                 if interval_check
                     # divide simplex by longest edge and construct two new ones
-                    new_simplices = NCNBD.divide_simplex_by_longest_edge(simplex_index, nlFunction.triangulation)
+                    new_simplices = NCNBD.divide_simplex_by_longest_edge!(simplex_index, nlFunction.triangulation)
                     # append to list of new simplices
                     append!(new_simplices_list, new_simplices)
+
+                    @infiltrate
+
                 end
             end
+            @infiltrate
 
             # DELETE PREVIOUS PIECEWISE LINEAR APPROXIMATION
             ####################################################################
             delete(linearizedSubproblem, nlFunction.triangulation.plrVariables)
-            delete(linearizedSubproblem, nlFunction.triangulation.plrConstraints)
+            for constraint in nlFunction.triangulation.plrConstraints
+                delete(linearizedSubproblem, constraint)
+            end
+            nlFunction.triangulation.plrVariables = JuMP.VariableRef[]
+            nlFunction.triangulation.plrConstraints = JuMP.ConstraintRef[]
+
+            @infiltrate
 
             # CREATE A NEW PIECEWISE LINEAR APPROXIMATION
             ####################################################################
             # Define overestimation/underestimation problem
             estimationProblem = JuMP.Model(appliedSolvers.MINLP)
-            estimationProblem = JuMP.Model(GAMS.Optimizer)
-            JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
+            #estimationProblem = JuMP.Model(GAMS.Optimizer)
+            #JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
             #JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
 
             piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
+
+            @infiltrate
 
             # DETERMINE ESTIMATION ERRORS
             ####################################################################
@@ -536,6 +552,8 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             for simplex_index in 1:size(new_simplices_list, 1)
                 determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
             end
+
+            @infiltrate
 
             # CREATE RELAXATION
             ####################################################################
@@ -546,10 +564,12 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             λ = linearizedSubproblem[:λ]
             e = linearizedSubproblem[:e]
 
-            relax_1 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
+            relax_1 = JuMP.@constraint(linearizedSubproblem, -sum(nlFunction.triangulation.simplices[i].maxOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
             relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
             push!(nlFunction.triangulation.plrConstraints, relax_1)
             push!(nlFunction.triangulation.plrConstraints, relax_2)
+
+            @infiltrate
 
         end
     end
