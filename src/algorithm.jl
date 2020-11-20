@@ -242,7 +242,7 @@ function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
     has_converged = false
     status = :Blubb
     cuts = Dict{Symbol, Vector{Float64}}()
-    current_sol = forward_results.sampled_states
+    current_sol = forward_trajectory.sampled_states
     lower_bound = 0.0
 
     @infiltrate
@@ -338,8 +338,6 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
 
         # SUBPROBLEM SOLUTION
         ############################################################################
-        @infiltrate
-
         # Solve the subproblem, note that `require_duals = false`.
         TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
             subproblem_results = solve_subproblem(
@@ -360,8 +358,6 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
         # Add the outgoing state variable to the list of states we have sampled
         # on this forward pass.
         push!(sampled_states, incoming_state_value)
-
-        @infiltrate
 
     end
     if terminated_due_to_cycle
@@ -417,13 +413,8 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
         push!(reg_data[:fixed_state_value], JuMP.fix_value(state.in))
         push!(reg_data[:slacks], reg_data[:fixed_state_value][i] - state.in)
         JuMP.unfix(state.in)
-        push!(UB, state.ub)
-
         JuMP.set_lower_bound(state.in, state.lb)
         JuMP.set_upper_bound(state.in, state.ub)
-        # TODO: Lower and upper bounds have to be stored in the beginning
-        # Also required for binary expansion determination
-        # Also required for constraints below
         number_of_states = i
     end
 
@@ -434,9 +425,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     # DEFINE NEW VARIABLES, CONSTRAINTS AND OBJECTIVE
     ############################################################################
     # These variables and constraints are used to define the norm of the slack as a MILP
-    # So far, the modeling approach by Bernardo da Costa is used
-    # TODO: Maybe change to more efficient approach
-    # TODO: Check if signs are correct for max and min problem
+    # Using the lifting approach without binary requirements
     slack = reg_data[:slacks]
 
     # Variable for objective
@@ -451,28 +440,16 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     JuMP.set_objective_function(linearizedSubproblem, new_obj)
 
     # Variables
-    slack_plus = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "slack_plus")
-    slack_minus = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "slack_minus")
-    for i in 1:number_of_states
-        JuMP.set_lower_bound(slack_plus[i], 0.0)
-        JuMP.set_lower_bound(slack_minus[i], 0.0)
-    end
-
-    aux_bin = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], Bin, base_name = "reg_aux_bin")
-    append!(reg_data[:reg_variables], slack_plus)
-    append!(reg_data[:reg_variables], slack_minus)
-    append!(reg_data[:reg_variables], aux_bin)
+    alpha = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "alpha")
+    append!(reg_data[:reg_variables], alpha)
 
     # Constraints
-    const_plus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack_plus[i] <= aux_bin[i] * UB[i])
-    const_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack_minus[i] <= (1-aux_bin[i]) * UB[i])
+    const_plus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], -alpha[i] <= slack[i])
+    const_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack[i] <= alpha[i])
     append!(reg_data[:reg_constraints], const_plus)
     append!(reg_data[:reg_constraints], const_minus)
 
-    plus_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack[i] == slack_plus[i] - slack_minus[i])
-    append!(reg_data[:reg_constraints], plus_minus)
-
-    const_norm = JuMP.@constraint(linearizedSubproblem, v >= sum(slack_plus[i] + slack_minus[i] for i in 1:number_of_states))
+    const_norm = JuMP.@constraint(linearizedSubproblem, v >= sum(alpha[i] for i in 1:number_of_states))
     push!(reg_data[:reg_constraints], const_norm)
 
 end
@@ -542,8 +519,6 @@ function solve_subproblem(
     # sigma for this stage
 
     regularize_subproblem!(node, linearizedSubproblem, sigma)
-
-    @infiltrate
 
     # SOLUTION
     ############################################################################
