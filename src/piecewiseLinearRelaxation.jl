@@ -60,11 +60,12 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         λ = linearizedSubproblem[:λ]
         e = linearizedSubproblem[:e]
 
-        relax_1 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
+        relax_1 = JuMP.@constraint(linearizedSubproblem, -sum(nlFunction.triangulation.simplices[i].maxOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
         relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
         push!(nlFunction.triangulation.plrConstraints, relax_1)
         push!(nlFunction.triangulation.plrConstraints, relax_2)
     end
+
 end
 
 
@@ -321,7 +322,7 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     auxVariable = triangulation.ext[:nonlinearFunction].auxVariable
     auxConst = JuMP.@constraint(linSubproblem, auxVariable == y)
     push!(triangulation.plrConstraints, auxConst)
-    
+
     # original variable encoding
     if dimension == 1
         xConst = JuMP.@constraint(linSubproblem, sum(λ[i,j] * triangulation.simplices[i].vertices[j, 1] for  i in 1:number_of_simplices, j in 1:dimension+1) == x_1 )

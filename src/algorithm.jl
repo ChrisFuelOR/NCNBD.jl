@@ -332,7 +332,9 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
 
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
-        set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
+        #set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
+        set_optimizer(linearizedSubproblem, GAMS.Optimizer)
+        JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", "Gurobi")
 
         # SUBPROBLEM SOLUTION
         ############################################################################
@@ -445,7 +447,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     fact = (JuMP.objective_sense(linearizedSubproblem) == JuMP.MOI.MIN_SENSE ? 1 : -1)
 
     # New objective
-    new_obj = old_obj + sigma * v
+    new_obj = old_obj + fact * sigma * v
     JuMP.set_objective_function(linearizedSubproblem, new_obj)
 
     # Variables

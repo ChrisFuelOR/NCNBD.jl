@@ -301,9 +301,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
         # determines a piecewise linear relaxation for all nonlinear functions
         # in this node
-
         piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
-
     end
 
     # CALL ACTUAL SOLUTION PROCEDURE
