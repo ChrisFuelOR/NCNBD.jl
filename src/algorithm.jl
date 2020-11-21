@@ -198,18 +198,18 @@ function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
 
     # BACKWARD PASS
     ############################################################################
-    # TimerOutputs.@timeit NCNBD_TIMER "backward_pass" begin
-    #     cuts = backward_pass(
-    #         model,
-    #         options,
-    #         algoParams,
-    #         appliedSolvers,
-    #         forward_trajectory.scenario_path,
-    #         forward_trajectory.sampled_states,
-    #         forward_trajectory.objective_states,
-    #         forward_trajectory.belief_states,
-    #     )
-    # end
+    TimerOutputs.@timeit NCNBD_TIMER "backward_pass" begin
+        cuts = NCNBD.inner_loop_backward_pass(
+            model,
+            options,
+            algoParams,
+            appliedSolvers,
+            forward_trajectory.scenario_path,
+            forward_trajectory.sampled_states,
+            forward_trajectory.objective_states,
+            forward_trajectory.belief_states,
+        )
+    end
 
     # CALCULATE LOWER BOUND
     ############################################################################
@@ -580,6 +580,7 @@ function solve_subproblem(
     )
 end
 
+# TODO: actually not required
 # Requires node.subproblem to have been solved with DualStatus == FeasiblePoint
 function get_dual_variables(node::SDDP.Node, ::SDDP.ContinuousRelaxation)
     # Note: due to JuMP's dual convention, we need to flip the sign for
@@ -592,6 +593,304 @@ function get_dual_variables(node::SDDP.Node, ::SDDP.ContinuousRelaxation)
     for (name, state) in node.ext[:lin_states]
         ref = JuMP.FixRef(state.in)
         dual_values[name] = dual_sign * JuMP.dual(ref)
+    end
+    return dual_values
+end
+
+
+function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
+    algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
+    scenario_path::Vector{Tuple{T,NoiseType}},
+    sampled_states::Vector{Dict{Symbol,Float64}},
+    objective_states::Vector{NTuple{N,Float64}},
+    belief_states::Vector{Tuple{Int,Dict{T,Float64}}}) where {T,NoiseType,N}
+
+    cuts = Dict{T,Vector{Any}}(index => Any[] for index in keys(model.nodes))
+    for index = length(scenario_path):-1:1
+        outgoing_state = sampled_states[index]
+        objective_state = get(objective_states, index, nothing)
+        partition_index, belief_state = get(belief_states, index, (0, nothing))
+        items = SDDP.BackwardPassItems(T, Noise)
+        if belief_state !== nothing
+            # # Update the cost-to-go function for partially observable model.
+            # for (node_index, belief) in belief_state
+            #     belief == 0.0 && continue
+            #     solve_all_children(
+            #         model,
+            #         model[node_index],
+            #         items,
+            #         belief,
+            #         belief_state,
+            #         objective_state,
+            #         outgoing_state,
+            #         options.backward_sampling_scheme,
+            #         scenario_path[1:index],
+            #     )
+            # end
+            # # We need to refine our estimate at all nodes in the partition.
+            # for node_index in model.belief_partition[partition_index]
+            #     node = model[node_index]
+            #     # Update belief state, etc.
+            #     current_belief = node.belief_state::BeliefState{T}
+            #     for (idx, belief) in belief_state
+            #         current_belief.belief[idx] = belief
+            #     end
+            #     new_cuts = refine_bellman_function(
+            #         model,
+            #         node,
+            #         node.bellman_function,
+            #         options.risk_measures[node_index],
+            #         outgoing_state,
+            #         items.duals,
+            #         items.supports,
+            #         items.probability .* items.belief,
+            #         items.objectives,
+            #     )
+            #     push!(cuts[node_index], new_cuts)
+            end
+        else
+            node_index, _ = scenario_path[index]
+            node = model[node_index]
+            if length(node.children) == 0
+                continue
+            end
+            solve_all_children(
+                model,
+                node,
+                items,
+                1.0,
+                belief_state,
+                objective_state,
+                outgoing_state,
+                options.backward_sampling_scheme,
+                scenario_path[1:index],
+                algoParams
+                appliedSolvers
+            )
+            # new_cuts = refine_bellman_function(
+            #     model,
+            #     node,
+            #     node.bellman_function,
+            #     options.risk_measures[node_index],
+            #     outgoing_state,
+            #     items.duals,
+            #     items.supports,
+            #     items.probability,
+            #     items.objectives,
+            # )
+            # push!(cuts[node_index], new_cuts)
+            # if options.refine_at_similar_nodes
+            #     # Refine the bellman function at other nodes with the same
+            #     # children, e.g., in the same stage of a Markovian policy graph.
+            #     for other_index in options.similar_children[node_index]
+            #         copied_probability = similar(items.probability)
+            #         other_node = model[other_index]
+            #         for (idx, child_index) in enumerate(items.nodes)
+            #             copied_probability[idx] =
+            #                 get(options.Φ, (other_index, child_index), 0.0) *
+            #                 items.supports[idx].probability
+            #         end
+            #         new_cuts = refine_bellman_function(
+            #             model,
+            #             other_node,
+            #             other_node.bellman_function,
+            #             options.risk_measures[other_index],
+            #             outgoing_state,
+            #             items.duals,
+            #             items.supports,
+            #             copied_probability,
+            #             items.objectives,
+            #         )
+            #         push!(cuts[other_index], new_cuts)
+            #     end
+            # end
+        end
+    end
+    return cuts
+end
+
+
+function solve_all_children(
+    model::PolicyGraph{T},
+    node::Node{T},
+    items::BackwardPassItems,
+    belief::Float64,
+    belief_state,
+    objective_state,
+    outgoing_state::Dict{Symbol,Float64},
+    backward_sampling_scheme::AbstractBackwardSamplingScheme,
+    scenario_path,
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers
+) where {T}
+    length_scenario_path = length(scenario_path)
+    for child in node.children
+        if isapprox(child.probability, 0.0, atol = 1e-6)
+            continue
+        end
+        child_node = model[child.term]
+        for noise in SDDP.sample_backward_noise_terms(backward_sampling_scheme, child_node)
+            if length(scenario_path) == length_scenario_path
+                push!(scenario_path, (child.term, noise.term))
+            else
+                scenario_path[end] = (child.term, noise.term)
+            end
+            if haskey(items.cached_solutions, (child.term, noise.term))
+                sol_index = items.cached_solutions[(child.term, noise.term)]
+                push!(items.duals, items.duals[sol_index])
+                push!(items.supports, items.supports[sol_index])
+                push!(items.nodes, child_node.index)
+                push!(items.probability, items.probability[sol_index])
+                push!(items.objectives, items.objectives[sol_index])
+                push!(items.belief, belief)
+            else
+                # Update belief state, etc.
+                if belief_state !== nothing
+                    current_belief = child_node.belief_state::SDDP.BeliefState{T}
+                    current_belief.updater(
+                        current_belief.belief,
+                        belief_state,
+                        current_belief.partition_index,
+                        noise.term,
+                    )
+                end
+                if objective_state !== nothing
+                    SDDP.update_objective_state(
+                        child_node.objective_state,
+                        objective_state,
+                        noise.term,
+                    )
+                end
+                TimerOutputs.@timeit NCNBD_TIMER "solve_bw_subproblem" begin
+                    subproblem_results = solve_subproblem_backward(
+                        model,
+                        child_node,
+                        outgoing_state,
+                        noise.term,
+                        scenario_path,
+                        require_duals = true, #TODO: Delete (also in forward pass)
+                        algoParams,
+                        appliedSolvers
+                    )
+                end
+                push!(items.duals, subproblem_results.duals)
+                push!(items.supports, noise)
+                push!(items.nodes, child_node.index)
+                push!(items.probability, child.probability * noise.probability)
+                push!(items.objectives, subproblem_results.objective)
+                push!(items.belief, belief)
+                items.cached_solutions[(child.term, noise.term)] = length(items.duals)
+                #TODO: Maybe add binary precision
+            end
+        end
+    end
+    if length(scenario_path) == length_scenario_path
+        # No-op. There weren't any children to solve.
+    else
+        # Drop the last element (i.e., the one we added).
+        pop!(scenario_path)
+    end
+end
+
+
+# Internal function: solve the subproblem associated with node given the
+# incoming state variables state and realization of the stagewise-independent
+# noise term noise. If require_duals=true, also return the dual variables
+# associated with the fixed constraint of the incoming state variables.
+function solve_subproblem_backward(
+    model::PolicyGraph{T},
+    node::Node{T},
+    state::Dict{Symbol,Float64},
+    noise,
+    scenario_path::Vector{Tuple{T,S}};
+    require_duals::Bool,
+) where {T,S}
+
+    # MODEL PARAMETRIZATION (-> LINEARIZED SUBPROBLEM!)
+    ############################################################################
+    linearizedSubproblem = node.ext[:linSubproblem]
+
+    # Parameterize the model. First, fix the value of the incoming state
+    # variables. Then parameterize the model depending on `noise`. Finally,
+    # set the objective.
+    set_incoming_state(node, state)
+    parameterize(node, noise)
+
+    # pre_optimize_ret = if node.pre_optimize_hook !== nothing
+    #     node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
+    # else
+    #     nothing
+    # end
+
+    #TODO: BACKWARD PASS PREPARATION
+    ############################################################################
+    # prepare_backward_pass!(node, linearizedSubproblem, binaryPrecision)
+    # Also adapt solver here
+
+    # PRIMAL SOLUTION
+    ############################################################################
+    JuMP.optimize!(linearizedSubproblem)
+
+    if haskey(model.ext, :total_solves)
+        model.ext[:total_solves] += 1
+    else
+        model.ext[:total_solves] = 1
+    end
+
+    # if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
+    #     attempt_numerical_recovery(node)
+    # end
+
+    state = get_outgoing_state(node) #TODO: actually not required
+    stage_objective = stage_objective_value(node.stage_objective)
+    objective = JuMP.objective_value(node.subproblem)
+
+    # DUAL SOLUTION
+    ############################################################################
+    # If require_duals = true, check for dual feasibility and return a dict with
+    # the dual on the fixed constraint associated with each incoming state
+    # variable. If require_duals=false, return an empty dictionary for
+    # type-stability.
+    dual_values = if require_duals
+        get_dual_variables_backward(node, node.integrality_handler)
+    else
+        Dict{Symbol,Float64}()
+    end
+
+    if node.post_optimize_hook !== nothing
+        node.post_optimize_hook(pre_optimize_ret)
+    end
+
+    #TODO: REGAIN ORIGINAL MODEL
+    ############################################################################
+    #
+
+    return (
+        state = state, # actually not required
+        duals = dual_values,
+        objective = objective,
+        stage_objective = stage_objective, # actually not required
+    )
+end
+
+
+function get_dual_variables_backward(node::Node, integrality_handler::SDDP.ContinuousRelaxation)
+    dual_values = Dict{Symbol,Float64}()
+    # TODO implement smart choice for initial duals
+    # TODO implement right states (binary states to be used here)
+    dual_vars = zeros(length(node.states))
+    solver_obj = JuMP.objective_value(node.ext[:linearizedSubproblem])
+    try
+        kelley_obj = _kelley(node, dual_vars, integrality_handler)::Float64
+        @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
+    catch e
+        write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
+        rethrow(e)
+    end
+    # TODO implement right states (binary states to be used here)
+    for (i, name) in enumerate(keys(node.states))
+        # TODO (maybe) change dual signs inside kelley to match LP duals
+        dual_values[name] = -dual_vars[i]
     end
     return dual_values
 end
