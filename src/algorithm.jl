@@ -556,8 +556,6 @@ function solve_subproblem(
     ############################################################################
     number_of_nonlinearities = size(node.ext[:nlFunctions], 1)
 
-    @infiltrate
-
     for i = 1:number_of_nonlinearities
         nlFunction = node.ext[:nlFunctions][i]
         dimension = size(nlFunction.variablesContained, 1)

@@ -398,7 +398,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
     println("optimal value: ", overestimation)
 
-    @infiltrate
     # x_opt = JuMP.value(estimationProblem[:x_1_est])
     # y_opt = JuMP.value(estimationProblem[:y_est])
     # l_opt_1 = JuMP.value(estimationProblem[:λ_est][simplex_index,1])
@@ -421,7 +420,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     # end
     # println("calculated x: ", x_val)
     # println("calculated y: ", y_val)
-    # @infiltrate
 
     # DETERMINE AND SOLVE MAXIMUM UNDERESTIMATION PROBLEM
     ############################################################################

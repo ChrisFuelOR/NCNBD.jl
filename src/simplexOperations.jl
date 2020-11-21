@@ -32,18 +32,15 @@ function divide_simplex_by_longest_edge_1D!(simplex_index::Int64, triangulation:
     midpoint = 0.5 * (simplex.vertices[1,1] + simplex.vertices[2,1])
     func_value = nlfunction.nonlinfunc_eval(midpoint)
 
-    # pre-allocate vertex space
-    vertices = Array{Float64,2}(undef, 2, 1)
-
     # create two new simplices and add them to the triangulation
-    vertices = [simplex.vertices[1,1], midpoint]
-    vertice_values = [simplex.vertice_values[1], func_value]
-    new_simplices[1]  = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
+    new_simplices[1] = NCNBD.Simplex(Array{Float64,2}(undef, 2, 1), Vector{Float64}(undef, 2), Inf, Inf)
+    new_simplices[1].vertices[:,1] = [simplex.vertices[1,1], midpoint]
+    new_simplices[1].vertice_values = [simplex.vertice_values[1], func_value]
     push!(triangulation.simplices, new_simplices[1] )
 
-    vertices = [midpoint, simplex.vertices[2,1]]
-    vertice_values = [func_value, simplex.vertice_values[2]]
-    new_simplices[2] = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
+    new_simplices[2] = NCNBD.Simplex(Array{Float64,2}(undef, 2, 1), Vector{Float64}(undef, 2), Inf, Inf)
+    new_simplices[2].vertices[:,1] = [midpoint, simplex.vertices[2,1]]
+    new_simplices[2].vertice_values = [func_value, simplex.vertice_values[2]]
     push!(triangulation.simplices, new_simplices[2])
 
     # delete old simplex
@@ -92,20 +89,20 @@ function divide_simplex_by_longest_edge_2D!(simplex_index::Int64, triangulation:
 
     # create two new simplices and add them to the triangulation
     # first simplex
-    vertices[1, :] = simplex.vertices[non_edge_vertex, :]
-    vertices[2, :] = simplex.vertices[longest_edge[1], :]
-    vertices[3, :] = [midpoint[1], midpoint[2]]
-    vertice_values = [simplex.vertice_values[non_edge_vertex], simplex.vertice_values[longest_edge[1]], func_value]
-    new_simplices[1]  = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
-    push!(triangulation.simplices, new_simplices[1] )
+    new_simplices[1] = NCNBD.Simplex(Array{Float64,2}(undef, 3, 2), Vector{Float64}(undef, 3), Inf, Inf)
+    new_simplices[1].vertices[1, :] = simplex.vertices[non_edge_vertex, :]
+    new_simplices[1].vertices[2, :] = simplex.vertices[longest_edge[1], :]
+    new_simplices[1].vertices[3, :] = [midpoint[1] midpoint[2]]
+    new_simplices[1].vertice_values = [simplex.vertice_values[non_edge_vertex], simplex.vertice_values[longest_edge[1]], func_value]
+    push!(triangulation.simplices, new_simplices[1])
 
     # second simplex
-    vertices[1, :] = simplex.vertices[non_edge_vertex, :]
-    vertices[2, :] = simplex.vertices[longest_edge[2], :]
-    vertices[3, :] = [midpoint[1], midpoint[2]]
-    vertice_values = [simplex.vertice_values[non_edge_vertex], simplex.vertice_values[longest_edge[2]], func_value]
-    new_simplices[2]  = NCNBD.Simplex(vertices, vertice_values, Inf, Inf)
-    push!(triangulation.simplices, new_simplices[2] )
+    new_simplices[1] = NCNBD.Simplex(Array{Float64,2}(undef, 3, 2), Vector{Float64}(undef, 3), Inf, Inf)
+    new_simplices[1].vertices[1, :] = simplex.vertices[non_edge_vertex, :]
+    new_simplices[1].vertices[2, :] = simplex.vertices[longest_edge[2], :]
+    new_simplices[1].vertices[3, :] = [midpoint[1] midpoint[2]]
+    new_simplices[1].vertice_values = [simplex.vertice_values[non_edge_vertex], simplex.vertice_values[longest_edge[2]], func_value]
+    push!(triangulation.simplices, new_simplices[2])
 
     # delete old simplex
     deleteat!(triangulation.simplices, simplex_index)

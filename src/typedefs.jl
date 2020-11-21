@@ -96,7 +96,6 @@ mutable struct NonlinearFunction
 
 end
 
-
 # struct for solvers to be used (maybe mutable)
 struct AppliedSolvers
     LP :: Any
