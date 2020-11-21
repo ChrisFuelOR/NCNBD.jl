@@ -1,4 +1,4 @@
-struct State{T}
+mutable struct State{T}
     # The incoming state variable.
     in::T
     # The outgoing state variable.

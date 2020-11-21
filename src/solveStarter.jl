@@ -266,6 +266,23 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         node.ext[:linSubproblem] = node.subproblem.ext[:linSubproblem]
         node.subproblem.ext[:linSubproblem] = Nothing
 
+        # Set bounds for x_in (taking bounds from previous stage's x_out)
+        #-----------------------------------------------------------------------
+        if node_index > 1
+
+            for (i, (name, states)) in enumerate(node.ext[:lin_states])
+                # Get correct bounds
+                lb = JuMP.lower_bound(model.nodes[node_index-1].states[name].out)
+                ub = JuMP.upper_bound(model.nodes[node_index-1].states[name].out)
+                # Set correct bounds
+                JuMP.set_lower_bound(states.in, lb)
+                JuMP.set_upper_bound(states.in, ub)
+                # Store bounds to re-set them easier later after relaxation (regularization, backward pass)
+                states.lb = lb
+                states.ub = ub
+            end
+        end
+
         # Set objective sense
         JuMP.set_objective_sense(node.ext[:linSubproblem], model.objective_sense)
 
