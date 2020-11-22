@@ -561,9 +561,6 @@ function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Opti
                 continue
             end
 
-            # storage for backward pass data
-            node.ext[:bw_data] = Dict{Symbol,Any}()
-
             solve_all_children(
                 model,
                 node,
@@ -726,6 +723,9 @@ function solve_subproblem_backward(
     ############################################################################
     linearizedSubproblem = node.ext[:linSubproblem]
 
+    # storage for backward pass data
+    node.ext[:backward_data] = Dict{Symbol,Any}()
+
     # Parameterize the model. First, fix the value of the incoming state
     # variables. Then parameterize the model depending on `noise`. Finally,
     # set the objective.
@@ -742,9 +742,7 @@ function solve_subproblem_backward(
     ############################################################################
     # prepare_backward_pass!(node, linearizedSubproblem, binaryPrecision)
     # Also adapt solver here
-    @infiltrate
     changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision[node_index])
-    @infiltrate
 
     # PRIMAL SOLUTION
     ############################################################################
@@ -760,8 +758,7 @@ function solve_subproblem_backward(
     #     attempt_numerical_recovery(node)
     # end
 
-    stage_objective = stage_objective_value(node.stage_objective)
-    objective = JuMP.objective_value(node.subproblem)
+    objective = JuMP.objective_value(linearizedSubproblem)
 
     # DUAL SOLUTION
     ############################################################################
@@ -782,14 +779,11 @@ function solve_subproblem_backward(
 
     #TODO: REGAIN ORIGINAL MODEL
     ############################################################################
-    @infiltrate
     changeToOriginalSpace!(node, linearizedSubproblem, state)
-    @infiltrate
 
     return (
         duals = dual_values,
-        objective = objective,
-        stage_objective = stage_objective, # actually not required
+        objective = objective
     )
 end
 

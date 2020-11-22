@@ -1,27 +1,18 @@
-mutable struct State{T}
-    # The incoming state variable.
-    in::T
-    # The outgoing state variable.
-    out::T
-    # StateInfo
-    info::StateInfo
-
-    # function State(in::T, out::T) where {T}
-    #     return new{T}(
-    #         in,
-    #         out,
-    #         -Inf,
-    #         Inf
-    #     )
-    # end
-end
-
 # must be mutable in my case, as in_part has to be set later
 mutable struct StateInfo
     in::JuMP.VariableInfo
     out::JuMP.VariableInfo
     initial_value::Float64
     kwargs
+end
+
+struct State{T}
+    # The incoming state variable.
+    in::T
+    # The outgoing state variable.
+    out::T
+    # StateInfo
+    info::StateInfo
 end
 
 function setup_state(
