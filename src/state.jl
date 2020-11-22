@@ -3,10 +3,8 @@ mutable struct State{T}
     in::T
     # The outgoing state variable.
     out::T
-    # The lower bound
-    lb::Float64
-    # The upper bound
-    ub::Float64
+    # StateInfo
+    info::StateInfo
 
     # function State(in::T, out::T) where {T}
     #     return new{T}(
@@ -18,7 +16,8 @@ mutable struct State{T}
     # end
 end
 
-struct StateInfo
+# must be mutable in my case, as in_part has to be set later
+mutable struct StateInfo
     in::JuMP.VariableInfo
     out::JuMP.VariableInfo
     initial_value::Float64

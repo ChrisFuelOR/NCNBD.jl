@@ -15,10 +15,6 @@ function JuMP.build_variable(
     end
     return StateInfo(
         JuMP.VariableInfo(
-            #info.has_lb,
-            #info.lower_bound,  # lower bound
-            #info.has_ub,
-            #info.upper_bound,  # upper bound
             false,
             NaN, # lower bound
             false,
@@ -54,8 +50,7 @@ function JuMP.add_variable(problem::JuMP.Model, state_info::StateInfo, name::Str
     state = State(
         JuMP.add_variable(problem, JuMP.ScalarVariable(state_info.in), name * "_in"),
         JuMP.add_variable(problem, JuMP.ScalarVariable(state_info.out), name * "_out"),
-        -Inf,
-        Inf
+        state_info
     )
 
     integrality_handler = SDDP.get_integrality_handler(problem)
