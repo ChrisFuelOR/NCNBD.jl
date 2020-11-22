@@ -137,7 +137,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
             subproblem_results = SDDP.solve_subproblem(
                 model,
                 node,
-                incoming_state_value,
+                incoming_state_value, # no State struct!
                 noise,
                 scenario_path[1:depth],
                 require_duals = false,
@@ -341,7 +341,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
             subproblem_results = solve_subproblem(
                 model,
                 node,
-                incoming_state_value,
+                incoming_state_value, # only values, no State struct!
                 noise,
                 scenario_path[1:depth],
                 sigma,
@@ -386,101 +386,6 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
 end
 
 
-function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Model, sigma::Float64)
-
-    #NOTE: The copy constraint is not modeled explicitly here. Instead,
-    # the state variable is unfixed and takes the role of z in our paper.
-    # It is then subtracted from the fixed value to obtain the so called slack.
-    # TODO: Check if this should be changed later. We manage to avoid introducing
-    # an additional variable here, but it becomes a bit confusing. Moreover,
-    # this is maybe not possible in the backward pass.
-
-    reg_data = node.ext[:regularization_data]
-    reg_data[:fixed_state_value] = Float64[]
-    reg_data[:slacks] = Any[]
-    reg_data[:reg_variables] = JuMP.VariableRef[]
-    reg_data[:reg_constraints] = JuMP.ConstraintRef[]
-
-    number_of_states = 0
-
-    # Storage for upper and lower bounds
-    UB = Float64[]
-
-    # UNFIX THE STATE VARIABLES
-    ############################################################################
-    for (i, (name, state)) in enumerate(node.ext[:lin_states])
-        push!(reg_data[:fixed_state_value], JuMP.fix_value(state.in))
-        push!(reg_data[:slacks], reg_data[:fixed_state_value][i] - state.in)
-        JuMP.unfix(state.in)
-        JuMP.set_lower_bound(state.in, state.lb)
-        JuMP.set_upper_bound(state.in, state.ub)
-        number_of_states = i
-    end
-
-    # STORE ORIGINAL OBJECTIVE FUNCTION
-    ############################################################################
-    old_obj = reg_data[:old_objective] = JuMP.objective_function(linearizedSubproblem)
-
-    # DEFINE NEW VARIABLES, CONSTRAINTS AND OBJECTIVE
-    ############################################################################
-    # These variables and constraints are used to define the norm of the slack as a MILP
-    # Using the lifting approach without binary requirements
-    slack = reg_data[:slacks]
-
-    # Variable for objective
-    v = JuMP.@variable(linearizedSubproblem, base_name = "reg_v")
-    push!(reg_data[:reg_variables], v)
-
-    # Get sign for regularization term
-    fact = (JuMP.objective_sense(linearizedSubproblem) == JuMP.MOI.MIN_SENSE ? 1 : -1)
-
-    # New objective
-    new_obj = old_obj + fact * sigma * v
-    JuMP.set_objective_function(linearizedSubproblem, new_obj)
-
-    # Variables
-    alpha = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "alpha")
-    append!(reg_data[:reg_variables], alpha)
-
-    # Constraints
-    const_plus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], -alpha[i] <= slack[i])
-    const_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack[i] <= alpha[i])
-    append!(reg_data[:reg_constraints], const_plus)
-    append!(reg_data[:reg_constraints], const_minus)
-
-    const_norm = JuMP.@constraint(linearizedSubproblem, v >= sum(alpha[i] for i in 1:number_of_states))
-    push!(reg_data[:reg_constraints], const_norm)
-
-end
-
-function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Model)
-
-    reg_data = node.ext[:regularization_data]
-
-    # FIX THE STATE VARIABLES
-    ############################################################################
-    for (i, (name, state)) in enumerate(node.ext[:lin_states])
-        JuMP.delete_lower_bound(state.in)
-        JuMP.delete_upper_bound(state.in)
-        JuMP.fix(state.in, reg_data[:fixed_state_value][i])
-    end
-
-    # REPLACE THE NEW BY THE OLD OBJECTIVE
-    ############################################################################
-    JuMP.set_objective_function(linearizedSubproblem, reg_data[:old_objective])
-
-    # DELETE ALL REGULARIZATION-BASED VARIABLES AND CONSTRAINTS
-    ############################################################################
-    delete(linearizedSubproblem, reg_data[:reg_variables])
-    for constraint in reg_data[:reg_constraints]
-        delete(linearizedSubproblem, constraint)
-    end
-
-    delete!(node.ext, :regularization_data)
-
-end
-
-
 # Internal function: solve the subproblem associated with node given the
 # incoming state variables state and realization of the stagewise-independent
 # noise term noise. If require_duals=true, also return the dual variables
@@ -515,7 +420,6 @@ function solve_subproblem(
     ############################################################################
     # storage for regularization data
     node.ext[:regularization_data] = Dict{Symbol,Any}()
-    # sigma for this stage
 
     regularize_subproblem!(node, linearizedSubproblem, sigma)
 
@@ -590,8 +494,8 @@ function get_dual_variables(node::SDDP.Node, ::SDDP.ContinuousRelaxation)
         write_subproblem_to_file(node, "linSubproblem.mof.json", throw_error = true)
     end
     dual_sign = JuMP.objective_sense(node.ext[:linSubproblem]) == MOI.MIN_SENSE ? 1.0 : -1.0
-    for (name, state) in node.ext[:lin_states]
-        ref = JuMP.FixRef(state.in)
+    for (name, state_comp) in node.ext[:lin_states]
+        ref = JuMP.FixRef(state_comp.in)
         dual_values[name] = dual_sign * JuMP.dual(ref)
     end
     return dual_values
@@ -606,13 +510,15 @@ function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Opti
     belief_states::Vector{Tuple{Int,Dict{T,Float64}}}) where {T,NoiseType,N}
 
     cuts = Dict{T,Vector{Any}}(index => Any[] for index in keys(model.nodes))
+
     for index = length(scenario_path):-1:1
         outgoing_state = sampled_states[index]
         objective_state = get(objective_states, index, nothing)
         partition_index, belief_state = get(belief_states, index, (0, nothing))
-        items = SDDP.BackwardPassItems(T, Noise)
+        items = SDDP.BackwardPassItems(T, SDDP.Noise)
         if belief_state !== nothing
             # # Update the cost-to-go function for partially observable model.
+            #print("blubb")
             # for (node_index, belief) in belief_state
             #     belief == 0.0 && continue
             #     solve_all_children(
@@ -647,16 +553,21 @@ function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Opti
             #         items.objectives,
             #     )
             #     push!(cuts[node_index], new_cuts)
-            end
+            #end
         else
             node_index, _ = scenario_path[index]
             node = model[node_index]
             if length(node.children) == 0
                 continue
             end
+
+            # storage for backward pass data
+            node.ext[:bw_data] = Dict{Symbol,Any}()
+
             solve_all_children(
                 model,
                 node,
+                node_index,
                 items,
                 1.0,
                 belief_state,
@@ -664,7 +575,7 @@ function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Opti
                 outgoing_state,
                 options.backward_sampling_scheme,
                 scenario_path[1:index],
-                algoParams
+                algoParams,
                 appliedSolvers
             )
             # new_cuts = refine_bellman_function(
@@ -711,14 +622,15 @@ end
 
 
 function solve_all_children(
-    model::PolicyGraph{T},
-    node::Node{T},
-    items::BackwardPassItems,
+    model::SDDP.PolicyGraph{T},
+    node::SDDP.Node{T},
+    node_index:: Int64,
+    items::SDDP.BackwardPassItems,
     belief::Float64,
     belief_state,
     objective_state,
     outgoing_state::Dict{Symbol,Float64},
-    backward_sampling_scheme::AbstractBackwardSamplingScheme,
+    backward_sampling_scheme::SDDP.AbstractBackwardSamplingScheme,
     scenario_path,
     algoParams::NCNBD.AlgoParams,
     appliedSolvers::NCNBD.AppliedSolvers
@@ -765,6 +677,7 @@ function solve_all_children(
                     subproblem_results = solve_subproblem_backward(
                         model,
                         child_node,
+                        node_index+1,
                         outgoing_state,
                         noise.term,
                         scenario_path,
@@ -798,12 +711,15 @@ end
 # noise term noise. If require_duals=true, also return the dual variables
 # associated with the fixed constraint of the incoming state variables.
 function solve_subproblem_backward(
-    model::PolicyGraph{T},
-    node::Node{T},
+    model::SDDP.PolicyGraph{T},
+    node::SDDP.Node{T},
+    node_index::Int64,
     state::Dict{Symbol,Float64},
     noise,
-    scenario_path::Vector{Tuple{T,S}};
-    require_duals::Bool,
+    scenario_path::Vector{Tuple{T,S}},
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers;
+    require_duals::Bool
 ) where {T,S}
 
     # MODEL PARAMETRIZATION (-> LINEARIZED SUBPROBLEM!)
@@ -826,6 +742,9 @@ function solve_subproblem_backward(
     ############################################################################
     # prepare_backward_pass!(node, linearizedSubproblem, binaryPrecision)
     # Also adapt solver here
+    @infiltrate
+    changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision[node_index])
+    @infiltrate
 
     # PRIMAL SOLUTION
     ############################################################################
@@ -841,7 +760,6 @@ function solve_subproblem_backward(
     #     attempt_numerical_recovery(node)
     # end
 
-    state = get_outgoing_state(node) #TODO: actually not required
     stage_objective = stage_objective_value(node.stage_objective)
     objective = JuMP.objective_value(node.subproblem)
 
@@ -851,22 +769,24 @@ function solve_subproblem_backward(
     # the dual on the fixed constraint associated with each incoming state
     # variable. If require_duals=false, return an empty dictionary for
     # type-stability.
-    dual_values = if require_duals
-        get_dual_variables_backward(node, node.integrality_handler)
-    else
-        Dict{Symbol,Float64}()
-    end
+    dual_values = Dict{Symbol,Float64}()
+    # dual_values = if require_duals
+    #     get_dual_variables_backward(node, node.integrality_handler)
+    # else
+    #     Dict{Symbol,Float64}()
+    # end
 
-    if node.post_optimize_hook !== nothing
-        node.post_optimize_hook(pre_optimize_ret)
-    end
+    # if node.post_optimize_hook !== nothing
+    #     node.post_optimize_hook(pre_optimize_ret)
+    # end
 
     #TODO: REGAIN ORIGINAL MODEL
     ############################################################################
-    #
+    @infiltrate
+    changeToOriginalSpace!(node, linearizedSubproblem, state)
+    @infiltrate
 
     return (
-        state = state, # actually not required
         duals = dual_values,
         objective = objective,
         stage_objective = stage_objective, # actually not required
@@ -874,7 +794,7 @@ function solve_subproblem_backward(
 end
 
 
-function get_dual_variables_backward(node::Node, integrality_handler::SDDP.ContinuousRelaxation)
+function get_dual_variables_backward(node::SDDP.Node, integrality_handler::SDDP.ContinuousRelaxation)
     dual_values = Dict{Symbol,Float64}()
     # TODO implement smart choice for initial duals
     # TODO implement right states (binary states to be used here)

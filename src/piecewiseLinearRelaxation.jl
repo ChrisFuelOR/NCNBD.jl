@@ -279,6 +279,7 @@ function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Tria
     z = JuMP.@variable(linSubproblem, [l=1:number_log], Bin, base_name="z_$nlIndex")
     append!(triangulation.plrVariables, z)
     # note z_est is not binary, as we will fix these values in the estimation problem anyway
+    # for the same reason, we do not need bounds 0 and 1 here
     z_est = JuMP.@variable(estimationProblem, [l=1:number_log], base_name="z_est")
     estimationProblem[:z_est] = z_est
 

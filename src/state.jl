@@ -44,6 +44,11 @@ end
 # contained in state.
 function set_incoming_state(node::SDDP.Node, state::Dict{Symbol,Float64})
     for (state_name, value) in state
+
+        # TODO: Check if required
+        prepare_state_fixing!(node, state_name)
+
+        # Fix value (bounds are automatically deleted by force argument)
         JuMP.fix(node.ext[:lin_states][state_name].in, value, force=true)
     end
     return
@@ -54,21 +59,21 @@ end
 # FeasiblePoint.
 function get_outgoing_state(node::SDDP.Node)
     values = Dict{Symbol,Float64}()
-    for (name, state) in node.ext[:lin_states]
+    for (name, state_comp) in node.ext[:lin_states]
         # To fix some cases of numerical infeasiblities, if the outgoing value
         # is outside its bounds, project the value back onto the bounds. There
         # is a pretty large (×5) penalty associated with this check because it
         # typically requires a call to the solver. It is worth reducing
         # infeasibilities though.
-        outgoing_value = JuMP.value(state.out)
-        if JuMP.has_upper_bound(state.out)
-            current_bound = JuMP.upper_bound(state.out)
+        outgoing_value = JuMP.value(state_comp.out)
+        if JuMP.has_upper_bound(state_comp.out)
+            current_bound = JuMP.upper_bound(state_comp.out)
             if current_bound < outgoing_value
                 outgoing_value = current_bound
             end
         end
-        if JuMP.has_lower_bound(state.out)
-            current_bound = JuMP.lower_bound(state.out)
+        if JuMP.has_lower_bound(state_comp.out)
+            current_bound = JuMP.lower_bound(state_comp.out)
             if current_bound > outgoing_value
                 outgoing_value = current_bound
             end
@@ -76,4 +81,48 @@ function get_outgoing_state(node::SDDP.Node)
         values[name] = outgoing_value
     end
     return values
+end
+
+# Delete binary and integer type of state variables, since I once had some
+# problems with fixing working properly then.
+# May not be required, though.
+# Bounds are not reset, since this can be done automatically using
+# force=true when fixing.
+function prepare_state_fixing!(node::SDDP.Node, state_name::Symbol)
+
+    if JuMP.is_binary(node.ext[:lin_states][state_name].in)
+        JuMP.unset_binary(node.ext[:lin_states][state_name].in)
+    elseif JuMP.is_integer(node.ext[:lin_states][state_name].in)
+        JuMP.unset_integer(node.ext[:lin_states][state_name].in)
+    end
+end
+
+function prepare_state_fixing!(node::SDDP.Node, state::State)
+
+    if JuMP.is_binary(state.in)
+        JuMP.unset_binary(state.in)
+    elseif JuMP.is_integer(state.in)
+        JuMP.unset_integer(state.in)
+    end
+end
+
+
+
+# Reset binary and integer type of state variables.
+# Reset bounds.
+# May not be required, though.
+function follow_state_unfixing!(state::State)
+
+    if state.info.in.has_lb
+        JuMP.set_lower_bound(state.in, state.info.in.lower_bound)
+    end
+    if state.info.in.has_ub
+        JuMP.set_upper_bound(state.in,  state.info.in.upper_bound)
+    end
+    if state.info.in.binary
+        JuMP.set_binary(state.in)
+    elseif state.info.in.integer
+        JuMP.set_integer(state.in)
+    end
+
 end

@@ -270,24 +270,24 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         #-----------------------------------------------------------------------
         if node_index > 1
 
-            for (i, (name, states)) in enumerate(node.ext[:lin_states])
+            for (i, (name, state)) in enumerate(node.ext[:lin_states])
                 # Get correct state_info
-                state_info = model.ext[:lin_states][node_index-1].states[name].info.out
+                state_info = model.ext[:lin_states][node_index-1].state[name].info.out
 
                 if state_info.has_lb
-                    JuMP.set_lower_bound(states.in, state_info.lower_bound)
+                    JuMP.set_lower_bound(state.in, state_info.lower_bound)
                 end
                 if state_info.has_ub
-                    JuMP.set_upper_bound(states.in, state_info.upper_bound)
+                    JuMP.set_upper_bound(state.in, state_info.upper_bound)
                 end
                 if state_info.binary
-                    JuMP.set_binary(states.in)
+                    JuMP.set_binary(state.in)
                 elseif state_info.integer
-                    JuMP.set_integer(states.in)
+                    JuMP.set_integer(state.in)
                 end
 
                 # Store info to reset it later
-                states.info.in = state_info
+                state.info.in = state_info
             end
         end
 
