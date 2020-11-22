@@ -8,7 +8,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     # this is maybe not possible in the backward pass.
 
     reg_data = node.ext[:regularization_data]
-    reg_data[:fixed_state_value] = Float64[] #TODO: should rather be done with symbol in a dict
+    reg_data[:fixed_state_value] = Dict{Symbol,Float64}()
     reg_data[:slacks] = Any[]
     reg_data[:reg_variables] = JuMP.VariableRef[]
     reg_data[:reg_constraints] = JuMP.ConstraintRef[]
@@ -18,8 +18,8 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     # UNFIX THE STATE VARIABLES
     ############################################################################
     for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
-        push!(reg_data[:fixed_state_value], JuMP.fix_value(state_comp.in))
-        push!(reg_data[:slacks], reg_data[:fixed_state_value][i] - state_comp.in)
+        reg_data[:fixed_state_value][name] = JuMP.fix_value(state_comp.in)
+        push!(reg_data[:slacks], reg_data[:fixed_state_value][name] - state_comp.in)
         JuMP.unfix(state_comp.in)
 
         #TODO: Check if required
@@ -74,7 +74,7 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
         #TODO: Check if required
         prepare_state_fixing!(node, state_comp)
 
-        JuMP.fix(state_comp.in, reg_data[:fixed_state_value][i], force=true)
+        JuMP.fix(state_comp.in, reg_data[:fixed_state_value][name], force=true)
     end
 
     # REPLACE THE NEW BY THE OLD OBJECTIVE
@@ -105,7 +105,7 @@ function changeToBinarySpace!(
     # It is then subtracted from the fixed value to obtain the so called slack.
 
     bw_data = node.ext[:backward_data]
-    bw_data[:fixed_state_value] = Dict{Symbol,Float64}() #TODO: should rather be done with symbol in a dict
+    bw_data[:fixed_state_value] = Dict{Symbol,Float64}()
     #reg_data[:slacks] = Any[]
     bw_data[:bin_variables] = JuMP.VariableRef[]
     bw_data[:bin_constraints] = JuMP.ConstraintRef[]
@@ -120,10 +120,10 @@ function changeToBinarySpace!(
 
         # Save fixed value of state
         fixed_value = JuMP.fix_value(state_comp.in)
-        push!(bw_data[:fixed_state_value][name], fixed_value)
+        bw_data[:fixed_state_value][state_name] = fixed_value
 
         # Set up state for backward pass using binary approximation
-        setup_state_backward(linearizedSubproblem, state_comp, name, binaryPrecision, bw_data)
+        setup_state_backward(linearizedSubproblem, state_comp, state_name, binaryPrecision, bw_data)
     end
 end
 
@@ -131,11 +131,15 @@ end
 function setup_state_backward(
     subproblem::JuMP.Model,
     state_comp::State,
-    name::String,
+    state_name::Symbol,
     binaryPrecision::Float64,
     bw_data::Dict{Symbol,Any}
 )
-    if state.info.in.binary
+
+    # Get name of state variable in String representation
+    name = JuMP.name(state_comp.in)
+
+    if state_comp.info.in.binary
         #-----------------------------------------------------------------------
         # In this case, the variable must not be unfixed, no new binary variables
         # or constraints have to be introduced.
@@ -145,7 +149,7 @@ function setup_state_backward(
             error("When using SDDiP, state variables require an upper bound.")
         end
 
-        if state.info.in.integer
+        if state_comp.info.in.integer
             #-------------------------------------------------------------------
 
             # INITIAL VALUE HANDLING
@@ -172,21 +176,24 @@ function setup_state_backward(
             )
             subproblem[:binary_vars] = binary_vars
             # store in list for later access and deletion
-            append!(bw_data[:bin_variables], binary_vars)
+            for i in 1:num_vars
+               push!(bw_data[:bin_variables], binary_vars[i].in)
+               push!(bw_data[:bin_variables], binary_vars[i].out)
+           end
 
             # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
             ####################################################################
-            JuMP.@constraint(
+            binary_constraint = JuMP.@constraint(
                 subproblem,
                 state_comp.in == SDDP.bincontract([binary_vars[i].in for i = 1:num_vars])
             )
             # store in list for later access and deletion
-            append!(bw_data[:bin_constraints], binary_vars)
+            push!(bw_data[:bin_constraints], binary_constraint)
 
             # FIX NEW VARIABLES
             ####################################################################
             # Get fixed values from fixed value of original state
-            fixed_binary_values = SDDP.binexpand(bw_data[:fixed_state_value][name], state_comp.info.in.upper_bound)
+            fixed_binary_values = SDDP.binexpand(bw_data[:fixed_state_value][state_name], state_comp.info.in.upper_bound)
             # Fix binary variables
             for i = 1:num_vars
                 JuMP.fix(binary_vars[i].in, fixed_binary_values[i])
@@ -232,23 +239,28 @@ function setup_state_backward(
                 Bin,
                 initial_value = initial_value[i]
             )
+
             subproblem[:binary_vars] = binary_vars
             # store in list for later access and deletion
-            append!(bw_data[:bin_variables], binary_vars)
+            for i in 1:num_vars
+                push!(bw_data[:bin_variables], binary_vars[i].in)
+                push!(bw_data[:bin_variables], binary_vars[i].out)
+            end
 
             # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
             ####################################################################
-            JuMP.@constraint(
+            binary_constraint = JuMP.@constraint(
                 subproblem,
                 state_comp.in == SDDP.bincontract([binary_vars[i].in for i = 1:num_vars], epsilon)
             )
+
             # store in list for later access and deletion
-            append!(bw_data[:bin_constraints], binary_vars)
+            push!(bw_data[:bin_constraints], binary_constraint)
 
             # FIX NEW VARIABLES
             ####################################################################
             # Get fixed values from fixed value of original state
-            fixed_binary_values = SDDP.binexpand(bw_data[:fixed_state_value][name], state_comp.info.in.upper_bound)
+            fixed_binary_values = SDDP.binexpand(bw_data[:fixed_state_value][state_name], state_comp.info.in.upper_bound, epsilon)
             # Fix binary variables
             for i = 1:num_vars
                 JuMP.fix(binary_vars[i].in, fixed_binary_values[i])
@@ -282,7 +294,8 @@ function changeToOriginalSpace!(
 
     # FIX THE STATE VARIABLES AGAIN
     ############################################################################
-    for (i, (name, state_comp)) in enumerate(state)
+    for (state_name, value) in state
+        state_comp = node.ext[:lin_states][state_name]
         JuMP.delete_lower_bound(state_comp.in)
         JuMP.delete_upper_bound(state_comp.in)
 
@@ -294,7 +307,7 @@ function changeToOriginalSpace!(
             JuMP.unset_integer(state_comp.in)
         end
 
-        JuMP.fix(state_comp.in, bw_data[:fixed_state_value][name])
+        JuMP.fix(state_comp.in, bw_data[:fixed_state_value][state_name])
     end
 
     # REPLACE THE NEW BY THE OLD OBJECTIVE
