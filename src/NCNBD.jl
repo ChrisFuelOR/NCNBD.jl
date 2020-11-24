@@ -32,6 +32,6 @@ include("algorithm.jl")
 include("piecewiseLinearRelaxation.jl")
 include("simplexOperations.jl")
 include("problemModifications.jl")
-
+include("lagrange.jl")
 
 end

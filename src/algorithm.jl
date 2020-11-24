@@ -767,11 +767,11 @@ function solve_subproblem_backward(
     # variable. If require_duals=false, return an empty dictionary for
     # type-stability.
     dual_values = Dict{Symbol,Float64}()
-    # dual_values = if require_duals
-    #     get_dual_variables_backward(node, node.integrality_handler)
-    # else
-    #     Dict{Symbol,Float64}()
-    # end
+    dual_values = if require_duals
+        get_dual_variables_backward(node, algoParams, appliedSolvers)
+    else
+        Dict{Symbol,Float64}()
+     end
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
@@ -788,14 +788,24 @@ function solve_subproblem_backward(
 end
 
 
-function get_dual_variables_backward(node::SDDP.Node, integrality_handler::SDDP.ContinuousRelaxation)
+function get_dual_variables_backward(
+    node::SDDP.Node
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers)
+
     dual_values = Dict{Symbol,Float64}()
     # TODO implement smart choice for initial duals
     # TODO implement right states (binary states to be used here)
     dual_vars = zeros(length(node.states))
     solver_obj = JuMP.objective_value(node.ext[:linearizedSubproblem])
+
+    # Create an SDDiP integrality_handler here to store the Lagrangian dual information
+    #TODO: Store tolerances in algoParams
+    integrality_handler = SDDP.SDDiP(iteration_limit = 100, atol = 1e-8, rtol = 1e-8)
+    node.ext[:lagrange] = integrality_handler
+
     try
-        kelley_obj = _kelley(node, dual_vars, integrality_handler)::Float64
+        kelley_obj = _kelley(node, dual_vars, integrality_handler, algoParams, appliedSOlvers)::Float64
         @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
     catch e
         write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
