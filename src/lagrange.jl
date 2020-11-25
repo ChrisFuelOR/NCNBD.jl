@@ -18,13 +18,13 @@ function _kelley(
     @assert JuMP.termination_status(model) == MOI.OPTIMAL
     obj = JuMP.objective_value(model)
 
-    for (i, (name, state_comp)) in enumerate(node.ext[:backward_data][:bin_states])
-        integrality_handler.old_rhs[i] = JuMP.fix_value(state_comp.in)
-        integrality_handler.slacks[i] = state_comp.in - integrality_handler.old_rhs[i]
-        JuMP.unfix(state_comp.in)
+    for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
+        integrality_handler.old_rhs[i] = JuMP.fix_value(bin_state)
+        integrality_handler.slacks[i] = bin_state - integrality_handler.old_rhs[i]
+        JuMP.unfix(bin_state)
         #JuMP.unset_binary(state_comp.in) # TODO: maybe not required
-        JuMP.set_lower_bound(state_comp.in, 0)
-        JuMP.set_upper_bound(state_comp.in, 1)
+        JuMP.set_lower_bound(bin_state, 0)
+        JuMP.set_upper_bound(bin_state, 1)
     end
 
     # SET-UP APPROXIMATION MODEL
@@ -134,9 +134,9 @@ function _kelley(
                 dual_vars .*= -1
             end
 
-            for (i, (name, state_comp)) in enumerate(node.ext[:backward_data][:bin_states])
+            for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
                 #prepare_state_fixing!(node, state_comp)
-                JuMP.fix(state_comp.in, integrality_handler.old_rhs[i], force = true)
+                JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
 
             return best_actual

@@ -106,10 +106,9 @@ function changeToBinarySpace!(
 
     bw_data = node.ext[:backward_data]
     bw_data[:fixed_state_value] = Dict{Symbol,Float64}()
-    #reg_data[:slacks] = Any[]
-    bw_data[:bin_variables] = JuMP.VariableRef[]
+    #bw_data[:bin_variables] = JuMP.VariableRef[]
     bw_data[:bin_constraints] = JuMP.ConstraintRef[]
-    bw_data[:bin_states] = Dict{Symbol,NCNBD.State{VariableRef}}()
+    bw_data[:bin_states] = Dict{Symbol,JuMP.VariableRef}()
 
     number_of_states = 0
 
@@ -153,45 +152,35 @@ function setup_state_backward(
         if state_comp.info.in.integer
             #-------------------------------------------------------------------
 
-            # INITIAL VALUE HANDLING
-            ####################################################################
-            # I think I do not need this here, since we are not in the first stage
-            # Simply set initial value to zero if required
-            # TODO: Why do we not consider the lower bound as well?
-            initial_value = SDDP.binexpand(
-                Int(state_comp.info.initial_value),
-                floor(Int, state_comp.info.out.upper_bound),
-            )
-
             # INTRODUCE BINARY VARIABLES TO THE PROBLEM
             ####################################################################
-            num_vars = length(initial_value)
+            #NOTE: We do not need to define them as binary,
+            #as they are either fixed or relaxed to [0, 1] anyway
+            #NOTE: We do not need to define them as state variables,
+            #as only the _in-parts would be required anyway.
+            #Moreover, no Binary/Integer or bound information has to be stored.
+
+            num_vars = SDDP._bitsrequired(state_comp.info.in.upper_bound)
 
             binary_vars = JuMP.@variable(
                 subproblem,
                 [i in 1:num_vars],
-                base_name = "_bin_" * name,
-                State,
-                #Bin,
-                initial_value = initial_value[i]
+                base_name = "bin_" * name,
             )
-            #NOTE: We do not need to define this as a binary variable,
-            #as it is either fixed or relaxed to [0, 1] anyway
-
             subproblem[:binary_vars] = binary_vars
             # store in list for later access and deletion
             for i in 1:num_vars
-               push!(bw_data[:bin_variables], binary_vars[i].in)
-               push!(bw_data[:bin_variables], binary_vars[i].out)
+               #push!(bw_data[:bin_variables], binary_vars[i])
                sym_name = Symbol(JuMP.name(binary_vars[i]))
                bw_data[:bin_states][sym_name] = binary_vars[i]
+               @infiltrate
            end
 
             # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
             ####################################################################
             binary_constraint = JuMP.@constraint(
                 subproblem,
-                state_comp.in == SDDP.bincontract([binary_vars[i].in for i = 1:num_vars])
+                state_comp.in == SDDP.bincontract([binary_vars[i] for i = 1:num_vars])
             )
             # store in list for later access and deletion
             push!(bw_data[:bin_constraints], binary_constraint)
@@ -203,7 +192,7 @@ function setup_state_backward(
             # Fix binary variables
             for i = 1:num_vars
                 #JuMP.unset_binary(binary_vars[i].in)
-                JuMP.fix(binary_vars[i].in, fixed_binary_values[i])
+                JuMP.fix(binary_vars[i], fixed_binary_values[i])
             end
 
             # UNFIX ORIGINAL STATE
@@ -217,51 +206,35 @@ function setup_state_backward(
             # DETERMINE BINARY APPROXIMATION STATE IN ORIGINAL COORDINATES
             ####################################################################
             # TODO: Not sure yet, if this is required. Where to store?
-            # approx_state = SDDP.bincontract([JuMP.fixed_value(binary_vars[i].in) for i = 1:num_vars])
+            # approx_state = SDDP.bincontract([JuMP.fixed_value(binary_vars[i]) for i = 1:num_vars])
 
         else
             #-------------------------------------------------------------------
             epsilon = binaryPrecision
 
-            # INITIAL VALUE HANDLING
-            ####################################################################
-            # I think I do not need this here, since we are not in the first stage
-            # Simply set initial value to zero if required
-            # TODO: Why do we not consider the lower bound as well?
-            initial_value = SDDP.binexpand(
-                float(state_comp.info.initial_value),
-                float(state_comp.info.out.upper_bound),
-                epsilon
-            )
-
             # INTRODUCE BINARY VARIABLES TO THE PROBLEM
             ####################################################################
-            num_vars = length(initial_value)
+            #NOTE: We do not need to define them as binary,
+            #as they are either fixed or relaxed to [0, 1] anyway
+            #NOTE: We do not need to define them as state variables,
+            #as only the _in-parts would be required anyway.
+            #Moreover, no Binary/Integer or bound information has to be stored.
+
+            num_vars = SDDP._bitsrequired(round(Int, state_comp.info.in.upper_bound / epsilon))
 
             binary_vars = JuMP.@variable(
                 subproblem,
                 [i in 1:num_vars],
-                base_name = "_bin_" * name,
-                State,
-                #Bin,
-                initial_value = initial_value[i]
+                base_name = "bin_" * name,
             )
-            #NOTE: We do not need to define this as a binary variable,
-            #as it is either fixed or relaxed to [0, 1] anyway
 
             subproblem[:binary_vars] = binary_vars
             # store in list for later access and deletion
             for i in 1:num_vars
-                push!(bw_data[:bin_variables], binary_vars[i].in)
-                push!(bw_data[:bin_variables], binary_vars[i].out)
-                sym_name = Symbol(JuMP.name(binary_vars[i].in))
+                #push!(bw_data[:bin_variables], binary_vars[i])
+                sym_name = Symbol(JuMP.name(binary_vars[i]))
                 # Store binary state reference for later
                 bw_data[:bin_states][sym_name] = binary_vars[i]
-
-                # Set also in_variable to binary
-                #TODO: Check if required
-                JuMP.set_binary(binary_vars[i].in)
-                binary_vars[i].info.in = binary_vars[i].info.out
             end
             subproblem[:binary_vars] = binary_vars
 
@@ -269,7 +242,7 @@ function setup_state_backward(
             ####################################################################
             binary_constraint = JuMP.@constraint(
                 subproblem,
-                state_comp.in == SDDP.bincontract([binary_vars[i].in for i = 1:num_vars], epsilon)
+                state_comp.in == SDDP.bincontract([binary_vars[i] for i = 1:num_vars], epsilon)
             )
 
             # store in list for later access and deletion
@@ -282,7 +255,7 @@ function setup_state_backward(
             # Fix binary variables
             for i = 1:num_vars
                 #JuMP.unset_binary(binary_vars[i].in)
-                JuMP.fix(binary_vars[i].in, fixed_binary_values[i])
+                JuMP.fix(binary_vars[i], fixed_binary_values[i])
             end
 
             # UNFIX ORIGINAL STATE
@@ -335,9 +308,13 @@ function changeToOriginalSpace!(
 
     # DELETE ALL BINARY SPACE BASED VARIABLES AND CONSTRAINTS
     ############################################################################
-    delete(linearizedSubproblem, bw_data[:bin_variables])
+    #delete(linearizedSubproblem, bw_data[:bin_variables])
+    for (name, bin_state) in bw_data[:bin_states]
+        JuMP.delete(linearizedSubproblem, bin_state)
+    end
+
     for constraint in bw_data[:bin_constraints]
-        delete(linearizedSubproblem, constraint)
+        JuMP.delete(linearizedSubproblem, constraint)
     end
 
     delete!(node.ext, :backward_data)

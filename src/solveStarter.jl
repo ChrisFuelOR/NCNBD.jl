@@ -421,7 +421,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
     while true
         # start an inner loop
-        result_inner = inner_loop_i[teration(model, options, algoParams, appliedSolvers)
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
         # logging preparation (in contrast to SDDP here instead of inner_loop_iteration?)
         # logging
         #log_iteration(options)
