@@ -109,6 +109,7 @@ function changeToBinarySpace!(
     #reg_data[:slacks] = Any[]
     bw_data[:bin_variables] = JuMP.VariableRef[]
     bw_data[:bin_constraints] = JuMP.ConstraintRef[]
+    bw_data[:bin_states] = Dict{Symbol,NCNBD.State{VariableRef}}()
 
     number_of_states = 0
 
@@ -171,14 +172,19 @@ function setup_state_backward(
                 [i in 1:num_vars],
                 base_name = "_bin_" * name,
                 State,
-                Bin,
+                #Bin,
                 initial_value = initial_value[i]
             )
+            #NOTE: We do not need to define this as a binary variable,
+            #as it is either fixed or relaxed to [0, 1] anyway
+
             subproblem[:binary_vars] = binary_vars
             # store in list for later access and deletion
             for i in 1:num_vars
                push!(bw_data[:bin_variables], binary_vars[i].in)
                push!(bw_data[:bin_variables], binary_vars[i].out)
+               sym_name = Symbol(JuMP.name(binary_vars[i]))
+               bw_data[:bin_states][sym_name] = binary_vars[i]
            end
 
             # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
@@ -196,6 +202,7 @@ function setup_state_backward(
             fixed_binary_values = SDDP.binexpand(bw_data[:fixed_state_value][state_name], state_comp.info.in.upper_bound)
             # Fix binary variables
             for i = 1:num_vars
+                #JuMP.unset_binary(binary_vars[i].in)
                 JuMP.fix(binary_vars[i].in, fixed_binary_values[i])
             end
 
@@ -236,16 +243,27 @@ function setup_state_backward(
                 [i in 1:num_vars],
                 base_name = "_bin_" * name,
                 State,
-                Bin,
+                #Bin,
                 initial_value = initial_value[i]
             )
+            #NOTE: We do not need to define this as a binary variable,
+            #as it is either fixed or relaxed to [0, 1] anyway
 
             subproblem[:binary_vars] = binary_vars
             # store in list for later access and deletion
             for i in 1:num_vars
                 push!(bw_data[:bin_variables], binary_vars[i].in)
                 push!(bw_data[:bin_variables], binary_vars[i].out)
+                sym_name = Symbol(JuMP.name(binary_vars[i].in))
+                # Store binary state reference for later
+                bw_data[:bin_states][sym_name] = binary_vars[i]
+
+                # Set also in_variable to binary
+                #TODO: Check if required
+                JuMP.set_binary(binary_vars[i].in)
+                binary_vars[i].info.in = binary_vars[i].info.out
             end
+            subproblem[:binary_vars] = binary_vars
 
             # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
             ####################################################################
@@ -263,6 +281,7 @@ function setup_state_backward(
             fixed_binary_values = SDDP.binexpand(bw_data[:fixed_state_value][state_name], state_comp.info.in.upper_bound, epsilon)
             # Fix binary variables
             for i = 1:num_vars
+                #JuMP.unset_binary(binary_vars[i].in)
                 JuMP.fix(binary_vars[i].in, fixed_binary_values[i])
             end
 

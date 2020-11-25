@@ -11,6 +11,7 @@ import GAMS
 import SCIP
 import MathOptInterface
 import Distances
+import LinearAlgebra
 
 import Reexport
 Reexport.@reexport using JuMP

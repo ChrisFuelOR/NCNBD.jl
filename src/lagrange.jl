@@ -1,4 +1,11 @@
-function _kelley(node::SDDP.Node, dual_vars::Vector{Float64}, integrality_handler::SDDP.SDDiP)
+function _kelley(
+    node::SDDP.Node,
+    node_index::Int64,
+    dual_vars::Vector{Float64},
+    integrality_handler::SDDP.SDDiP,
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers
+    )
 
     # INITIALIZATION
     ############################################################################
@@ -11,11 +18,11 @@ function _kelley(node::SDDP.Node, dual_vars::Vector{Float64}, integrality_handle
     @assert JuMP.termination_status(model) == MOI.OPTIMAL
     obj = JuMP.objective_value(model)
 
-    for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
+    for (i, (name, state_comp)) in enumerate(node.ext[:backward_data][:bin_states])
         integrality_handler.old_rhs[i] = JuMP.fix_value(state_comp.in)
-        integrality_handler.slacks[i] = state.in - integrality_handler.old_rhs[i]
+        integrality_handler.slacks[i] = state_comp.in - integrality_handler.old_rhs[i]
         JuMP.unfix(state_comp.in)
-        JuMP.unset_binary(state_comp.in) # TODO: maybe not required
+        #JuMP.unset_binary(state_comp.in) # TODO: maybe not required
         JuMP.set_lower_bound(state_comp.in, 0)
         JuMP.set_upper_bound(state_comp.in, 1)
     end
@@ -41,6 +48,7 @@ function _kelley(node::SDDP.Node, dual_vars::Vector{Float64}, integrality_handle
         x[1:length(dual_vars)]
     end
     JuMP.@objective(approx_model, dualsense, θ)
+    @infiltrate
 
     if dualsense == MOI.MIN_SENSE
         JuMP.set_lower_bound(θ, obj)
@@ -49,18 +57,28 @@ function _kelley(node::SDDP.Node, dual_vars::Vector{Float64}, integrality_handle
         JuMP.set_upper_bound(θ, obj)
         (best_actual, f_actual, f_approx) = (-Inf, -Inf, Inf)
     end
+    @infiltrate
 
     # DETERMINE AND ADD BOUNDS FOR DUALVARIABLES
     ############################################################################
     #TODO: Determine a norm of B (coefficient matrix of binary expansion)
-    # We use the maximum norm here!
-    B_norm = 1
-    dual_bound = algoParams.sigma * B_norm
+    # We use the column sum norm here
+    # But instead of calculating it exactly, we can also use the maximum
+    # upper bound of all state variables as a bound
+    B_norm_bound = 0
+    for (name, state_comp) in node.ext[:lin_states]
+        if state_comp.info.in.upper_bound > B_norm_bound
+            B_norm_bound = state_comp.info.in.upper_bound
+        end
+    end
+    dual_bound = algoParams.sigma[node_index] * B_norm_bound
 
     for i in 1:length(dual_vars)
         JuMP.set_lower_bound(x[i], -dual_bound)
         JuMP.set_upper_bound(x[i], dual_bound)
     end
+
+    @infiltrate
 
     # CUTTING-PLANE METHOD
     ############################################################################
@@ -72,6 +90,8 @@ function _kelley(node::SDDP.Node, dual_vars::Vector{Float64}, integrality_handle
         ########################################################################
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
+
+        @infiltrate
 
         # ADD CUTTING PLANE
         ########################################################################
@@ -103,6 +123,8 @@ function _kelley(node::SDDP.Node, dual_vars::Vector{Float64}, integrality_handle
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
+        @infiltrate
+
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
         # More reliable than checking whether subgradient is zero
@@ -111,7 +133,8 @@ function _kelley(node::SDDP.Node, dual_vars::Vector{Float64}, integrality_handle
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
             end
-            for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
+
+            for (i, (name, state_comp)) in enumerate(node.ext[:backward_data][:bin_states])
                 #prepare_state_fixing!(node, state_comp)
                 JuMP.fix(state_comp.in, integrality_handler.old_rhs[i], force = true)
             end
@@ -127,7 +150,7 @@ end
 
 function _solve_Lagrangian_relaxation!(
     subgradients::Vector{Float64},
-    node::Node,
+    node::SDDP.Node,
     dual_vars::Vector{Float64},
     slacks,
 )
@@ -139,6 +162,8 @@ function _solve_Lagrangian_relaxation!(
     JuMP.set_objective_function(model, new_obj)
     JuMP.optimize!(model)
     lagrangian_obj = JuMP.objective_value(model)
+
+    @infiltrate
 
     # Reset old objective, update subgradients using slack values
     JuMP.set_objective_function(model, old_obj)

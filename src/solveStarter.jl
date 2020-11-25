@@ -379,6 +379,7 @@ Outer loop function of NCNBD.
 function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
     while true
+        @infiltrate
         result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
         #log_iteration(options)
         if result_outer.has_converged
@@ -420,7 +421,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
     while true
         # start an inner loop
-        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
+        result_inner = inner_loop_i[teration(model, options, algoParams, appliedSolvers)
         # logging preparation (in contrast to SDDP here instead of inner_loop_iteration?)
         # logging
         #log_iteration(options)

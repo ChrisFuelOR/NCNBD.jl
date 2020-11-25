@@ -210,6 +210,7 @@ function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
             forward_trajectory.belief_states,
         )
     end
+    @infiltrate
 
     # CALCULATE LOWER BOUND
     ############################################################################
@@ -491,7 +492,7 @@ function get_dual_variables(node::SDDP.Node, ::SDDP.ContinuousRelaxation)
     # maximization problems.
     dual_values = Dict{Symbol,Float64}()
     if JuMP.dual_status(node.ext[:linSubproblem]) != JuMP.MOI.FEASIBLE_POINT
-        write_subproblem_to_file(node, "linSubproblem.mof.json", throw_error = true)
+        SDDP.write_subproblem_to_file(node, "linSubproblem.mof.json", throw_error = true)
     end
     dual_sign = JuMP.objective_sense(node.ext[:linSubproblem]) == MOI.MIN_SENSE ? 1.0 : -1.0
     for (name, state_comp) in node.ext[:lin_states]
@@ -575,6 +576,7 @@ function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Opti
                 algoParams,
                 appliedSolvers
             )
+            @infiltrate
             # new_cuts = refine_bellman_function(
             #     model,
             #     node,
@@ -747,6 +749,7 @@ function solve_subproblem_backward(
     # PRIMAL SOLUTION
     ############################################################################
     JuMP.optimize!(linearizedSubproblem)
+    @infiltrate
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -768,7 +771,7 @@ function solve_subproblem_backward(
     # type-stability.
     dual_values = Dict{Symbol,Float64}()
     dual_values = if require_duals
-        get_dual_variables_backward(node, algoParams, appliedSolvers)
+        get_dual_variables_backward(node, node_index, algoParams, appliedSolvers)
     else
         Dict{Symbol,Float64}()
      end
@@ -789,32 +792,35 @@ end
 
 
 function get_dual_variables_backward(
-    node::SDDP.Node
+    node::SDDP.Node,
+    node_index::Int64,
     algoParams::NCNBD.AlgoParams,
     appliedSolvers::NCNBD.AppliedSolvers)
 
     dual_values = Dict{Symbol,Float64}()
     # TODO implement smart choice for initial duals
-    # TODO implement right states (binary states to be used here)
-    dual_vars = zeros(length(node.states))
-    solver_obj = JuMP.objective_value(node.ext[:linearizedSubproblem])
+    number_of_states = length(node.ext[:backward_data][:bin_states])
+    dual_vars = zeros(number_of_states)
+    solver_obj = JuMP.objective_value(node.ext[:linSubproblem])
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
     integrality_handler = SDDP.SDDiP(iteration_limit = 100, atol = 1e-8, rtol = 1e-8)
+    integrality_handler = SDDP.update_integrality_handler!(integrality_handler, appliedSolvers.MILP, number_of_states)
     node.ext[:lagrange] = integrality_handler
 
     try
-        kelley_obj = _kelley(node, dual_vars, integrality_handler, algoParams, appliedSOlvers)::Float64
+        kelley_obj = _kelley(node, node_index, dual_vars, integrality_handler, algoParams, appliedSolvers)::Float64
         @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
     catch e
-        write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
+        SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
         rethrow(e)
     end
-    # TODO implement right states (binary states to be used here)
-    for (i, name) in enumerate(keys(node.states))
+
+    for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
         # TODO (maybe) change dual signs inside kelley to match LP duals
         dual_values[name] = -dual_vars[i]
     end
+    @infiltrate
     return dual_values
 end
