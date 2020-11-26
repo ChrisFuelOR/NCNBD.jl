@@ -125,6 +125,8 @@ function changeToBinarySpace!(
         # Set up state for backward pass using binary approximation
         setup_state_backward(linearizedSubproblem, state_comp, state_name, binaryPrecision, bw_data)
     end
+
+    return
 end
 
 
@@ -173,7 +175,6 @@ function setup_state_backward(
                #push!(bw_data[:bin_variables], binary_vars[i])
                sym_name = Symbol(JuMP.name(binary_vars[i]))
                bw_data[:bin_states][sym_name] = binary_vars[i]
-               @infiltrate
            end
 
             # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
@@ -205,8 +206,7 @@ function setup_state_backward(
 
             # DETERMINE BINARY APPROXIMATION STATE IN ORIGINAL COORDINATES
             ####################################################################
-            # TODO: Not sure yet, if this is required. Where to store?
-            # approx_state = SDDP.bincontract([JuMP.fixed_value(binary_vars[i]) for i = 1:num_vars])
+            #SDDP.bincontract([JuMP.fix_value(binary_vars[i]) for i = 1:num_vars])
 
         else
             #-------------------------------------------------------------------
@@ -268,8 +268,7 @@ function setup_state_backward(
 
             # DETERMINE BINARY APPROXIMATION STATE IN ORIGINAL COORDINATES
             ####################################################################
-            # TODO: Not sure yet, if this is required. How to store this?
-            #approx_state = SDDP.bincontract([JuMP.fixed_value(binary_vars[i].in) for i = 1:num_vars], epsilon)
+            #SDDP.bincontract([JuMP.fix_value(binary_vars[i]) for i = 1:num_vars], epsilon)
         end
     end
     return
@@ -319,4 +318,28 @@ function changeToOriginalSpace!(
 
     delete!(node.ext, :backward_data)
 
+end
+
+
+function determine_used_trial_states(
+    state_comp::State,
+    state_value::Float64,
+    binaryPrecision::Float64,
+)
+
+    if state_comp.info.out.binary
+        approx_state_value = state_value
+    else
+        if !isfinite(state_comp.info.out.upper_bound) || !state_comp.info.out.has_ub
+            error("When using SDDiP, state variables require an upper bound.")
+        end
+
+        if state_comp.info.out.integer
+            approx_state_value = state_value
+        else
+            fixed_binary_values = SDDP.binexpand(state_value, state_comp.info.out.upper_bound, binaryPrecision)
+            approx_state_value = SDDP.bincontract(fixed_binary_values, binaryPrecision)
+        end
+    end
+    return approx_state_value
 end

@@ -106,14 +106,23 @@ end
 # Struct to store information on a nonlinear cut
 struct NonlinearCut
     intercept   ::  Float64 # intercept of the cut (Lagrangian function value)
-    gradient    ::  Vector{Float64} # optimal dual variables in binary space
-    trialPoint  ::  Vector{Float64} # point at which this cut was created
-    binaryNum   ::  Int64 # number of binary variables at moment of creation
-    binaryEps   ::  Float64 # binary precision at moment of creation
+    coefficients  ::  Dict{Symbol,Float64} # optimal dual variables in binary space
+    trial_state  ::  Dict{Symbol,Float64} # point at which this cut was created
+    binary_precision :: Float64 # binary precision at moment of creation
+    cutVariables :: Vector{JuMP.VariableRef}
+    cutConstraints :: Vector{JuMP.ConstraintRef}
+    cutVariables_lin :: Vector{JuMP.VariableRef}
+    cutConstraints_lin :: Vector{JuMP.ConstraintRef}
+    obj_y::Union{Nothing,NTuple{N,Float64} where {N}} # SDDP
+    belief_y::Union{Nothing,Dict{T,Float64} where {T}} # SDDP
+    non_dominated_count::Int # SDDP
 end
-    # what about differences in the binary expansion of all components?
-    # do we need to store the trial point also in binary? I think not because
-    # we can always convert it. Do we really need binaryNum and binaryEps?
+    # TODO: Do we need to store the trial point also in binary form?
+    # I think not because we can always determine it using trial_state
+    # and binary_precision.
+    # TODO: If the binary precision may be different for all components,
+    # then we have to adapt this.
+    # TODO: Should we also store the expression of this cut in binary space?
 
 # struct for outer loop iteration results
 struct OuterLoopIterationResult#{T}

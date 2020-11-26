@@ -503,8 +503,11 @@ function get_dual_variables(node::SDDP.Node, ::SDDP.ContinuousRelaxation)
 end
 
 
-function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
-    algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
+function inner_loop_backward_pass(
+    model::SDDP.PolicyGraph{T},
+    options::SDDP.Options,
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers,
     scenario_path::Vector{Tuple{T,NoiseType}},
     sampled_states::Vector{Dict{Symbol,Float64}},
     objective_states::Vector{NTuple{N,Float64}},
@@ -562,6 +565,8 @@ function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Opti
                 continue
             end
 
+            # SOLVE ALL CHILDREN PROBLEM
+            ####################################################################
             solve_all_children(
                 model,
                 node,
@@ -576,18 +581,32 @@ function inner_loop_backward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Opti
                 algoParams,
                 appliedSolvers
             )
+
+            # RECONSTRUCT USED TRIAL POINTS IN BACKWARD PASS
+            ####################################################################
+            used_trial_points = Dict{Symbol,Float64}()
+            epsilon = algoParams.binaryPrecision[node_index]
+            for (name, value) in outgoing_state
+                state_comp = node.ext[:lin_states][name]
+                used_trial_points[name] = determine_used_trial_states(state_comp, value, epsilon)
+            end
+
             @infiltrate
-            # new_cuts = refine_bellman_function(
-            #     model,
-            #     node,
-            #     node.bellman_function,
-            #     options.risk_measures[node_index],
-            #     outgoing_state,
-            #     items.duals,
-            #     items.supports,
-            #     items.probability,
-            #     items.objectives,
-            # )
+            # REFINE BELLMAN FUNCTION BY ADDING CUTS
+            ####################################################################
+            new_cuts = refine_bellman_function(
+                model,
+                node,
+                node_index,
+                node.bellman_function,
+                options.risk_measures[node_index],
+                used_trial_points,
+                items.duals,
+                items.supports,
+                items.probability,
+                items.objectives,
+                algoParams
+            )
             # push!(cuts[node_index], new_cuts)
             # if options.refine_at_similar_nodes
             #     # Refine the bellman function at other nodes with the same
@@ -623,7 +642,7 @@ end
 function solve_all_children(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
-    node_index:: Int64,
+    node_index::Int64,
     items::SDDP.BackwardPassItems,
     belief::Float64,
     belief_state,
@@ -740,7 +759,7 @@ function solve_subproblem_backward(
     #     nothing
     # end
 
-    #TODO: BACKWARD PASS PREPARATION
+    # BACKWARD PASS PREPARATION
     ############################################################################
     # prepare_backward_pass!(node, linearizedSubproblem, binaryPrecision)
     # Also adapt solver here
@@ -749,7 +768,7 @@ function solve_subproblem_backward(
     # PRIMAL SOLUTION
     ############################################################################
     JuMP.optimize!(linearizedSubproblem)
-    @infiltrate
+    #@infiltrate
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -774,7 +793,7 @@ function solve_subproblem_backward(
         get_dual_variables_backward(node, node_index, algoParams, appliedSolvers)
     else
         Dict{Symbol,Float64}()
-     end
+    end
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
@@ -783,7 +802,6 @@ function solve_subproblem_backward(
     #TODO: REGAIN ORIGINAL MODEL
     ############################################################################
     changeToOriginalSpace!(node, linearizedSubproblem, state)
-
     return (
         duals = dual_values,
         objective = objective
@@ -821,6 +839,6 @@ function get_dual_variables_backward(
         # TODO (maybe) change dual signs inside kelley to match LP duals
         dual_values[name] = -dual_vars[i]
     end
-    @infiltrate
+
     return dual_values
 end

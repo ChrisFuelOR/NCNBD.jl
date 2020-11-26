@@ -15,6 +15,7 @@ import LinearAlgebra
 
 import Reexport
 Reexport.@reexport using JuMP
+#Reexport.@reexport using SDDP
 
 using Infiltrator
 
@@ -26,6 +27,7 @@ include("state.jl")
 include("JuMP.jl")
 include("typedefs.jl")
 include("objective.jl")
+include("SDDP.jl")
 include("bellman.jl")
 
 include("solveStarter.jl")
