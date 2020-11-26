@@ -146,6 +146,47 @@ function setup_state_backward(
         # In this case, the variable must not be unfixed, no new binary variables
         # or constraints have to be introduced.
 
+        # INTRODUCE ONE NEW BINARY VARIABLE TO THE PROBLEM
+        ####################################################################
+        # Still helpful, as later binary_vars is used in Lagrangian dual.
+        # If we would not introduce a new variable, but just store the state
+        # itself per reference in binary_vars, then it would be deleted later.
+
+        binary_var = JuMP.@variable(
+            subproblem,
+            base_name = "bin_" * name,
+        )
+        subproblem[:binary_vars] = binary_var
+        # store in list for later access and deletion
+        sym_name = Symbol(JuMP.name(binary_var))
+        bw_data[:bin_states][sym_name] = binary_var
+
+        # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
+        ####################################################################
+        binary_constraint = JuMP.@constraint(subproblem, state_comp.in == binary_var)
+        # store in list for later access and deletion
+        push!(bw_data[:bin_constraints], binary_constraint)
+
+        # FIX NEW VARIABLE
+        ####################################################################
+        # Get fixed values from fixed value of original state
+        fixed_binary_value = JuMP.fix_value(state_comp.in)
+        # Fix binary variables
+        #JuMP.unset_binary(binary_var.in)
+        JuMP.fix(binary_var, fixed_binary_value)
+
+        # UNFIX ORIGINAL STATE
+        ####################################################################
+        # Unfix the original state
+        JuMP.unfix(state_comp.in)
+
+        #TODO: Check if required
+        follow_state_unfixing!(state_comp)
+
+        # DETERMINE BINARY APPROXIMATION STATE IN ORIGINAL COORDINATES
+        ####################################################################
+        #SDDP.bincontract([JuMP.fix_value(binary_vars[i]) for i = 1:num_vars])
+
     else
         if !isfinite(state_comp.info.in.upper_bound) || !state_comp.info.in.has_ub
             error("When using SDDiP, state variables require an upper bound.")
@@ -328,6 +369,7 @@ function determine_used_trial_states(
 )
 
     if state_comp.info.out.binary
+        fixed_binary_values = state_value
         approx_state_value = state_value
     else
         if !isfinite(state_comp.info.out.upper_bound) || !state_comp.info.out.has_ub
@@ -335,11 +377,12 @@ function determine_used_trial_states(
         end
 
         if state_comp.info.out.integer
-            approx_state_value = state_value
+            fixed_binary_values = SDDP.binexpand(state_value, state_comp.info.out.upper_bound)
+            approx_state_value = SDDP.bincontract(fixed_binary_values)
         else
             fixed_binary_values = SDDP.binexpand(state_value, state_comp.info.out.upper_bound, binaryPrecision)
             approx_state_value = SDDP.bincontract(fixed_binary_values, binaryPrecision)
         end
     end
-    return approx_state_value
+    return approx_state_value, fixed_binary_values
 end
