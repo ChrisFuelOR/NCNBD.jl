@@ -123,6 +123,7 @@ end
     # TODO: If the binary precision may be different for all components,
     # then we have to adapt this.
     # TODO: Should we also store the expression of this cut in binary space?
+    # TODO: Do we want to store the iteration as well?
 
 # struct for outer loop iteration results
 struct OuterLoopIterationResult#{T}
@@ -146,4 +147,28 @@ struct InnerLoopIterationResult#{T}
     status :: Symbol # solution status (i.e. number of iterations)
     #nonlinearCuts :: Dict{T, Vector{Any}} # only required for logging, binary explanation
     # however, then also binary precision / K should be stored for interpretability
+end
+
+struct BackwardPassItems{T,U}
+    "Given a (node, noise) tuple, index the element in the array."
+    cached_solutions::Dict{Tuple{T,Any},Int}
+    duals::Vector{Dict{Symbol,Float64}}
+    supports::Vector{U}
+    nodes::Vector{T}
+    probability::Vector{Float64}
+    objectives::Vector{Float64}
+    belief::Vector{Float64}
+    bin_state_values::Vector{Dict{Symbol,Float64}}
+    #TODO: We could also store sigma and binary precision here possibly
+    function BackwardPassItems(T, U)
+        return new{T,U}(
+            Dict{Tuple{T,Any},Int}(),
+            Dict{Symbol,Float64}[],
+            U[],
+            T[],
+            Float64[],
+            Float64[],
+            Float64[],
+        )
+    end
 end
