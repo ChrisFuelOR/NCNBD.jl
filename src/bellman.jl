@@ -52,7 +52,8 @@ function refine_bellman_function(
     node_index::Int64,
     bellman_function::SDDP.BellmanFunction,
     risk_measure::SDDP.AbstractRiskMeasure,
-    outgoing_state::Dict{Symbol,Float64},
+    used_trial_points::Dict{Symbol,Float64},
+    bin_state_values::Vector{Dict{Symbol,Float64}},
     dual_variables::Vector{Dict{Symbol,Float64}},
     noise_supports::Vector,
     nominal_probability::Vector{Float64},
@@ -63,7 +64,8 @@ function refine_bellman_function(
     @assert length(dual_variables) ==
     length(noise_supports) ==
     length(nominal_probability) ==
-    length(objective_realizations)
+    length(objective_realizations) ==
+    length(bin_state_values)
     # Preliminaries that are common to all cut types.
     risk_adjusted_probability = similar(nominal_probability)
     offset = SDDP.adjust_probability(
@@ -79,12 +81,14 @@ function refine_bellman_function(
         return _add_average_cut(
             node,
             node_index,
-            outgoing_state,
+            used_trial_points,
+            bin_state_values,
             risk_adjusted_probability,
             objective_realizations,
             dual_variables,
             offset,
             algoParams,
+            model.ext[:total_solves]
         )
     else  # Add a multi-cut
         @assert bellman_function.cut_type == SDDP.MULTI_CUT
@@ -92,7 +96,7 @@ function refine_bellman_function(
         # SDDP._add_locals_if_necessary(node, bellman_function, length(dual_variables))
         # return _add_multi_cut(
         #     node,
-        #     outgoing_state,
+        #     used_trial_points,
         #     risk_adjusted_probability,
         #     objective_realizations,
         #     dual_variables,
@@ -107,21 +111,24 @@ end
 function _add_average_cut(
     node::SDDP.Node,
     node_index::Int64,
-    outgoing_state::Dict{Symbol,Float64},
+    used_trial_points::Dict{Symbol,Float64},
+    bin_state_values::Vector{Dict{Symbol,Float64}},
     risk_adjusted_probability::Vector{Float64},
     objective_realizations::Vector{Float64},
     dual_variables::Vector{Dict{Symbol,Float64}},
     offset::Float64,
-    algoParams::NCNBD.AlgoParams
+    algoParams::NCNBD.AlgoParams,
+    iteration::Int64
 )
 
     @infiltrate
 
     N = length(risk_adjusted_probability)
-    @assert N == length(objective_realizations) == length(dual_variables)
+    @assert N == length(objective_realizations) == length(dual_variables) == length(bin_state_values)
+
     # Calculate the expected intercept and dual variables with respect to the
     # risk-adjusted probability distribution.
-    πᵏ = Dict(key => 0.0 for key in keys(outgoing_state))
+    πᵏ = Dict(key => 0.0 for key in keys(bin_state_values))
     θᵏ = offset
     for i = 1:length(objective_realizations)
         p = risk_adjusted_probability[i]
@@ -130,14 +137,32 @@ function _add_average_cut(
             πᵏ[key] += p * dual
         end
     end
+
     # Now add the average-cut to the subproblem. We include the objective-state
     # component μᵀy and the belief state (if it exists).
     obj_y = node.objective_state === nothing ? nothing : node.objective_state.state
     belief_y = node.belief_state === nothing ? nothing : node.belief_state.belief
 
-    epsilon = algoParams.binaryPrecision[node_index]
-    sigma = algoParams.sigma[node_index]
-    _add_cut(node, node.bellman_function.global_theta, node.ext[:lin_bellman_function].global_theta, θᵏ, πᵏ, outgoing_state, obj_y, belief_y, epsilon, sigma)
+    # As cuts are created for the value function of the following state,
+    # we need the parameters for this stage
+    epsilon = algoParams.binaryPrecision[node_index+1]
+    sigma = algoParams.sigma[node_index+1]
+
+    _add_cut(
+        node,
+        node.bellman_function.global_theta,
+        node.ext[:lin_bellman_function].global_theta,
+        θᵏ,
+        πᵏ,
+        bin_state_values,
+        used_trial_points,
+        obj_y,
+        belief_y,
+        epsilon,
+        sigma,
+        iteration
+    )
+
     return (theta = θᵏ, pi = πᵏ, x = outgoing_state, obj_y = obj_y, belief_y = belief_y)
 end
 
@@ -149,29 +174,30 @@ function _add_cut(
     V_lin::SDDP.ConvexApproximation,
     θᵏ::Float64,
     πᵏ::Dict{Symbol,Float64},
+    λᵏ::Dict{Symbol,Float64},
     xᵏ::Dict{Symbol,Float64},
     obj_y::Union{Nothing,NTuple{N,Float64}},
-    belief_y::Union{Nothing,Dict{T,Float64}};
-    cut_selection::Bool = true,
+    belief_y::Union{Nothing,Dict{T,Float64}},
     epsilon::Float64,
-    sigma::Float64
+    sigma::Float64,
+    iteration::Int64;
+    cut_selection::Bool = true
 ) where {N,T}
 
     # CORRECT INTERCEPT
     ############################################################################
-    for (key, x) in xᵏ
-        θᵏ -= πᵏ[key] * xᵏ[key]
+    for (key, λ) in λᵏ
+        θᵏ -= πᵏ[key] * λᵏ[key]
     end
 
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
+    #TODO: Should we add λᵏ? Actually, this is information is not required.
     cut = NonlinearCut(θᵏ, πᵏ, xᵏ, binaryPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
     ############################################################################
-    add_cut_constraint_to_lin_model(node, V_lin, cut, sigma, epsilon)
-
-    #add_cut_constraint_to_model(node, V, cut, sigma, epsilon)
+    add_cut_constraints_to_models(node, V, V_lin, cut, sigma, epsilon, iteration)
 
     if cut_selection
         _cut_selection_update(V, cut, xᵏ)
@@ -184,16 +210,22 @@ function _add_cut(
 end
 
 
-function add_cut_constraint_to_lin_model(
+function add_cut_constraints_to_models(
     node::SDDP.Node,
     V::SDDP.ConvexApproximation,
+    V_lin::SDDP.ConvexApproximation,
     cut::NonlinearCut,
+    #λᵏ::Dict{Symbol,Float64},
     sigma::Float64,
-    binaryPrecision::Float64
+    binaryPrecision::Float64,
+    iteration::Int64
     )
 
     model = JuMP.owner_model(V.theta)
-    @assert model == node.ext[:linSubproblem]
+    @assert model == node.subproblem
+
+    model_lin = JuMP.owner_model(V_lin.theta)
+    @assert model_lin == node.ext[:linSubproblem]
 
     # In gamma, all lambda (or here gamma) variables are stored,
     # such that they can be multiplied with the cut_coefficients which relate
@@ -201,9 +233,14 @@ function add_cut_constraint_to_lin_model(
     # as they are written into one vector
     # All other constraints and variables are introduced per state component
     gamma = JuMP.VariableRef[]
+    gamma_lin = JuMP.VariableRef[]
     duals_so_far = 0
+    duals_lin_so_far = 0
 
-    # determine maximum U
+    # NOTE: Next steps are only done based on lin_states,
+    # since normal SDDP states do not have an info argument.
+
+    # Determine maximum U for Big M constant
     Umax = 0
     for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
         if state_comp.info.out.upper_bound > Umax
@@ -211,11 +248,21 @@ function add_cut_constraint_to_lin_model(
         end
     end
 
+    # ADD NEW VARIABLES AND CONSTRAINTS FOR CUT PROJECTION
+    ############################################################################
     for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
         if state_comp.info.out.binary
 
+            # No cut projection required in binary state
+            # Store states in gamma though for general cut expression
             for (i, x) in V.states
                 push!(gamma, x)
+                duals_so_far += 1
+            end
+
+            for (i, x) in V_lin.states
+                push!(gamma_lin, x)
+                duals_lin_so_far += 1
             end
 
         else
@@ -231,80 +278,16 @@ function add_cut_constraint_to_lin_model(
                 epsilon = binaryPrecision
             end
 
-            # ADD VARIABLES FOR CUT PROJECTION
-            ####################################################################
-            #TODO: Can we enumerate the cuts here as well?
-            ν = JuMP.@variable(model, [k in 1:K], lower_bound=0, base_name = "ν_" * string(i))
-            μ = JuMP.@variable(model, [k in 1:K], lower_bound=0, base_name = "μ_" * string(i))
-            η = JuMP.@variable(model, base_name = "η_" * string(i))
-            γ = JuMP.@variable(model, [k in 1:K], lower_bound=0, upper_bound=1, base_name = "γ_" * string(i))
-            w = JuMP.@variable(model, [k in 1:K], binary=true, base_name = "w_" * string(i))
-            u = JuMP.@variable(model, [k in 1:K], binary=true, base_name = "u_" * string(i))
-            append!(gamma, γ)
+            # Call function to add projection constraints and variables to
+            # model and model_Lin
+            duals_so_far = add_cut_projection_to_model!(model, V, cut.coefficients, gamma, iteration, K, epsilon, sigma, cut.cutVariables, cut.cutConstraints, i, duals_so_far)
+            duals_so_far_lin = add_cut_projection_to_model!(model_lin, V_lin, cut.coefficients, gamma_lin, iteration, K, epsilon, sigma, cut.cutVariables_lin, cut.cutConstraints_lin, i, duals_so_far_lin)
 
-            #Store those variables!
-            append!(cut.cutVariables_lin, ν)
-            append!(cut.cutVariables_lin, μ)
-            push!(cut.cutVariables_lin, η)
-            append!(cut.cutVariables_lin, γ)
-            append!(cut.cutVariables_lin, w)
-            append!(cut.cutVariables_lin, u)
-
-            # ADD BINARY EXPANSION CONSTRAINT
-            ####################################################################
-            binary_constraint = JuMP.@constraint(
-                model,
-                state_comp.out == SDDP.bincontract([γ[k] for k = 1:K], epsilon)
-            )
-            push!(cut.cutConstraints_lin, binary_constraint)
-
-            # ADD KKT CONSTRAINT
-            ####################################################################
-            kkt_constraints = JuMP.@constraint(
-                model,
-                [k=1:K],
-                cut.coefficients[duals_so_far+k] - ν[k] + μ[k] + 2^(k-1) * epsilon == η
-            )
-            append!(cut.cutConstraints_lin, kkt_constraints)
-
-            # ADD BIG M CONSTRAINTS
-            ####################################################################
-            bigM = 2 * sigma * Umax
-
-            bigM_11_constraints = JuMP.@constraint(
-                model,
-                [k=1:K],
-                γ[k] <= w[k]
-            )
-            append!(cut.cutConstraints_lin, bigM_11_constraints)
-
-            bigM_12_constraints = JuMP.@constraint(
-                model,
-                [k=1:K],
-                ν[k] <= bigM * (1-w[k])
-            )
-            append!(cut.cutConstraints_lin, bigM_12_constraints)
-
-            bigM_21_constraints = JuMP.@constraint(
-                model,
-                [k=1:K],
-                1 - γ[k] <= u[k]
-            )
-            append!(cut.cutConstraints_lin, bigM_21_constraints)
-
-            bigM_22_constraints = JuMP.@constraint(
-                model,
-                [k=1:K],
-                μ[k] <= bigM * (1-u[k])
-            )
-            append!(cut.cutConstraints_lin, bigM_22_constraints)
-
-            duals_so_far += K
         end
     end
 
     # ADD ORIGINAL CUT DESCRIPTION
-    ####################################################################
+    ############################################################################
     yᵀμ = JuMP.AffExpr(0.0)
     # if V.objective_states !== nothing
     #     for (y, μ) in zip(cut.obj_y, V.objective_states)
@@ -317,167 +300,130 @@ function add_cut_constraint_to_lin_model(
     #     end
     # end
 
-    @assert size(gamma, 1) == collect(values(cut.coefficients)) == duals_so_far
+    @assert size(gamma, 1) == size(collect(values(cut.coefficients)), 1)
+                           == duals_so_far
+                           == duals_so_far_lin
+                           == size(gamma_lin, 1)
+                           # == size(collect(values(λᵏ)), 1)
     number_of_duals = size(gamma, 1)
 
+    # TO ORIGINAL MODEL
+    ############################################################################
     expr = @expression(
         model,
-        V.theta + yᵀμ - sum(cut.coefficients[j] * gammas[j]  for j=1:number_of_duals)
+        V.theta + yᵀμ - sum(cut.coefficients[j] * gamma[j]  for j=1:number_of_duals)
     )
 
-    cut.constraint_ref = if JuMP.objective_sense(model) == MOI.MIN_SENSE
+    constraint_ref = if JuMP.objective_sense(model) == MOI.MIN_SENSE
         @constraint(model, expr >= cut.intercept)
     else
         @constraint(model, expr <= cut.intercept)
     end
+    push!(cut.cutConstraints, constraint_ref)
+
+    # TO LINEAR MODEL
+    ############################################################################
+    expr_lin = @expression(
+        model_lin,
+        V_lin.theta + yᵀμ - sum(cut.coefficients[j] * gamma_lin[j]  for j=1:number_of_duals)
+    )
+
+    constraint_ref_lin = if JuMP.objective_sense(model_lin) == MOI.MIN_SENSE
+        @constraint(model_lin, expr_lin >= cut.intercept)
+    else
+        @constraint(model_lin, expr_lin <= cut.intercept)
+    end
+    push!(cut.cutConstraints_lin, constraint_ref_lin)    
 
     return
 
 end
 
 
-# function add_cut_constraint_to_model(
-#     node::SDDP.Node,
-#     V::SDDP.ConvexApproximation,
-#     cut::NonlinearCut,
-#     sigma::Float64,
-#     binaryPrecision::Float64
-#     )
-#
-#     model = JuMP.owner_model(V.theta)
-#     @assert model == node.subproblem
-#
-#     gamma = JuMP.VariableRef[]
-#     duals_so_far = 0
-#
-#     # determine maximum U
-#     Umax = 0
-#     for (i, (name, state_comp)) in enumerate(node.states)
-#         if state_comp.info.out.upper_bound > Umax
-#             Umax = state_comp.info.out.upper_bound
-#         end
-#     end
-#
-#     for (i, (name, state_comp)) in enumerate(node.states)
-#         if state_comp.info.out.binary
-#
-#             for (i, x) in V.states
-#                 push!(gamma, x)
-#             end
-#
-#         else
-#             if !isfinite(state_comp.info.out.upper_bound) || !state_comp.info.out.has_ub
-#             error("When using SDDiP, state variables require an upper bound.")
-#             end
-#
-#             if state_comp.info.out.integer
-#                 K = SDDP._bitsrequired(state_comp.info.out.upper_bound)
-#                 epsilon = 1
-#             elseif state_comp.info.out.binary
-#                 K = SDDP._bitsrequired(round(Int, state_comp.info.out.upper_bound / binaryPrecision))
-#                 epsilon = binaryPrecision
-#             end
-#
-#             # ADD VARIABLES FOR CUT PROJECTION
-#             ####################################################################
-#             #TODO: Can we enumerate the cuts here as well?
-#             ν = JuMP.@variable(model, [k in 1:K], lower_bound=0, base_name = "ν_" * string(i))
-#             μ = JuMP.@variable(model, [k in 1:K], lower_bound=0, base_name = "μ_" * string(i))
-#             η = JuMP.@variable(model, base_name = "η_" * string(i))
-#             γ = JuMP.@variable(model, [k in 1:K], lower_bound=0, upper_bound=1, base_name = "γ_" * string(i))
-#             w = JuMP.@variable(model, [k in 1:K], binary=true, base_name = "w_" * string(i))
-#             u = JuMP.@variable(model, [k in 1:K], binary=true, base_name = "u_" * string(i))
-#             append!(gamma, γ)
-#
-#             #Store those variables!
-#             append!(cut.cutVariables_lin, ν)
-#             append!(cut.cutVariables_lin, μ)
-#             push!(cut.cutVariables_lin, η)
-#             append!(cut.cutVariables_lin, γ)
-#             append!(cut.cutVariables_lin, w)
-#             append!(cut.cutVariables_lin, u)
-#
-#             # ADD BINARY EXPANSION CONSTRAINT
-#             ####################################################################
-#             binary_constraint = JuMP.@constraint(
-#                 model,
-#                 state_comp.out == SDDP.bincontract([γ[k] for k = 1:K], epsilon)
-#             )
-#             push!(cut.cutConstraints_lin, binary_constraint)
-#
-#             # ADD KKT CONSTRAINT
-#             ####################################################################
-#             kkt_constraints = JuMP.@constraint(
-#                 model,
-#                 [k=1:K],
-#                 cut.coefficients[duals_so_far+k] - ν[k] + μ[k] + 2^(k-1) * epsilon == η
-#             )
-#             append!(cut.cutConstraints_lin, kkt_constraints)
-#
-#             # ADD BIG M CONSTRAINTS
-#             ####################################################################
-#             bigM = 2 * sigma * Umax
-#
-#             bigM_11_constraints = JuMP.@constraint(
-#                 model,
-#                 [k=1:K],
-#                 γ[k] <= w[k]
-#             )
-#             append!(cut.cutConstraints_lin, bigM_11_constraints)
-#
-#             bigM_12_constraints = JuMP.@constraint(
-#                 model,
-#                 [k=1:K],
-#                 ν[k] <= bigM * (1-w[k])
-#             )
-#             append!(cut.cutConstraints_lin, bigM_12_constraints)
-#
-#             bigM_21_constraints = JuMP.@constraint(
-#                 model,
-#                 [k=1:K],
-#                 1 - γ[k] <= u[k]
-#             )
-#             append!(cut.cutConstraints_lin, bigM_21_constraints)
-#
-#             bigM_22_constraints = JuMP.@constraint(
-#                 model,
-#                 [k=1:K],
-#                 μ[k] <= bigM * (1-u[k])
-#             )
-#             append!(cut.cutConstraints_lin, bigM_22_constraints)
-#
-#             duals_so_far += K
-#         end
-#     end
-#
-#     # ADD ORIGINAL CUT DESCRIPTION
-#     ####################################################################
-#     yᵀμ = JuMP.AffExpr(0.0)
-#     # if V.objective_states !== nothing
-#     #     for (y, μ) in zip(cut.obj_y, V.objective_states)
-#     #         JuMP.add_to_expression!(yᵀμ, y, μ)
-#     #     end
-#     # end
-#     # if V.belief_states !== nothing
-#     #     for (k, μ) in V.belief_states
-#     #         JuMP.add_to_expression!(yᵀμ, cut.belief_y[k], μ)
-#     #     end
-#     # end
-#
-#     @assert size(gamma, 1) = collect(values(cut.coefficients)) = duals_so_far
-#     number_of_duals = size(gamma, 1)
-#
-#     expr = @expression(
-#         model,
-#         V.theta + yᵀμ - sum(cut.coefficients[j] * gammas[j]  for j=1:number_of_duals)
-#     )
-#
-#     cut.constraint_ref = if JuMP.objective_sense(model) == MOI.MIN_SENSE
-#         @constraint(model, expr >= cut.intercept)
-#     else
-#         @constraint(model, expr <= cut.intercept)
-#     end
-#
-#     return
-#
-# end
+function add_cut_projection_to_model(
+    model::JuMP.Model,
+    V::SDDP.ConvexApproximation,
+    coefficients::Dict{Symbol,Float64}
+    gamma::JuMP.VariableRef,
+    iteration::Int64,
+    K::Int64,
+    epsilon::Float64,
+    sigma::Float64,
+    cutVariables::Vector{JuMP.VariableRef},
+    cutConstraints::Vector{JuMP.ConstraintRef},
+    i::Int64,
+    duals_so_far::Int64
+    )
+
+    # ADD VARIABLES FOR CUT PROJECTION
+    ####################################################################
+    ν = JuMP.@variable(model, [k in 1:K], lower_bound=0, base_name = "ν_" * string(i) * "_it" * string(iteration))
+    μ = JuMP.@variable(model, [k in 1:K], lower_bound=0, base_name = "μ_" * string(i) * "_it" * string(iteration))
+    η = JuMP.@variable(model, base_name = "η_" * string(i) * "_it" * string(iteration))
+    γ = JuMP.@variable(model, [k in 1:K], lower_bound=0, upper_bound=1, base_name = "γ_" * string(i) * "_it" * string(iteration))
+    w = JuMP.@variable(model, [k in 1:K], binary=true, base_name = "w_" * string(i) * "_it" * string(iteration))
+    u = JuMP.@variable(model, [k in 1:K], binary=true, base_name = "u_" * string(i) * "_it" * string(iteration))
+    append!(gamma, γ)
+
+    #Store those variables!
+    append!(cutVariables, ν)
+    append!(cutVariables, μ)
+    push!(cutVariables, η)
+    append!(cutVariables, γ)
+    append!(cutVariables, w)
+    append!(cutVariables, u)
+
+    # ADD BINARY EXPANSION CONSTRAINT
+    ####################################################################
+    binary_constraint = JuMP.@constraint(
+        model,
+        V.states[i] == SDDP.bincontract([γ[k] for k = 1:K], epsilon)
+    )
+    push!(cutConstraints, binary_constraint)
+
+    # ADD KKT CONSTRAINT
+    ####################################################################
+    kkt_constraints = JuMP.@constraint(
+        model,
+        [k=1:K],
+        coefficients[duals_so_far+k] - ν[k] + μ[k] + 2^(k-1) * epsilon == η
+    )
+    append!(cutConstraints, kkt_constraints)
+
+    # ADD BIG M CONSTRAINTS
+    ####################################################################
+    bigM = 2 * sigma * Umax
+
+    bigM_11_constraints = JuMP.@constraint(
+        model,
+        [k=1:K],
+        γ[k] <= w[k]
+    )
+    append!(cutConstraints, bigM_11_constraints)
+
+    bigM_12_constraints = JuMP.@constraint(
+        model,
+        [k=1:K],
+        ν[k] <= bigM * (1-w[k])
+    )
+    append!(cutConstraints, bigM_12_constraints)
+
+    bigM_21_constraints = JuMP.@constraint(
+        model,
+        [k=1:K],
+        1 - γ[k] <= u[k]
+    )
+    append!(cutConstraints, bigM_21_constraints)
+
+    bigM_22_constraints = JuMP.@constraint(
+        model,
+        [k=1:K],
+        μ[k] <= bigM * (1-u[k])
+    )
+    append!(cutConstraints, bigM_22_constraints)
+
+    duals_so_far += K
+
+    return duals_so_far
+
+end
