@@ -519,7 +519,7 @@ function inner_loop_backward_pass(
         outgoing_state = sampled_states[index]
         objective_state = get(objective_states, index, nothing)
         partition_index, belief_state = get(belief_states, index, (0, nothing))
-        items = SDDP.BackwardPassItems(T, SDDP.Noise)
+        items = BackwardPassItems(T, SDDP.Noise)
         if belief_state !== nothing
             # # Update the cost-to-go function for partially observable model.
             #print("blubb")
@@ -565,6 +565,13 @@ function inner_loop_backward_pass(
                 continue
             end
 
+            # Dict to store values of binary approximation of the state
+            # Note that we could also retrieve this from the actual trial point
+            # (outgoing_state) or from its approximation via binexpand. However,
+            # this collection is not only important to obtain the correct values,
+            # but also to store them together with the symbol/name of the variable.
+            node.ext[:binary_state_values] = Dict{Symbol, Float64}()
+
             # SOLVE ALL CHILDREN PROBLEM
             ####################################################################
             solve_all_children(
@@ -588,7 +595,8 @@ function inner_loop_backward_pass(
             epsilon = algoParams.binaryPrecision[node_index]
             for (name, value) in outgoing_state
                 state_comp = node.ext[:lin_states][name]
-                used_trial_points[name] = determine_used_trial_states(state_comp, value, epsilon)
+                (approx_state_value, )  = determine_used_trial_states(state_comp, value, epsilon)
+                used_trial_points[name] = approx_state_value
             end
 
             @infiltrate
@@ -601,6 +609,7 @@ function inner_loop_backward_pass(
                 node.bellman_function,
                 options.risk_measures[node_index],
                 used_trial_points,
+                items.bin_state_values,
                 items.duals,
                 items.supports,
                 items.probability,
@@ -643,7 +652,7 @@ function solve_all_children(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
     node_index::Int64,
-    items::SDDP.BackwardPassItems,
+    items::BackwardPassItems,
     belief::Float64,
     belief_state,
     objective_state,
@@ -673,6 +682,7 @@ function solve_all_children(
                 push!(items.probability, items.probability[sol_index])
                 push!(items.objectives, items.objectives[sol_index])
                 push!(items.belief, belief)
+                push!(items.bin_state_values, items.bin_state_values[sol_index])
             else
                 # Update belief state, etc.
                 if belief_state !== nothing
@@ -710,6 +720,7 @@ function solve_all_children(
                 push!(items.probability, child.probability * noise.probability)
                 push!(items.objectives, subproblem_results.objective)
                 push!(items.belief, belief)
+                push!(items.bin_state_values, subproblem_results.bin_state_values)
                 items.cached_solutions[(child.term, noise.term)] = length(items.duals)
                 #TODO: Maybe add binary precision
             end
@@ -788,11 +799,13 @@ function solve_subproblem_backward(
     # the dual on the fixed constraint associated with each incoming state
     # variable. If require_duals=false, return an empty dictionary for
     # type-stability.
-    dual_values = Dict{Symbol,Float64}()
-    dual_values = if require_duals
-        get_dual_variables_backward(node, node_index, algoParams, appliedSolvers)
+    if require_duals
+        lagrangian_results = get_dual_variables_backward(node, node_index, algoParams, appliedSolvers)
+        dual_values = lagrangian_results.dual_values
+        bin_state_valus = lagrangian.results.dual_values
     else
-        Dict{Symbol,Float64}()
+        dual_values = Dict{Symbol,Float64}()
+        bin_state_values = Dict{Symbol,Float64}()
     end
 
     # if node.post_optimize_hook !== nothing
@@ -804,6 +817,7 @@ function solve_subproblem_backward(
     changeToOriginalSpace!(node, linearizedSubproblem, state)
     return (
         duals = dual_values,
+        bin_state_values = bin_state_values,
         objective = objective
     )
 end
@@ -815,7 +829,10 @@ function get_dual_variables_backward(
     algoParams::NCNBD.AlgoParams,
     appliedSolvers::NCNBD.AppliedSolvers)
 
+    # storages for return of dual values and binary state values (trial point)
     dual_values = Dict{Symbol,Float64}()
+    bin_state_values = Dict{Symbol, Float64}()
+
     # TODO implement smart choice for initial duals
     number_of_states = length(node.ext[:backward_data][:bin_states])
     dual_vars = zeros(number_of_states)
@@ -838,7 +855,11 @@ function get_dual_variables_backward(
     for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
         # TODO (maybe) change dual signs inside kelley to match LP duals
         dual_values[name] = -dual_vars[i]
+        bin_state_values[name] = integrality_handler.old_rhs[i]
     end
 
-    return dual_values
+    return (
+        dual_values=dual_values,
+        bin_state_values=bin_state_values
+    )
 end
