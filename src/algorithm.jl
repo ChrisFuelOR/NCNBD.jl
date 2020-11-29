@@ -128,13 +128,17 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # ===== End: starting state for infinite horizon =====
 
         # Set optimizer to MINLP optimizer
-        set_optimizer(model, appliedSolvers.MINLP)
+        #set_optimizer(node.subproblem, SCIP.Optimizer)
+
+        set_optimizer(node.subproblem, appliedSolvers.MINLP)
+        JuMP.set_optimizer_attribute(node.subproblem, "Solver", "BARON")
+        #set_optimizer_attribute(model, GAMS.ModelType(), "MINLP")
 
         # SUBPROBLEM SOLUTION
         ############################################################################
         # Solve the subproblem, note that `require_duals = false`.
         TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
-            subproblem_results = SDDP.solve_subproblem(
+            subproblem_results = solve_subproblem_forward_outer(
                 model,
                 node,
                 incoming_state_value, # no State struct!
@@ -183,6 +187,14 @@ end
 
 function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
     algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+
+    # ITERATION COUNTER
+    ############################################################################
+    if haskey(model.ext, :iteration)
+        model.ext[:iteration] += 1
+    else
+        model.ext[:iteration] = 1
+    end
 
     # FORWARD PASS
     ############################################################################
@@ -339,7 +351,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
         ############################################################################
         # Solve the subproblem, note that `require_duals = false`.
         TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
-            subproblem_results = solve_subproblem(
+            subproblem_results = solve_subproblem_forward_inner(
                 model,
                 node,
                 incoming_state_value, # only values, no State struct!
@@ -387,11 +399,68 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Optio
 end
 
 
+function solve_subproblem_forward_outer(
+    model::SDDP.PolicyGraph{T},
+    node::SDDP.Node{T},
+    state::Dict{Symbol,Float64},
+    noise,
+    scenario_path::Vector{Tuple{T,S}};
+    require_duals::Bool,
+) where {T,S}
+    #TODO: We can actually delete the duals part here
+
+    # Parameterize the model. First, fix the value of the incoming state
+    # variables. Then parameterize the model depending on `noise`. Finally,
+    # set the objective.
+    set_incoming_state(node, state)
+    parameterize(node, noise)
+
+    pre_optimize_ret = if node.pre_optimize_hook !== nothing
+        node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
+    else
+        nothing
+    end
+
+    @infiltrate
+
+    JuMP.optimize!(node.subproblem)
+
+    if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
+        SDDP.attempt_numerical_recovery(node)
+    end
+
+    state = SDDP.get_outgoing_state(node)
+    stage_objective = SDDP.stage_objective_value(node.stage_objective)
+    objective = JuMP.objective_value(node.subproblem)
+
+    # If require_duals = true, check for dual feasibility and return a dict with
+    # the dual on the fixed constraint associated with each incoming state
+    # variable. If require_duals=false, return an empty dictionary for
+    # type-stability.
+    dual_values = if require_duals
+        SDDP.get_dual_variables(node, node.integrality_handler)
+    else
+        Dict{Symbol,Float64}()
+    end
+
+    if node.post_optimize_hook !== nothing
+        node.post_optimize_hook(pre_optimize_ret)
+    end
+
+    return (
+        state = state,
+        duals = dual_values,
+        objective = objective,
+        stage_objective = stage_objective,
+    )
+end
+
+
 # Internal function: solve the subproblem associated with node given the
 # incoming state variables state and realization of the stagewise-independent
 # noise term noise. If require_duals=true, also return the dual variables
 # associated with the fixed constraint of the incoming state variables.
-function solve_subproblem(
+function solve_subproblem_forward_inner(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
     state::Dict{Symbol,Float64},
@@ -400,6 +469,7 @@ function solve_subproblem(
     sigma::Float64;
     require_duals::Bool,
 ) where {T,S}
+    #TODO: We can actually delete the duals part here
 
     # MODEL PARAMETRIZATION (-> LINEARIZED SUBPROBLEM!)
     ############################################################################
@@ -408,8 +478,8 @@ function solve_subproblem(
     # Parameterize the model. First, fix the value of the incoming state
     # variables. Then parameterize the model depending on `noise`. Finally,
     # set the objective.
-    set_incoming_state(node, state)
-    parameterize(node, noise)
+    set_incoming_lin_state(node, state)
+    parameterize_lin(node, noise)
 
     # pre_optimize_ret = if node.pre_optimize_hook !== nothing
     #     node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
@@ -602,20 +672,20 @@ function inner_loop_backward_pass(
             @infiltrate
             # REFINE BELLMAN FUNCTION BY ADDING CUTS
             ####################################################################
-            new_cuts = refine_bellman_function(
-                model,
-                node,
-                node_index,
-                node.bellman_function,
-                options.risk_measures[node_index],
-                used_trial_points,
-                items.bin_state_values,
-                items.duals,
-                items.supports,
-                items.probability,
-                items.objectives,
-                algoParams
-            )
+            # new_cuts = refine_bellman_function(
+            #     model,
+            #     node,
+            #     node_index,
+            #     node.bellman_function,
+            #     options.risk_measures[node_index],
+            #     used_trial_points,
+            #     items.bin_state_values,
+            #     items.duals,
+            #     items.supports,
+            #     items.probability,
+            #     items.objectives,
+            #     algoParams
+            # )
             # push!(cuts[node_index], new_cuts)
             # if options.refine_at_similar_nodes
             #     # Refine the bellman function at other nodes with the same
@@ -802,7 +872,7 @@ function solve_subproblem_backward(
     if require_duals
         lagrangian_results = get_dual_variables_backward(node, node_index, algoParams, appliedSolvers)
         dual_values = lagrangian_results.dual_values
-        bin_state_valus = lagrangian.results.dual_values
+        bin_state_values = lagrangian_results.bin_state_values
     else
         dual_values = Dict{Symbol,Float64}()
         bin_state_values = Dict{Symbol,Float64}()

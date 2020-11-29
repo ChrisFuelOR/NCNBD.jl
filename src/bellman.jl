@@ -1,5 +1,64 @@
-function initialize_bellman_function(
-    factory::SDDP.InstanceFactory{SDDP.BellmanFunction},
+mutable struct LevelOneOracle
+    cuts::Vector{NCNBD.NonlinearCut}
+    states::Vector{SDDP.SampledState}
+    cuts_to_be_deleted::Vector{NCNBD.NonlinearCut}
+    deletion_minimum::Int
+    function LevelOneOracle(deletion_minimum)
+        return new(NCNBD.NonlinearCut[], SDDP.SampledState[], NCNBD.NonlinearCut[], deletion_minimum)
+    end
+end
+
+mutable struct NonConvexApproximation
+    theta::JuMP.VariableRef
+    states::Dict{Symbol,JuMP.VariableRef}
+    objective_states::Union{Nothing,NTuple{N,JuMP.VariableRef} where {N}}
+    belief_states::Union{Nothing,Dict{T,JuMP.VariableRef} where {T}}
+    cut_oracle::LevelOneOracle
+    function NonConvexApproximation(
+        theta::JuMP.VariableRef,
+        states::Dict{Symbol,JuMP.VariableRef},
+        objective_states,
+        belief_states,
+        deletion_minimum::Int,
+    )
+        return new(
+            theta,
+            states,
+            objective_states,
+            belief_states,
+            LevelOneOracle(deletion_minimum),
+        )
+    end
+end
+
+mutable struct BellmanFunction <: SDDP.AbstractBellmanFunction
+    global_theta::NonConvexApproximation
+    local_thetas::Vector{NonConvexApproximation}
+    cut_type::SDDP.CutType
+    # Cuts defining the dual representation of the risk measure.
+    risk_set_cuts::Set{Vector{Float64}}
+end
+
+function BellmanFunction(;
+    lower_bound = -Inf,
+    upper_bound = Inf,
+    deletion_minimum::Int = 1,
+    cut_type::SDDP.CutType = SDDP.MULTI_CUT,
+)
+    return SDDP.InstanceFactory{BellmanFunction}(
+        lower_bound = lower_bound,
+        upper_bound = upper_bound,
+        deletion_minimum = deletion_minimum,
+        cut_type = cut_type,
+    )
+end
+
+function bellman_term(bellman_function::NCNBD.BellmanFunction)
+    return bellman_function.global_theta.theta
+end
+
+function initialize_bellman_function_MILP(
+    factory::SDDP.InstanceFactory{BellmanFunction},
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
 ) where {T}
@@ -35,9 +94,55 @@ function initialize_bellman_function(
     x′ = Dict(key => var.out for (key, var) in node.ext[:lin_states])
     obj_μ = node.objective_state !== nothing ? node.objective_state.μ : nothing
     belief_μ = node.belief_state !== nothing ? node.belief_state.μ : nothing
-    return SDDP.BellmanFunction(
-        SDDP.ConvexApproximation(Θᴳ, x′, obj_μ, belief_μ, deletion_minimum),
-        SDDP.ConvexApproximation[],
+    return BellmanFunction(
+        NonConvexApproximation(Θᴳ, x′, obj_μ, belief_μ, deletion_minimum),
+        NonConvexApproximation[],
+        cut_type,
+        Set{Vector{Float64}}(),
+    )
+end
+
+
+function initialize_bellman_function_MINLP(
+    factory::SDDP.InstanceFactory{BellmanFunction},
+    model::SDDP.PolicyGraph{T},
+    node::SDDP.Node{T},
+) where {T}
+    lower_bound, upper_bound, deletion_minimum, cut_type = -Inf, Inf, 0, SDDP.SINGLE_CUT
+    if length(factory.args) > 0
+        error("Positional arguments $(factory.args) ignored in BellmanFunction.")
+    end
+    for (kw, value) in factory.kwargs
+        if kw == :lower_bound
+            lower_bound = value
+        elseif kw == :upper_bound
+            upper_bound = value
+        elseif kw == :deletion_minimum
+            deletion_minimum = value
+        elseif kw == :cut_type
+            cut_type = value
+        else
+            error("Keyword $(kw) not recognised as argument to BellmanFunction.")
+        end
+    end
+    if lower_bound == -Inf && upper_bound == Inf
+        error("You must specify a finite bound on the cost-to-go term.")
+    end
+    if length(node.children) == 0
+        lower_bound = upper_bound = 0.0
+    end
+    Θᴳ = JuMP.@variable(node.subproblem, base_name="Θᴳ")
+    lower_bound > -Inf && JuMP.set_lower_bound(Θᴳ, lower_bound)
+    upper_bound < Inf && JuMP.set_upper_bound(Θᴳ, upper_bound)
+    # Initialize bounds for the objective states. If objective_state==nothing,
+    # this check will be skipped by dispatch.
+    SDDP._add_initial_bounds(node.objective_state, Θᴳ)
+    x′ = Dict(key => var.out for (key, var) in node.states)
+    obj_μ = node.objective_state !== nothing ? node.objective_state.μ : nothing
+    belief_μ = node.belief_state !== nothing ? node.belief_state.μ : nothing
+    return BellmanFunction(
+        NonConvexApproximation(Θᴳ, x′, obj_μ, belief_μ, deletion_minimum),
+        NonConvexApproximation[],
         cut_type,
         Set{Vector{Float64}}(),
     )
@@ -50,7 +155,7 @@ function refine_bellman_function(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
     node_index::Int64,
-    bellman_function::SDDP.BellmanFunction,
+    bellman_function::BellmanFunction,
     risk_measure::SDDP.AbstractRiskMeasure,
     used_trial_points::Dict{Symbol,Float64},
     bin_state_values::Vector{Dict{Symbol,Float64}},
@@ -76,6 +181,7 @@ function refine_bellman_function(
         objective_realizations,
         model.objective_sense == MOI.MIN_SENSE,
     )
+    #@infiltrate
     # The meat of the function.
     if bellman_function.cut_type == SDDP.SINGLE_CUT
         return _add_average_cut(
@@ -88,7 +194,7 @@ function refine_bellman_function(
             dual_variables,
             offset,
             algoParams,
-            model.ext[:total_solves]
+            model.ext[:iteration]
         )
     else  # Add a multi-cut
         @assert bellman_function.cut_type == SDDP.MULTI_CUT
@@ -121,15 +227,15 @@ function _add_average_cut(
     iteration::Int64
 )
 
-    @infiltrate
-
     N = length(risk_adjusted_probability)
     @assert N == length(objective_realizations) == length(dual_variables) == length(bin_state_values)
+    bin_state_values = bin_state_values[1]
 
     # Calculate the expected intercept and dual variables with respect to the
     # risk-adjusted probability distribution.
     πᵏ = Dict(key => 0.0 for key in keys(bin_state_values))
     θᵏ = offset
+    #@infiltrate
     for i = 1:length(objective_realizations)
         p = risk_adjusted_probability[i]
         θᵏ += p * objective_realizations[i]
@@ -163,15 +269,15 @@ function _add_average_cut(
         iteration
     )
 
-    return (theta = θᵏ, pi = πᵏ, x = outgoing_state, obj_y = obj_y, belief_y = belief_y)
+    return (theta = θᵏ, pi = πᵏ, x = bin_state_values, obj_y = obj_y, belief_y = belief_y)
 end
 
 
 # Add the cut to the model and the convex approximation.
 function _add_cut(
     node::SDDP.Node,
-    V::SDDP.ConvexApproximation,
-    V_lin::SDDP.ConvexApproximation,
+    V::NonConvexApproximation,
+    V_lin::NonConvexApproximation,
     θᵏ::Float64,
     πᵏ::Dict{Symbol,Float64},
     λᵏ::Dict{Symbol,Float64},
@@ -181,7 +287,7 @@ function _add_cut(
     epsilon::Float64,
     sigma::Float64,
     iteration::Int64;
-    cut_selection::Bool = true
+    cut_selection::Bool = false
 ) where {N,T}
 
     # CORRECT INTERCEPT
@@ -193,16 +299,18 @@ function _add_cut(
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
     #TODO: Should we add λᵏ? Actually, this is information is not required.
-    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, binaryPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
+    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, epsilon, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
     ############################################################################
     add_cut_constraints_to_models(node, V, V_lin, cut, sigma, epsilon, iteration)
 
     if cut_selection
-        _cut_selection_update(V, cut, xᵏ)
-        _cut_selection_update(V_lin, cut, xᵏ)
+        #TODO
+        #SDDP._cut_selection_update(V, cut, xᵏ)
+        #SDDP._cut_selection_update(V_lin, cut, xᵏ)
     else
+        #@infiltrate
         push!(V.cut_oracle.cuts, cut)
         push!(V_lin.cut_oracle.cuts, cut)
     end
@@ -212,8 +320,8 @@ end
 
 function add_cut_constraints_to_models(
     node::SDDP.Node,
-    V::SDDP.ConvexApproximation,
-    V_lin::SDDP.ConvexApproximation,
+    V::NonConvexApproximation,
+    V_lin::NonConvexApproximation,
     cut::NonlinearCut,
     #λᵏ::Dict{Symbol,Float64},
     sigma::Float64,
@@ -255,15 +363,11 @@ function add_cut_constraints_to_models(
 
             # No cut projection required in binary state
             # Store states in gamma though for general cut expression
-            for (i, x) in V.states
-                push!(gamma, x)
-                duals_so_far += 1
-            end
+            push!(gamma, V.states[name])
+            duals_so_far += 1
 
-            for (i, x) in V_lin.states
-                push!(gamma_lin, x)
-                duals_lin_so_far += 1
-            end
+            push!(gamma_lin, V_lin.states[name])
+            duals_lin_so_far += 1
 
         else
             if !isfinite(state_comp.info.out.upper_bound) || !state_comp.info.out.has_ub
@@ -273,15 +377,15 @@ function add_cut_constraints_to_models(
             if state_comp.info.out.integer
                 K = SDDP._bitsrequired(state_comp.info.out.upper_bound)
                 epsilon = 1
-            elseif state_comp.info.out.binary
+            else
                 K = SDDP._bitsrequired(round(Int, state_comp.info.out.upper_bound / binaryPrecision))
                 epsilon = binaryPrecision
             end
 
             # Call function to add projection constraints and variables to
             # model and model_Lin
-            duals_so_far = add_cut_projection_to_model!(model, V, cut.coefficients, gamma, iteration, K, epsilon, sigma, cut.cutVariables, cut.cutConstraints, i, duals_so_far)
-            duals_so_far_lin = add_cut_projection_to_model!(model_lin, V_lin, cut.coefficients, gamma_lin, iteration, K, epsilon, sigma, cut.cutVariables_lin, cut.cutConstraints_lin, i, duals_so_far_lin)
+            duals_so_far = add_cut_projection_to_model!(model, V.states[name], cut.coefficients, gamma, iteration, K, epsilon, sigma, cut.cutVariables, cut.cutConstraints, i, duals_so_far, Umax)
+            duals_lin_so_far = add_cut_projection_to_model!(model_lin, V_lin.states[name], cut.coefficients, gamma_lin, iteration, K, epsilon, sigma, cut.cutVariables_lin, cut.cutConstraints_lin, i, duals_lin_so_far, Umax)
 
         end
     end
@@ -300,18 +404,25 @@ function add_cut_constraints_to_models(
     #     end
     # end
 
-    @assert size(gamma, 1) == size(collect(values(cut.coefficients)), 1)
+    @assert (size(gamma, 1) == size(collect(values(cut.coefficients)), 1)
                            == duals_so_far
-                           == duals_so_far_lin
-                           == size(gamma_lin, 1)
+                           == duals_lin_so_far
+                           == size(gamma_lin, 1))
                            # == size(collect(values(λᵏ)), 1)
     number_of_duals = size(gamma, 1)
 
+    allCoefficients = Vector{Float64}(undef, number_of_duals)
+    for (i, (name, value)) in enumerate(cut.coefficients)
+        allCoefficients[i] = value
+    end
+
     # TO ORIGINAL MODEL
     ############################################################################
+    #@infiltrate
+
     expr = @expression(
         model,
-        V.theta + yᵀμ - sum(cut.coefficients[j] * gamma[j]  for j=1:number_of_duals)
+        V.theta + yᵀμ - sum(allCoefficients[j] * gamma[j]  for j=1:number_of_duals)
     )
 
     constraint_ref = if JuMP.objective_sense(model) == MOI.MIN_SENSE
@@ -325,7 +436,7 @@ function add_cut_constraints_to_models(
     ############################################################################
     expr_lin = @expression(
         model_lin,
-        V_lin.theta + yᵀμ - sum(cut.coefficients[j] * gamma_lin[j]  for j=1:number_of_duals)
+        V_lin.theta + yᵀμ - sum(allCoefficients[j] * gamma_lin[j]  for j=1:number_of_duals)
     )
 
     constraint_ref_lin = if JuMP.objective_sense(model_lin) == MOI.MIN_SENSE
@@ -333,18 +444,18 @@ function add_cut_constraints_to_models(
     else
         @constraint(model_lin, expr_lin <= cut.intercept)
     end
-    push!(cut.cutConstraints_lin, constraint_ref_lin)    
+    push!(cut.cutConstraints_lin, constraint_ref_lin)
 
     return
 
 end
 
 
-function add_cut_projection_to_model(
+function add_cut_projection_to_model!(
     model::JuMP.Model,
-    V::SDDP.ConvexApproximation,
-    coefficients::Dict{Symbol,Float64}
-    gamma::JuMP.VariableRef,
+    state_comp::JuMP.VariableRef,
+    coefficients::Dict{Symbol,Float64},
+    gamma::Vector{JuMP.VariableRef},
     iteration::Int64,
     K::Int64,
     epsilon::Float64,
@@ -352,7 +463,8 @@ function add_cut_projection_to_model(
     cutVariables::Vector{JuMP.VariableRef},
     cutConstraints::Vector{JuMP.ConstraintRef},
     i::Int64,
-    duals_so_far::Int64
+    duals_so_far::Int64,
+    Umax::Float64
     )
 
     # ADD VARIABLES FOR CUT PROJECTION
@@ -377,16 +489,23 @@ function add_cut_projection_to_model(
     ####################################################################
     binary_constraint = JuMP.@constraint(
         model,
-        V.states[i] == SDDP.bincontract([γ[k] for k = 1:K], epsilon)
+        state_comp == SDDP.bincontract([γ[k] for k = 1:K], epsilon)
     )
     push!(cutConstraints, binary_constraint)
 
     # ADD KKT CONSTRAINT
     ####################################################################
+    relatedCoefficients = Vector{Float64}(undef, K)
+    for (i, (name, value)) in enumerate(coefficients)
+        if i >= duals_so_far && i <= duals_so_far + K
+            relatedCoefficients[duals_so_far+i] = value
+        end
+    end
+
     kkt_constraints = JuMP.@constraint(
         model,
         [k=1:K],
-        coefficients[duals_so_far+k] - ν[k] + μ[k] + 2^(k-1) * epsilon == η
+        relatedCoefficients[k] - ν[k] + μ[k] + 2^(k-1) * epsilon * η == 0
     )
     append!(cutConstraints, kkt_constraints)
 

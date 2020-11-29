@@ -38,7 +38,7 @@ function set_lin_objective(subproblem::JuMP.Model)
             @expression(
                 subproblem,
                 node.ext[:lin_stage_objective] +
-                SDDP.bellman_term(node.ext[:lin_bellman_function])
+                bellman_term(node.ext[:lin_bellman_function])
             )
         )
     end
@@ -46,9 +46,42 @@ function set_lin_objective(subproblem::JuMP.Model)
     return
 end
 
-function parameterize(node::SDDP.Node, noise)
+
+# Internal function: set the objective of node to the stage objective, plus the
+# cost/value-to-go term.
+function set_objective(subproblem::JuMP.Model)
+    node = SDDP.get_node(subproblem)
+    objective_state_component = SDDP.get_objective_state_component(node)
+    belief_state_component = SDDP.get_belief_state_component(node)
+    if objective_state_component != JuMP.AffExpr(0.0) ||
+       belief_state_component != JuMP.AffExpr(0.0)
+        node.stage_objective_set = false
+    end
+    if !node.stage_objective_set
+        JuMP.set_objective(
+            subproblem,
+            JuMP.objective_sense(subproblem),
+            @expression(
+                subproblem,
+                node.stage_objective +
+                bellman_term(node.bellman_function)
+            )
+        )
+    end
+    node.stage_objective_set = true
+    return
+end
+
+function parameterize_lin(node::SDDP.Node, noise)
     node.parameterize(noise)
     # set objective function and Bellman function for MILP
     set_lin_objective(node.ext[:linSubproblem])
+    return
+end
+
+function parameterize(node::SDDP.Node, noise)
+    node.parameterize(noise)
+    # set objective function and Bellman function for MILP
+    set_objective(node.subproblem)
     return
 end
