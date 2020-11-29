@@ -306,13 +306,27 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 lower_bound = -Inf
             end
 
-            bellman_function = SDDP.BellmanFunction(lower_bound = lower_bound, upper_bound = upper_bound)
-            node.ext[:lin_bellman_function] = initialize_bellman_function(bellman_function, model, node)
-            node.ext[:lin_bellman_function].cut_type = node.bellman_function.cut_type
-            node.ext[:lin_bellman_function].global_theta.cut_oracle.deletion_minimum = node.bellman_function.global_theta.cut_oracle.deletion_minimum
+            cut_type = node.bellman_function.cut_type
+            deletion_minimum = node.bellman_function.global_theta.cut_oracle.deletion_minimum
+
+            bellman_function = BellmanFunction(lower_bound = lower_bound, upper_bound = upper_bound)
+            node.ext[:lin_bellman_function] = initialize_bellman_function_MILP(bellman_function, model, node)
+            node.ext[:lin_bellman_function].cut_type = cut_type
+            node.ext[:lin_bellman_function].global_theta.cut_oracle.deletion_minimum = deletion_minimum
             for oracle in node.ext[:lin_bellman_function].local_thetas
-                oracle.cut_oracle.deletion_minimum = node.oracle.cut_oracle.deletion_minimum
+                oracle.cut_oracle.deletion_minimum = deletion_minimum
+                #oracle.cut_oracle.deletion_minimum = node.oracle.cut_oracle.deletion_minimum
             end
+
+            # also re-initialize the existing value function such that nonlinear cuts are used
+            # fortunately, node.bellman_function requires no specific type
+            node.bellman_function = initialize_bellman_function_MINLP(bellman_function, model, node)
+            node.bellman_function.cut_type = cut_type
+            node.bellman_function.global_theta.cut_oracle.deletion_minimum = deletion_minimum
+            for oracle in node.bellman_function.local_thetas
+                oracle.cut_oracle.deletion_minimum = deletion_minimum
+            end
+
         end
     end
 

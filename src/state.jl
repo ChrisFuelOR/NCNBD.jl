@@ -33,7 +33,7 @@ end
 
 # Internal function: set the incoming state variables of node to the values
 # contained in state.
-function set_incoming_state(node::SDDP.Node, state::Dict{Symbol,Float64})
+function set_incoming_lin_state(node::SDDP.Node, state::Dict{Symbol,Float64})
     for (state_name, value) in state
 
         # TODO: Check if required
@@ -41,6 +41,21 @@ function set_incoming_state(node::SDDP.Node, state::Dict{Symbol,Float64})
 
         # Fix value (bounds are automatically deleted by force argument)
         JuMP.fix(node.ext[:lin_states][state_name].in, value, force=true)
+    end
+    return
+end
+
+
+# Internal function: set the incoming state variables of node to the values
+# contained in state.
+function set_incoming_state(node::SDDP.Node, state::Dict{Symbol,Float64})
+    for (state_name, value) in state
+
+        # TODO: Check if required
+        prepare_state_fixing!(node, state_name)
+
+        # Fix value (bounds are automatically deleted by force argument)
+        JuMP.fix(node.states[state_name].in, value, force=true)
     end
     return
 end
