@@ -169,6 +169,7 @@ struct BackwardPassItems{T,U}
             Float64[],
             Float64[],
             Float64[],
+            Dict{Symbol,Float64}[],
         )
     end
 end
