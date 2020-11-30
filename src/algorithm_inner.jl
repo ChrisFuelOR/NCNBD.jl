@@ -31,7 +31,7 @@ function inner_loop_iteration(
         # TODO: Maybe make this more efficient
         for i in 1:size(previousSolution,1)
             # Consider stage 2 here (should be the same for all following stages)
-            for (name, state_comp) in model.nodes[2].ext[:lin_states]
+            for (name, state_comp) in model.nodes[i].ext[:lin_states]
                 current_sol = forward_trajectory.sampledStates[i][name]
                 previous_sol = previousSolution[i][name]
                 if current_sol != previous_sol

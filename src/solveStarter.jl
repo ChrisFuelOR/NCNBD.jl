@@ -392,17 +392,54 @@ Outer loop function of NCNBD.
 
 function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+
+    #previousSolution = Nothing
+
     while true
         @infiltrate
         result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
         #log_iteration(options)
         if result_outer.has_converged
             return result_outer.status
-        else
-            piecewise_linear_refinement(model, appliedSolvers)
-            # also give solution from result_outer
-        #TODO: When to increase sigma? Every other iteration?
         end
+
+       # INCREASE SIGMA - METHOD I
+       #########################################################################
+       # Increase sigma for all stages based on solution change
+       #  if !isnothing(previousSolution)
+       #      solutionCheck = true
+       #
+       #      # Check if solution has changed since last iteration
+       #      # TODO: Maybe make this more efficient
+       #      for i in 1:size(previousSolution,1)
+       #          for (name, state_comp) in model.nodes[i].ext[:lin_states]
+       #              current_sol = forward_trajectory.sampledStates[i][name]
+       #              previous_sol = previousSolution[i][name]
+       #              if current_sol != previous_sol
+       #                  solutionCheck = false
+       #              end
+       #          end
+       #      end
+       #
+       #      # Increase sigma for all stages by factor 5
+    	# if solutionCheck == false
+       #          algoParams.sigma = algoParams.sigma * 5
+       #      end
+       # end
+       #
+       #  previousSolution = result_outer.current_sol
+
+       # INCREASE SIGMA - METHOD II
+       #########################################################################
+       # Increase sigma for all stages based on iteration
+       # every sigmaCounter-th iteration, sigma is increased instead of PLA refinement
+       if mod(model.ext[:outer_iteration] / algoParams.sigmaCounter) == 0
+           algoParams.sigma = algoParams.sigma * 5
+       else
+           # Piecewise linear refinement
+           piecewise_linear_refinement(model, appliedSolvers)
+       end
+
     end
 end
 
@@ -433,9 +470,12 @@ Inner loop function of NCNBD, if also outer loop is used.
 
 function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+
+    previousSolution = Nothing
+
     while true
         # start an inner loop
-        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution)
         # logging preparation (in contrast to SDDP here instead of inner_loop_iteration?)
         # logging
         #log_iteration(options)
@@ -443,5 +483,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             # return all results here to keep them accessible in outer pass
             return result_inner
         end
+
+        previousSolution = result_inner.current_sol
     end
 end

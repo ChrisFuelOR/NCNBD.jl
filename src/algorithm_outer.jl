@@ -3,6 +3,14 @@ const NCNBD_TIMER = TimerOutputs.TimerOutput()
 function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
+    # ITERATION COUNTER
+    ############################################################################
+    if haskey(model.ext, :outer_iteration)
+        model.ext[:outer_iteration] += 1
+    else
+        model.ext[:outer_iteration] = 1
+    end
+
     # CALL THE INNER LOOP AND GET BACK RESULTS IF CONVERGED
     ############################################################################
     TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
