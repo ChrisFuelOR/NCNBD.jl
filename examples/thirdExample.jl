@@ -160,23 +160,26 @@ function thirdExample()
     ############################################################################
     appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, GAMS.Optimizer)
 
-    epsilon_outerLoop = 0.0
-    epsilon_innerLoop = 0.0
+    epsilon_outerLoop = 0.001
+    epsilon_innerLoop = 0.001
     binaryPrecision = Dict(:x => 0.5)
     plaPrecision = [2, 4]
     sigma = [1.0, 1.0]
+    sigma_counter = 5
 
-    @infiltrate
+    #@infiltrate
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
-                            epsilon_innerLoop, binaryPrecision, plaPrecision, sigma)
+                            epsilon_innerLoop, binaryPrecision, plaPrecision,
+                            sigma, sigma_counter)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, sigma)
+                                      binaryPrecision, sigma, sigma_counter)
 
     # SET-UP NONLINEARITIES
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 100, print_level = 0)
+                iteration_limit = 100, print_level = 0,
+                time_limit = 1800, stopping_rules = [NCNBD.DeterministicStopping()])
 end
 
 thirdExample()

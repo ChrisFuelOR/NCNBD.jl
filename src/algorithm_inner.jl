@@ -1,6 +1,6 @@
 function inner_loop_iteration(
     model::SDDP.PolicyGraph{T},
-    options::SDDP.Options,
+    options::NCNBD.Options,
     algoParams::NCNBD.AlgoParams,
     appliedSolvers::NCNBD.AppliedSolvers,
     previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing}
@@ -13,6 +13,7 @@ function inner_loop_iteration(
     else
         model.ext[:iteration] = 1
     end
+    # TODO: Should this be set to 0 again for each new outer loop?
 
     # FORWARD PASS
     ############################################################################
@@ -32,7 +33,7 @@ function inner_loop_iteration(
         for i in 1:size(previousSolution,1)
             # Consider stage 2 here (should be the same for all following stages)
             for (name, state_comp) in model.nodes[i].ext[:lin_states]
-                current_sol = forward_trajectory.sampledStates[i][name]
+                current_sol = forward_trajectory.sampled_states[i][name]
                 previous_sol = previousSolution[i][name]
                 if current_sol != previous_sol
                     solutionCheck = false
@@ -67,55 +68,50 @@ function inner_loop_iteration(
             forward_trajectory.belief_states,
         )
     end
-    @infiltrate
+    #@infiltrate
 
     # CALCULATE LOWER BOUND
     ############################################################################
-    #TimerOutputs.@timeit NCNBD_TIMER "calculate_bound" begin
-    #    bound = calculate_bound(model)
-    #end
+    TimerOutputs.@timeit NCNBD_TIMER "calculate_bound" begin
+        bound = calculate_bound(model)
+    end
 
     # PREPARE LOGGING
     ############################################################################
-    # TODO: Should this be done here or in the inner_loop function?
-    # Which parts are required for the convergence test?
-
-    # push!(
-    #     options.log,
-    #     Log(
-    #         length(options.log) + 1,
-    #         bound,
-    #         forward_trajectory.cumulative_value,
-    #         time() - options.start_time,
-    #         Distributed.myid(),
-    #         model.ext[:total_solves],
-    #     ),
-    # )
+    @infiltrate
+    push!(
+         options.log_inner,
+         Log(
+             model.ext[:outer_iteration],
+             model.ext[:iteration], #length(options.log) + 1,
+             bound,
+             forward_trajectory.cumulative_value,
+             forward_trajectory.sampled_states,
+             time() - options.start_time,
+             #Distributed.myid(),
+             #model.ext[:total_solves],
+             algoParams.binaryPrecision,
+             algoParams.epsilon_innerLoop
+         ),
+     )
 
     # CHECK IF THE INNER LOOP CONVERGED YET
     ############################################################################
-    # TODO: To be implemented
-    #has_converged, status = convergence_test(model, options.log, options.stopping_rules)
-
-    has_converged = true
-    status = :Blubb
-    cuts = Dict{Symbol, Vector{Float64}}()
-    current_sol = forward_trajectory.sampled_states
-    lower_bound = 0.0
+    has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules)
 
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
-        lower_bound,
+        bound,
         forward_trajectory.cumulative_value,
-        current_sol,
+        forward_trajectory.sampled_states,
         has_converged,
         status,
-        #cuts,
+        cuts,
     )
 end
 
 
-function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
+function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Options,
     algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
     ::SDDP.DefaultForwardPass) where {T}
 
@@ -346,7 +342,7 @@ end
 
 function inner_loop_backward_pass(
     model::SDDP.PolicyGraph{T},
-    options::SDDP.Options,
+    options::NCNBD.Options,
     algoParams::NCNBD.AlgoParams,
     appliedSolvers::NCNBD.AppliedSolvers,
     scenario_path::Vector{Tuple{T,NoiseType}},
@@ -702,5 +698,147 @@ function get_dual_variables_backward(
     return (
         dual_values=dual_values,
         bin_state_values=bin_state_values
+    )
+end
+
+
+"""
+Calculate the lower bound (if minimizing, otherwise upper bound) of the problem
+model at the point state, assuming the risk measure at the root node is
+risk_measure.
+"""
+function calculate_bound(
+    model::SDDP.PolicyGraph{T},
+    root_state::Dict{Symbol,Float64} = model.initial_root_state;
+    risk_measure = SDDP.Expectation(),
+) where {T}
+
+    # Note that here all children of the root node are solved, since the root
+    # node is not node 1, but node 0.
+    # In our case, this means that only stage 1 problem is solved again,
+    # using the updated Bellman function from the backward pass.
+    # NOTE: We could also implement this in our case such that only
+    # the linearizedSubproblem of the first stage is solved and
+    # the bound is returned.
+
+    # Initialization.
+    noise_supports = Any[]
+    probabilities = Float64[]
+    objectives = Float64[]
+    current_belief = SDDP.initialize_belief(model)
+
+    # Solve all problems that are children of the root node.
+    for child in model.root_children
+        if isapprox(child.probability, 0.0, atol = 1e-6)
+            continue
+        end
+        node = model[child.term]
+        for noise in node.noise_terms
+            if node.objective_state !== nothing
+                SDDP.update_objective_state(
+                    node.objective_state,
+                    node.objective_state.initial_value,
+                    noise.term,
+                )
+            end
+            # Update belief state, etc.
+            if node.belief_state !== nothing
+                belief = node.belief_state::SDDP.BeliefState{T}
+                partition_index = belief.partition_index
+                belief.updater(belief.belief, current_belief, partition_index, noise.term)
+            end
+            subproblem_results = solve_first_stage_problem(
+                model,
+                node,
+                root_state,
+                noise.term,
+                Tuple{T,Any}[(child.term, noise.term)],
+                require_duals = false,
+            )
+            push!(objectives, subproblem_results.objective)
+            push!(probabilities, child.probability * noise.probability)
+            push!(noise_supports, noise.term)
+        end
+    end
+    # Now compute the risk-adjusted probability measure:
+    risk_adjusted_probability = similar(probabilities)
+    offset = SDDP.adjust_probability(
+        risk_measure,
+        risk_adjusted_probability,
+        probabilities,
+        noise_supports,
+        objectives,
+        model.objective_sense == MOI.MIN_SENSE,
+    )
+    # Finally, calculate the risk-adjusted value.
+    return sum(obj * prob for (obj, prob) in zip(objectives, risk_adjusted_probability)) +
+           offset
+end
+
+
+function solve_first_stage_problem(
+    model::SDDP.PolicyGraph{T},
+    node::SDDP.Node{T},
+    state::Dict{Symbol,Float64},
+    noise,
+    scenario_path::Vector{Tuple{T,S}};
+    require_duals::Bool,
+) where {T,S}
+    #TODO: We can actually delete the duals part here
+
+    # MODEL PARAMETRIZATION (-> LINEARIZED SUBPROBLEM!)
+    ############################################################################
+    linearizedSubproblem = node.ext[:linSubproblem]
+
+    # Parameterize the model. First, fix the value of the incoming state
+    # variables. Then parameterize the model depending on `noise`. Finally,
+    # set the objective.
+    set_incoming_lin_state(node, state)
+    parameterize_lin(node, noise)
+
+    # pre_optimize_ret = if node.pre_optimize_hook !== nothing
+    #     node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
+    # else
+    #     nothing
+    # end
+
+    # SOLUTION
+    ############################################################################
+    JuMP.optimize!(linearizedSubproblem)
+
+    if haskey(model.ext, :total_solves)
+        model.ext[:total_solves] += 1
+    else
+        model.ext[:total_solves] = 1
+    end
+
+    # if JuMP.primal_status(node.ext[:linSubproblem]) != JuMP.MOI.FEASIBLE_POINT
+    #     SDDP.attempt_numerical_recovery(node)
+    # end
+
+    state = get_outgoing_state(node)
+    stage_objective = JuMP.value(node.ext[:lin_stage_objective])
+    #stage_objective_value(node.ext[:lin_stage_objective])
+    objective = JuMP.objective_value(node.ext[:linSubproblem])
+
+    # If require_duals = true, check for dual feasibility and return a dict with
+    # the dual on the fixed constraint associated with each incoming state
+    # variable. If require_duals=false, return an empty dictionary for
+    # type-stability.
+    dual_values = if require_duals
+        get_dual_variables(node, node.integrality_handler)
+    else
+        Dict{Symbol,Float64}()
+    end
+
+    # if node.post_optimize_hook !== nothing
+    #     node.post_optimize_hook(pre_optimize_ret)
+    # end
+
+    return (
+        state = state,
+        duals = dual_values,
+        objective = objective,
+        stage_objective = stage_objective,
     )
 end

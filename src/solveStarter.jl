@@ -100,7 +100,8 @@ function solve(
     # Reset the TimerOutput.
     TimerOutputs.reset_timer!(NCNBD_TIMER)
     log_file_handle = open(log_file, "a")
-    log = SDDP.Log[]
+    log_inner = Log[]
+    log_outer = Log[]
 
     if print_level > 0
         print_helper(print_banner, log_file_handle)
@@ -160,7 +161,7 @@ function solve(
         (::Any, ::Any) -> nothing
     end
 
-    sddpOptions = SDDP.Options(
+    sddpOptions = Options(
         model,
         model.initial_root_state,
         sampling_scheme,
@@ -172,7 +173,8 @@ function solve(
         dashboard_callback,
         print_level,
         time(),
-        log,
+        log_inner,
+        log_outer,
         log_file_handle,
         log_frequency,
         forward_pass,
@@ -252,7 +254,7 @@ Solves the `model` using NCNBD in a serial scheme.
 """
 
 function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams,
+    options::NCNBD.Options, algoParams::NCNBD.AlgoParams,
     initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     # SET UP LINEARIZED SUBPROBLEM DATA
@@ -261,10 +263,10 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         node = model.nodes[node_index]
 
         node.ext[:nlFunctions] = node.subproblem.ext[:nlFunctions]
-        node.subproblem.ext[:nlFunctions] = Nothing
+        node.subproblem.ext[:nlFunctions] = nothing
 
         node.ext[:linSubproblem] = node.subproblem.ext[:linSubproblem]
-        node.subproblem.ext[:linSubproblem] = Nothing
+        node.subproblem.ext[:linSubproblem] = nothing
 
         # Set info for x_in (taking bounds, binary, integer info from previous stage's x_out)
         #-----------------------------------------------------------------------
@@ -358,7 +360,7 @@ Solves the `model` (MILP) using the inner loop of NCNBD in a serial scheme.
 """
 
 function solve_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+    options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     status = master_loop_ncbd_inner(parallel_scheme, model, options, algoParams)
     return status
@@ -376,10 +378,11 @@ end
 Solves the `model` (LP) using SDDP in a serial scheme.
 """
 
-function solve_sddp(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::SDDP.Options) where {T}
+function solve_sddp(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T}, options::NCNBD.Options) where {T}
 
     status = SDDP.master_loop(parallel_scheme, model, options)
     return status
+    #create sddp options from ncnbd options
 
 end
 
@@ -391,9 +394,9 @@ Outer loop function of NCNBD.
 """
 
 function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+    options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-    #previousSolution = Nothing
+    #previousSolution = nothing
 
     while true
         @infiltrate
@@ -413,7 +416,7 @@ function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{
        #      # TODO: Maybe make this more efficient
        #      for i in 1:size(previousSolution,1)
        #          for (name, state_comp) in model.nodes[i].ext[:lin_states]
-       #              current_sol = forward_trajectory.sampledStates[i][name]
+       #              current_sol = forward_trajectory.sampled_states[i][name]
        #              previous_sol = previousSolution[i][name]
        #              if current_sol != previous_sol
        #                  solutionCheck = false
@@ -451,7 +454,7 @@ Inner loop function of NCNBD, if only inner loop is used.
 """
 
 function master_loop_ncbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+    options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
     while true
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
         log_iteration(options)
@@ -469,9 +472,9 @@ Inner loop function of NCNBD, if also outer loop is used.
 """
 
 function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+    options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-    previousSolution = Nothing
+    previousSolution = nothing
 
     while true
         # start an inner loop

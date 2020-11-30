@@ -1,7 +1,7 @@
 const NCNBD_TIMER = TimerOutputs.TimerOutput()
 
 function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+    options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     # ITERATION COUNTER
     ############################################################################
@@ -32,29 +32,25 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
 
     # LOGGING RESULTS?
     ############################################################################
-    # push!(
-    #     options.log,
-    #     Log(
-    #         length(options.log) + 1,
-    #         bound,
-    #         forward_trajectory.cumulative_value,
-    #         time() - options.start_time,
-    #         Distributed.myid(),
-    #         model.ext[:total_solves],
-    #     ),
-    # )
+    push!(
+        options.log_outer,
+        Log(
+            model.ext[:outer_iteration], #length(options.log) + 1,
+            Nothing,
+            inner_loop_results.bound,
+            forward_results.cumulative_value,
+            forward_results.sampled_states,
+            time() - options.start_time,
+            #Distributed.myid(),
+            #model.ext[:total_solves],
+            algoParams.binaryPrecision,
+            algoParams.epsilon_outerLoop
+        ),
+    )
 
     # CONVERGENCE TEST
     ############################################################################
-    # TODO: Here we should use a classical convergence test
-    # Later on, also SDDP stopping rules should be considered
-    #has_converged, status = convergence_test(model, options.log, options.stopping_rules)
-
-    has_converged = false
-    status = :Blubb
-    cuts = Dict{Symbol, Vector{Float64}}()
-    current_sol = forward_results.sampled_states
-    lower_bound = 0.0
+    has_converged, status = convergence_test(model, options.log_outer, options.stopping_rules)
 
     @infiltrate
 
@@ -72,7 +68,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
 end
 
 function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
-    options::SDDP.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+    options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     # SAMPLING AND INITIALIZATION (JUST LIKE IN SDDP)
     ############################################################################

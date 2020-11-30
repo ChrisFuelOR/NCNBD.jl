@@ -25,14 +25,19 @@ export @lin_stageobjective
 include("state.jl")
 include("JuMP.jl")
 include("typedefs.jl")
+include("logging.jl")
+include("stopping.jl")
 include("objective.jl")
 include("bellman.jl")
 
 include("solveStarter.jl")
-include("algorithm.jl")
+include("algorithm_inner.jl")
+include("algorithm_outer.jl")
 include("piecewiseLinearRelaxation.jl")
 include("simplexOperations.jl")
 include("problemModifications.jl")
 include("lagrange.jl")
+
+
 
 end

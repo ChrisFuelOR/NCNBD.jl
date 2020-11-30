@@ -399,7 +399,7 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     #println("Max overestimation error")
     #println(estimationProblem)
 
-    @infiltrate
+    #@infiltrate
 
     JuMP.optimize!(estimationProblem)
     # TODO: Check if globally optimal solution
