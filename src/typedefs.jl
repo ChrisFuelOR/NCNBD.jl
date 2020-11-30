@@ -32,7 +32,8 @@ import Revise
 mutable struct AlgoParams
     epsilon_outerLoop :: Float64 # optimality tolerance for outer loop
     epsilon_innerLoop :: Float64 # optimality tolerance for inner loop
-    binaryPrecision :: Vector{Float64} # Epsilons for latest/current binary expansion (better vector?)
+    #binaryPrecision :: Vector{Float64} # Epsilons for latest/current binary expansion (better vector?)
+    binaryPrecision :: Dict{Symbol, Float64}
     sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)
 end
 
@@ -40,9 +41,10 @@ end
 struct InitialAlgoParams
     epsilon_outerLoop :: Float64
     epsilon_innerLoop :: Float64
-    binaryPrecision :: Vector{Float64}
+    binaryPrecision :: Dict{Symbol, Float64}
     plaPrecision :: Vector{Float64}
     sigma :: Vector{Float64}
+    sigma_counter :: Int64
 end
 
 # struct for Simplex
@@ -108,7 +110,7 @@ struct NonlinearCut
     intercept   ::  Float64 # intercept of the cut (Lagrangian function value)
     coefficients  ::  Dict{Symbol,Float64} # optimal dual variables in binary space
     trial_state  ::  Dict{Symbol,Float64} # point at which this cut was created
-    binary_precision :: Float64 # binary precision at moment of creation
+    binary_precision :: Dict{Symbol,Float64} # binary precision at moment of creation
     cutVariables :: Vector{JuMP.VariableRef}
     cutConstraints :: Vector{JuMP.ConstraintRef}
     cutVariables_lin :: Vector{JuMP.VariableRef}

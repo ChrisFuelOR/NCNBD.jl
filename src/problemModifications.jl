@@ -97,7 +97,7 @@ function changeToBinarySpace!(
     node::SDDP.Node,
     linearizedSubproblem::JuMP.Model,
     state::Dict{Symbol,Float64},
-    binaryPrecision::Float64
+    binaryPrecision::Dict{Symbol,Float64}
     )
 
     #NOTE: The copy constraint is not modeled explicitly here. Instead,
@@ -121,9 +121,10 @@ function changeToBinarySpace!(
         # Save fixed value of state
         fixed_value = JuMP.fix_value(state_comp.in)
         bw_data[:fixed_state_value][state_name] = fixed_value
+        epsilon = binaryPrecision[state_name]
 
         # Set up state for backward pass using binary approximation
-        setup_state_backward(linearizedSubproblem, state_comp, state_name, binaryPrecision, bw_data)
+        setup_state_backward(linearizedSubproblem, state_comp, state_name, epsilon, bw_data)
     end
 
     return

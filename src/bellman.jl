@@ -251,7 +251,6 @@ function _add_average_cut(
 
     # As cuts are created for the value function of the following state,
     # we need the parameters for this stage
-    epsilon = algoParams.binaryPrecision[node_index+1]
     sigma = algoParams.sigma[node_index+1]
 
     _add_cut(
@@ -264,7 +263,7 @@ function _add_average_cut(
         used_trial_points,
         obj_y,
         belief_y,
-        epsilon,
+        algoParams.binaryPrecision,
         sigma,
         iteration
     )
@@ -284,7 +283,7 @@ function _add_cut(
     xᵏ::Dict{Symbol,Float64},
     obj_y::Union{Nothing,NTuple{N,Float64}},
     belief_y::Union{Nothing,Dict{T,Float64}},
-    epsilon::Float64,
+    binaryPrecision::Dict{Symbol,Float64},
     sigma::Float64,
     iteration::Int64;
     cut_selection::Bool = false
@@ -299,11 +298,11 @@ function _add_cut(
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
     #TODO: Should we add λᵏ? Actually, this is information is not required.
-    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, epsilon, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
+    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, binaryPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
     ############################################################################
-    add_cut_constraints_to_models(node, V, V_lin, cut, sigma, epsilon, iteration)
+    add_cut_constraints_to_models(node, V, V_lin, cut, sigma, binaryPrecision, iteration)
 
     if cut_selection
         #TODO
@@ -325,7 +324,7 @@ function add_cut_constraints_to_models(
     cut::NonlinearCut,
     #λᵏ::Dict{Symbol,Float64},
     sigma::Float64,
-    binaryPrecision::Float64,
+    binaryPrecision::Dict{Symbol,Float64},
     iteration::Int64
     )
 
@@ -378,8 +377,8 @@ function add_cut_constraints_to_models(
                 K = SDDP._bitsrequired(state_comp.info.out.upper_bound)
                 epsilon = 1
             else
-                K = SDDP._bitsrequired(round(Int, state_comp.info.out.upper_bound / binaryPrecision))
-                epsilon = binaryPrecision
+                epsilon = binaryPrecision[name]
+                K = SDDP._bitsrequired(round(Int, state_comp.info.out.upper_bound / epsilon))
             end
 
             # Call function to add projection constraints and variables to

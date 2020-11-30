@@ -185,8 +185,13 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
 end
 
 
-function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
-    algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+function inner_loop_iteration(
+    model::SDDP.PolicyGraph{T},
+    options::SDDP.Options,
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers,
+    previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing}
+    ) where {T}
 
     # ITERATION COUNTER
     ############################################################################
@@ -204,9 +209,36 @@ function inner_loop_iteration(model::SDDP.PolicyGraph{T}, options::SDDP.Options,
 
     # BINARY REFINEMENT
     ############################################################################
-    # TODO: To be implemented
     # If the forward pass solution did not change during the last iteration, then
-    # increase the binary precision (for all stages?)
+    # increase the binary precision (for all stages)
+    if !isnothing(previousSolution)
+        solutionCheck = true
+
+        # Check if solution has changed since last iteration
+        # TODO: Maybe make this more efficient
+        for i in 1:size(previousSolution,1)
+            # Consider stage 2 here (should be the same for all following stages)
+            for (name, state_comp) in model.nodes[2].ext[:lin_states]
+                current_sol = forward_trajectory.sampledStates[i][name]
+                previous_sol = previousSolution[i][name]
+                if current_sol != previous_sol
+                    solutionCheck = false
+                end
+            end
+        end
+
+        # Increase binary precision such that K = K + 1
+        if solutionCheck == false
+            # Consider stage 2 here (should be the same for all following stages)
+            for (name, state_comp) in model.nodes[2].ext[:lin_states]
+                current_prec = algoParams.binaryPrecision[name]
+                ub = state_comp.info.in.upper_bound
+                K = SDDP._bitsrequired(round(Int, ub / epsilon))
+                new_prec = ub / sum(2^(k-1) for k in 1:K+1)
+                algoParams.binaryPrecision[name] = new_prec
+            end
+        end
+    end
 
     # BACKWARD PASS
     ############################################################################
@@ -662,9 +694,10 @@ function inner_loop_backward_pass(
             # RECONSTRUCT USED TRIAL POINTS IN BACKWARD PASS
             ####################################################################
             used_trial_points = Dict{Symbol,Float64}()
-            epsilon = algoParams.binaryPrecision[node_index]
+            #epsilon = algoParams.binaryPrecision[node_index]
             for (name, value) in outgoing_state
                 state_comp = node.ext[:lin_states][name]
+                epsilon = algoParams.binaryPrecision[name]
                 (approx_state_value, )  = determine_used_trial_states(state_comp, value, epsilon)
                 used_trial_points[name] = approx_state_value
             end
@@ -672,21 +705,21 @@ function inner_loop_backward_pass(
             @infiltrate
             # REFINE BELLMAN FUNCTION BY ADDING CUTS
             ####################################################################
-            # new_cuts = refine_bellman_function(
-            #     model,
-            #     node,
-            #     node_index,
-            #     node.bellman_function,
-            #     options.risk_measures[node_index],
-            #     used_trial_points,
-            #     items.bin_state_values,
-            #     items.duals,
-            #     items.supports,
-            #     items.probability,
-            #     items.objectives,
-            #     algoParams
-            # )
-            # push!(cuts[node_index], new_cuts)
+            new_cuts = refine_bellman_function(
+                model,
+                node,
+                node_index,
+                node.bellman_function,
+                options.risk_measures[node_index],
+                used_trial_points,
+                items.bin_state_values,
+                items.duals,
+                items.supports,
+                items.probability,
+                items.objectives,
+                algoParams
+            )
+            push!(cuts[node_index], new_cuts)
             # if options.refine_at_similar_nodes
             #     # Refine the bellman function at other nodes with the same
             #     # children, e.g., in the same stage of a Markovian policy graph.
@@ -842,9 +875,8 @@ function solve_subproblem_backward(
 
     # BACKWARD PASS PREPARATION
     ############################################################################
-    # prepare_backward_pass!(node, linearizedSubproblem, binaryPrecision)
     # Also adapt solver here
-    changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision[node_index])
+    changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
 
     # PRIMAL SOLUTION
     ############################################################################

@@ -162,9 +162,11 @@ function thirdExample()
 
     epsilon_outerLoop = 0.0
     epsilon_innerLoop = 0.0
-    binaryPrecision = [0.5, 0.5]
+    binaryPrecision = Dict(:x => 0.5)
     plaPrecision = [2, 4]
     sigma = [1.0, 1.0]
+
+    @infiltrate
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision, sigma)
