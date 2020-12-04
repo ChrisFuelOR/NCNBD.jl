@@ -231,18 +231,18 @@ function solve(
         # dashboard_callback(nothing, true)
     end
     # TODO: Print/Log also initialAlgoParams
-    # training_results = TrainingResults(status, log)
-    # model.most_recent_training_results = training_results
-    # if print_level > 0
-    #     print_helper(print_footer, log_file_handle, training_results)
-    #     if print_level > 1
-    #         print_helper(TimerOutputs.print_timer, log_file_handle, SDDP_TIMER)
-    #         # Annoyingly, TimerOutputs doesn't end the print section with `\n`,
-    #         # so we do it here.
-    #         print_helper(println, log_file_handle)
-    #     end
-    # end
-    # close(log_file_handle)
+    ncnbd_results = Results(status, log_inner, log_outer)
+    model.ext[:results] = ncnbd_results
+    if print_level > 0
+        print_helper(print_footer, log_file_handle, ncnbd_results)
+        if print_level > 1
+            print_helper(TimerOutputs.print_timer, log_file_handle, NCNBD_TIMER)
+            # Annoyingly, TimerOutputs doesn't end the print section with `\n`,
+            # so we do it here.
+            print_helper(println, log_file_handle)
+        end
+    end
+    close(log_file_handle)
     return
 end
 
@@ -257,6 +257,8 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams,
     initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
+    @infiltrate
+
     # SET UP LINEARIZED SUBPROBLEM DATA
     ############################################################################
     for (node_index, children) in model.nodes
@@ -267,6 +269,9 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
         node.ext[:linSubproblem] = node.subproblem.ext[:linSubproblem]
         node.subproblem.ext[:linSubproblem] = nothing
+
+        #JuMP.set_silent(node.subproblem)
+        #JuMP.set_silent(node.ext[:linSubproblem])
 
         # Set info for x_in (taking bounds, binary, integer info from previous stage's x_out)
         #-----------------------------------------------------------------------
@@ -332,6 +337,8 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
     end
 
+    @infiltrate
+
     # INITIALIZE PIECEWISE LINEAR RELAXATION
     ############################################################################
     for (node_index, children) in model.nodes
@@ -344,6 +351,8 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         # in this node
         piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
     end
+
+    @infiltrate
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################
@@ -401,7 +410,7 @@ function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{
     while true
         @infiltrate
         result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
-        #log_iteration(options)
+        log_iteration(options, options.log_inner)
         if result_outer.has_converged
             return result_outer.status
         end
@@ -457,7 +466,7 @@ function master_loop_ncbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Policy
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
     while true
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
-        log_iteration(options)
+        log_iteration(options, options.log_outer)
         if result_inner.has_converged
             return result_inner.status
         end
@@ -478,10 +487,10 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
     while true
         # start an inner loop
+        @infiltrate
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution)
-        # logging preparation (in contrast to SDDP here instead of inner_loop_iteration?)
         # logging
-        #log_iteration(options)
+        log_iteration(options, options.log_inner)
         if result_inner.has_converged
             # return all results here to keep them accessible in outer pass
             return result_inner
