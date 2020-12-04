@@ -1,0 +1,1456 @@
+{
+  "name": "MathOptFormat Model",
+  "version": {
+    "major": 0,
+    "minor": 5
+  },
+  "variables": [
+    {
+      "name": "x_in"
+    },
+    {
+      "name": "x_out"
+    },
+    {
+      "name": "y_loc"
+    },
+    {
+      "name": "nonlinearAux[1]"
+    },
+    {
+      "name": "x5"
+    },
+    {
+      "name": "Θᴳ"
+    },
+    {
+      "name": "ν_1_it1[1]"
+    },
+    {
+      "name": "ν_1_it1[2]"
+    },
+    {
+      "name": "ν_1_it1[3]"
+    },
+    {
+      "name": "μ_1_it1[1]"
+    },
+    {
+      "name": "μ_1_it1[2]"
+    },
+    {
+      "name": "μ_1_it1[3]"
+    },
+    {
+      "name": "η_1_it1"
+    },
+    {
+      "name": "γ_1_it1[1]"
+    },
+    {
+      "name": "γ_1_it1[2]"
+    },
+    {
+      "name": "γ_1_it1[3]"
+    },
+    {
+      "name": "w_1_it1[1]"
+    },
+    {
+      "name": "w_1_it1[2]"
+    },
+    {
+      "name": "w_1_it1[3]"
+    },
+    {
+      "name": "u_1_it1[1]"
+    },
+    {
+      "name": "u_1_it1[2]"
+    },
+    {
+      "name": "u_1_it1[3]"
+    },
+    {
+      "name": "ν_1_it2[1]"
+    },
+    {
+      "name": "ν_1_it2[2]"
+    },
+    {
+      "name": "ν_1_it2[3]"
+    },
+    {
+      "name": "μ_1_it2[1]"
+    },
+    {
+      "name": "μ_1_it2[2]"
+    },
+    {
+      "name": "μ_1_it2[3]"
+    },
+    {
+      "name": "η_1_it2"
+    },
+    {
+      "name": "γ_1_it2[1]"
+    },
+    {
+      "name": "γ_1_it2[2]"
+    },
+    {
+      "name": "γ_1_it2[3]"
+    },
+    {
+      "name": "w_1_it2[1]"
+    },
+    {
+      "name": "w_1_it2[2]"
+    },
+    {
+      "name": "w_1_it2[3]"
+    },
+    {
+      "name": "u_1_it2[1]"
+    },
+    {
+      "name": "u_1_it2[2]"
+    },
+    {
+      "name": "u_1_it2[3]"
+    }
+  ],
+  "objective": {
+    "sense": "min",
+    "function": {
+      "type": "ScalarAffineFunction",
+      "terms": [
+        {
+          "coefficient": 1.0,
+          "variable": "y_loc"
+        },
+        {
+          "coefficient": 1.0,
+          "variable": "Θᴳ"
+        }
+      ],
+      "constant": 0.0
+    }
+  },
+  "constraints": [
+    {
+      "function": {
+        "type": "ScalarNonlinearFunction",
+        "root": {
+          "type": "node",
+          "index": 2
+        },
+        "node_list": [
+          {
+            "type": "sqrt",
+            "args": [
+              {
+                "type": "variable",
+                "name": "x_out"
+              }
+            ]
+          },
+          {
+            "type": "-",
+            "args": [
+              {
+                "type": "variable",
+                "name": "nonlinearAux[1]"
+              },
+              {
+                "type": "node",
+                "index": 1
+              }
+            ]
+          }
+        ]
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": 0.0
+      }
+    },
+    {
+      "name": "c1",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "x_out"
+          },
+          {
+            "coefficient": -0.5,
+            "variable": "γ_1_it1[1]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "γ_1_it1[2]"
+          },
+          {
+            "coefficient": -2.0,
+            "variable": "γ_1_it1[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": 0.0
+      }
+    },
+    {
+      "name": "c2",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "ν_1_it1[1]"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it1[1]"
+          },
+          {
+            "coefficient": 0.5,
+            "variable": "η_1_it1"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": -2.0
+      }
+    },
+    {
+      "name": "c3",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "ν_1_it1[2]"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it1[2]"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "η_1_it1"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": -2.0
+      }
+    },
+    {
+      "name": "c4",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "ν_1_it1[3]"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it1[3]"
+          },
+          {
+            "coefficient": 2.0,
+            "variable": "η_1_it1"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": -2.0
+      }
+    },
+    {
+      "name": "c5",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "x_out"
+          },
+          {
+            "coefficient": -0.5,
+            "variable": "γ_1_it2[1]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "γ_1_it2[2]"
+          },
+          {
+            "coefficient": -2.0,
+            "variable": "γ_1_it2[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": 0.0
+      }
+    },
+    {
+      "name": "c6",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "ν_1_it2[1]"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it2[1]"
+          },
+          {
+            "coefficient": 0.5,
+            "variable": "η_1_it2"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": -2.0
+      }
+    },
+    {
+      "name": "c7",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "ν_1_it2[2]"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it2[2]"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "η_1_it2"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": -2.0
+      }
+    },
+    {
+      "name": "c8",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "ν_1_it2[3]"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it2[3]"
+          },
+          {
+            "coefficient": 2.0,
+            "variable": "η_1_it2"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": -2.0
+      }
+    },
+    {
+      "name": "lin_con",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "x_in"
+          },
+          {
+            "coefficient": 1.5,
+            "variable": "x_out"
+          },
+          {
+            "coefficient": 1.0,
+            "variable": "y_loc"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 3.0
+      }
+    },
+    {
+      "name": "actual_nlcon",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "y_loc"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "nonlinearAux[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c11",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "Θᴳ"
+          },
+          {
+            "coefficient": -2.0,
+            "variable": "γ_1_it1[1]"
+          },
+          {
+            "coefficient": -2.0,
+            "variable": "γ_1_it1[2]"
+          },
+          {
+            "coefficient": -2.0,
+            "variable": "γ_1_it1[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": -2.4
+      }
+    },
+    {
+      "name": "c12",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "Θᴳ"
+          },
+          {
+            "coefficient": -2.0,
+            "variable": "γ_1_it2[1]"
+          },
+          {
+            "coefficient": -2.0,
+            "variable": "γ_1_it2[2]"
+          },
+          {
+            "coefficient": -2.0,
+            "variable": "γ_1_it2[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": -2.4
+      }
+    },
+    {
+      "name": "c13",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "γ_1_it1[1]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "w_1_it1[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 0.0
+      }
+    },
+    {
+      "name": "c14",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "γ_1_it1[2]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "w_1_it1[2]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 0.0
+      }
+    },
+    {
+      "name": "c15",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "γ_1_it1[3]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "w_1_it1[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 0.0
+      }
+    },
+    {
+      "name": "c16",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "ν_1_it1[1]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "w_1_it1[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c17",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "ν_1_it1[2]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "w_1_it1[2]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c18",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "ν_1_it1[3]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "w_1_it1[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c19",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "γ_1_it1[1]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "u_1_it1[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": -1.0
+      }
+    },
+    {
+      "name": "c20",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "γ_1_it1[2]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "u_1_it1[2]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": -1.0
+      }
+    },
+    {
+      "name": "c21",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "γ_1_it1[3]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "u_1_it1[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": -1.0
+      }
+    },
+    {
+      "name": "c22",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it1[1]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "u_1_it1[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c23",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it1[2]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "u_1_it1[2]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c24",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it1[3]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "u_1_it1[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c25",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "γ_1_it2[1]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "w_1_it2[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 0.0
+      }
+    },
+    {
+      "name": "c26",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "γ_1_it2[2]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "w_1_it2[2]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 0.0
+      }
+    },
+    {
+      "name": "c27",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "γ_1_it2[3]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "w_1_it2[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 0.0
+      }
+    },
+    {
+      "name": "c28",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "ν_1_it2[1]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "w_1_it2[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c29",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "ν_1_it2[2]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "w_1_it2[2]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c30",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "ν_1_it2[3]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "w_1_it2[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c31",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "γ_1_it2[1]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "u_1_it2[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": -1.0
+      }
+    },
+    {
+      "name": "c32",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "γ_1_it2[2]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "u_1_it2[2]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": -1.0
+      }
+    },
+    {
+      "name": "c33",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": -1.0,
+            "variable": "γ_1_it2[3]"
+          },
+          {
+            "coefficient": -1.0,
+            "variable": "u_1_it2[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": -1.0
+      }
+    },
+    {
+      "name": "c34",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it2[1]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "u_1_it2[1]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c35",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it2[2]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "u_1_it2[2]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c36",
+      "function": {
+        "type": "ScalarAffineFunction",
+        "terms": [
+          {
+            "coefficient": 1.0,
+            "variable": "μ_1_it2[3]"
+          },
+          {
+            "coefficient": 4.0,
+            "variable": "u_1_it2[3]"
+          }
+        ],
+        "constant": 0.0
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 4.0
+      }
+    },
+    {
+      "name": "c1_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "x_in"
+      },
+      "set": {
+        "type": "EqualTo",
+        "value": 0.0
+      }
+    },
+    {
+      "name": "c2_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "x_out"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c3_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "y_loc"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c5_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "x5"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c6_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "Θᴳ"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c7_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "ν_1_it1[1]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c8_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "ν_1_it1[2]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c9",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "ν_1_it1[3]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c10",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "μ_1_it1[1]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c11_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "μ_1_it1[2]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c12_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "μ_1_it1[3]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c14_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it1[1]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c15_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it1[2]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c16_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it1[3]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c23_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "ν_1_it2[1]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c24_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "ν_1_it2[2]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c25_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "ν_1_it2[3]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c26_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "μ_1_it2[1]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c27_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "μ_1_it2[2]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c28_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "μ_1_it2[3]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c30_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it2[1]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c31_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it2[2]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c32_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it2[3]"
+      },
+      "set": {
+        "type": "GreaterThan",
+        "lower": 0.0
+      }
+    },
+    {
+      "name": "c2_2",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "x_out"
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 2.0
+      }
+    },
+    {
+      "name": "c3_2",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "y_loc"
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 2.0
+      }
+    },
+    {
+      "name": "c14_2",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it1[1]"
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 1.0
+      }
+    },
+    {
+      "name": "c15_2",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it1[2]"
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 1.0
+      }
+    },
+    {
+      "name": "c16_2",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it1[3]"
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 1.0
+      }
+    },
+    {
+      "name": "c30_2",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it2[1]"
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 1.0
+      }
+    },
+    {
+      "name": "c31_2",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it2[2]"
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 1.0
+      }
+    },
+    {
+      "name": "c32_2",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "γ_1_it2[3]"
+      },
+      "set": {
+        "type": "LessThan",
+        "upper": 1.0
+      }
+    },
+    {
+      "name": "c17_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "w_1_it1[1]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c18_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "w_1_it1[2]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c19_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "w_1_it1[3]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c20_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "u_1_it1[1]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c21_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "u_1_it1[2]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c22_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "u_1_it1[3]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c33_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "w_1_it2[1]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c34_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "w_1_it2[2]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c35_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "w_1_it2[3]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c36_1",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "u_1_it2[1]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c37",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "u_1_it2[2]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    },
+    {
+      "name": "c38",
+      "function": {
+        "type": "SingleVariable",
+        "variable": "u_1_it2[3]"
+      },
+      "set": {
+        "type": "ZeroOne"
+      }
+    }
+  ]
+}

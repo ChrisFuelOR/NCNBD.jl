@@ -8,6 +8,7 @@ struct Log
     time::Float64
     #pid::Int
     #total_solves::Int
+    sigma::Vector{Float64}
     binaryPrecision::Dict{Symbol,Float64}
     opt_tolerance::Float64
 end
@@ -84,5 +85,155 @@ struct Options{T}
             log_frequency,
             forward_pass,
         )
+    end
+end
+
+struct Results
+    status::Symbol
+    log_inner::Vector{Log}
+    log_outer::Vector{Log}
+end
+
+function print_helper(f, io, args...)
+    f(stdout, args...)
+    f(io, args...)
+end
+
+function print_banner(io)
+    println(
+        io,
+        "--------------------------------------------------------------------------------",
+    )
+    println(io, "                      NCNBD.jl (c) Christian Füllner, 2020")
+    println(io, "re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20")
+    println(io)
+end
+
+function print_iteration_header(io)
+    println(
+        io,
+        " Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   ",
+    )
+end
+
+print_value(x::Real) = lpad(Printf.@sprintf("%1.6e", x), 13)
+print_value(x::Int) = Printf.@sprintf("%9d", x)
+
+function print_iteration(io, log::Log)
+    print(io, print_value(log.outer_iteration))
+    print(io, "  ", print_value(log.iteration))
+    print(io, "   ", print_value(log.upper_bound))
+    print(io, "  ", print_value(log.lower_bound))
+    #print(io, "  ", print_value(log.current_state[1][:x]))
+    print(io, "  ", print_value(log.time))
+    # print(io, "  ", print_value(log.pid))
+    # print(io, "  ", print_value(log.total_solves))
+    #print(io, "  ", print_value(log.binaryPrecision))
+    println(io)
+end
+
+function print_footer(io, training_results)
+    println(io, "\nTerminating NCNBD with status: $(training_results.status)")
+    println(
+        io,
+        "------------------------------------------------------------------------------",
+    )
+end
+
+function log_iteration(options, log)
+    options.dashboard_callback(log[end], false)
+    if options.print_level > 0 && mod(length(log), options.log_frequency) == 0
+        print_helper(print_iteration, options.log_file_handle, log[end])
+    end
+end
+
+
+"""
+    write_log_to_csv(model::PolicyGraph, filename::String)
+
+Write the log of the most recent training to a csv for post-analysis.
+
+Assumes that the model has been trained via [`NCNBD.solve`](@ref).
+"""
+function write_log_to_csv(model::SDDP.PolicyGraph, filename::String, algoParams::NCNBD.AlgoParams)
+    if model.ext[:results] === nothing
+        error("Unable to write the log to file because the model has not been solved yet.")
+    end
+    open(filename, "w") do io
+        for log in model.ext[:results].log_outer
+
+            println(io, "ITERATION ", log.outer_iteration)
+
+            for log_inner in model.ext[:results].log_inner
+                if log_inner.outer_iteration == log.outer_iteration
+                    println(io, "outer_iteration, inner_iteration, inner_upper_bound, inner_lower_bound, time")
+                    println(
+                        io,
+                        log.outer_iteration,
+                        ", ",
+                        log.iteration,
+                        ", ",
+                        log.upper_bound,
+                        ", ",
+                        log.lower_bound,
+                        ", ",
+                        log.time,
+                    )
+
+                    println(io)
+                    println(io, "current solution: " )
+                    # should be the same for all nodes
+                    for i in 1:size(log.current_state, 1)
+                        println(io, "Stage $i :")
+                        for (name, state) in model.nodes[i].ext[:lin_states]
+                            println(io, "state: ", string(name), " ", log.current_state[i][name])
+                        end
+                    end
+
+                    println(io)
+                    println(io, "binary precision: " )
+                    # should be the same for all nodes
+                    for (name, state) in model.nodes[1].ext[:lin_states]
+                        println(io, "state: ", string(name), " ", algoParams.binaryPrecision[name])
+                    end
+
+                end
+            end
+
+            println(io, "------------------------------------------------------")
+
+            println(io, "outer_iteration, inner_iteration, upper_bound, lower_bound, time")
+            println(
+                io,
+                log.outer_iteration,
+                ", ",
+                log.iteration,
+                ", ",
+                log.upper_bound,
+                ", ",
+                log.lower_bound,
+                ", ",
+                log.time,
+            )
+
+            println(io)
+            println(io, "current solution: " )
+            # should be the same for all nodes
+            for i in 1:size(log.current_state, 1)
+                println(io, "Stage $i :")
+                for (name, state) in model.nodes[i].states
+                    println(io, "state: ", string(name), " ", log.current_state[i][name])
+                end
+            end
+
+            println(io)
+            println(io, "sigma: " )
+            for i in 1:size(log.sigma, 1)
+                println(io, "stage $i :", " ", log.sigma[i])
+            end
+
+            println(io, "######################################################")
+        end
+
     end
 end

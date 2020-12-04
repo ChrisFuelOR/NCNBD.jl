@@ -1,0 +1,26 @@
+ITERATION 1
+outer_iteration, inner_iteration, inner_upper_bound, inner_lower_bound, time
+1, nothing, 0.0, 1.9500000000000002, 8969.046999931335
+
+current solution: 
+Stage 1 :
+state: x 0.0
+Stage 2 :
+state: x 0.0
+
+binary precision: 
+state: x 0.5
+------------------------------------------------------
+outer_iteration, inner_iteration, upper_bound, lower_bound, time
+1, nothing, 0.0, 1.9500000000000002, 8969.046999931335
+
+current solution: 
+Stage 1 :
+state: x 0.0
+Stage 2 :
+state: x 0.0
+
+sigma: 
+stage 1 : 1.0
+stage 2 : 1.0
+######################################################
