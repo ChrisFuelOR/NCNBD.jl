@@ -41,6 +41,7 @@ function _kelley(
 
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(appliedSolvers.MILP)
+    #JuMP.set_silent(approx_model)
 
     # Objective estimate and Lagrangian duals
     @variables approx_model begin
@@ -78,7 +79,7 @@ function _kelley(
         JuMP.set_upper_bound(x[i], dual_bound)
     end
 
-    #@infiltrate
+    @infiltrate
 
     # CUTTING-PLANE METHOD
     ############################################################################
@@ -91,7 +92,7 @@ function _kelley(
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
 
-        #@infiltrate
+        @infiltrate
 
         # ADD CUTTING PLANE
         ########################################################################
@@ -123,7 +124,7 @@ function _kelley(
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        #@infiltrate
+        @infiltrate
 
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
