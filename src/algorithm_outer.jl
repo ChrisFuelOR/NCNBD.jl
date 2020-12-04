@@ -11,6 +11,8 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
         model.ext[:outer_iteration] = 1
     end
 
+    @infiltrate
+
     # CALL THE INNER LOOP AND GET BACK RESULTS IF CONVERGED
     ############################################################################
     TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
@@ -32,17 +34,19 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
 
     # LOGGING RESULTS?
     ############################################################################
+
     push!(
         options.log_outer,
         Log(
             model.ext[:outer_iteration], #length(options.log) + 1,
-            Nothing,
-            inner_loop_results.bound,
+            nothing,
+            inner_loop_results.lower_bound,
             forward_results.cumulative_value,
             forward_results.sampled_states,
             time() - options.start_time,
             #Distributed.myid(),
             #model.ext[:total_solves],
+            algoParams.sigma,
             algoParams.binaryPrecision,
             algoParams.epsilon_outerLoop
         ),
@@ -50,7 +54,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
 
     # CONVERGENCE TEST
     ############################################################################
-    has_converged, status = convergence_test(model, options.log_outer, options.stopping_rules)
+    has_converged, status = convergence_test(model, options.log_outer, options.stopping_rules, :outer)
 
     @infiltrate
 
@@ -58,9 +62,9 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     ############################################################################
     return NCNBD.OuterLoopIterationResult(
         #Distributed.myid(),
-        lower_bound,
+        inner_loop_results.lower_bound,
         forward_results.cumulative_value,
-        current_sol,
+        forward_results.sampled_states,
         has_converged,
         status
         #cuts,
@@ -135,7 +139,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         #set_optimizer(node.subproblem, SCIP.Optimizer)
 
         set_optimizer(node.subproblem, appliedSolvers.MINLP)
-        JuMP.set_optimizer_attribute(node.subproblem, "Solver", "BARON")
+        #JuMP.set_optimizer_attribute(node.subproblem, "Solver", "SCIP")
         #set_optimizer_attribute(model, GAMS.ModelType(), "MINLP")
 
         # SUBPROBLEM SOLUTION
@@ -178,6 +182,8 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         end
     end
 
+    @infiltrate
+
     # ===== End: drop off starting state if terminated due to cycle =====
     return (
         scenario_path = scenario_path,
@@ -205,19 +211,21 @@ function solve_subproblem_forward_outer(
     set_incoming_state(node, state)
     parameterize(node, noise)
 
-    pre_optimize_ret = if node.pre_optimize_hook !== nothing
-        node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
-    else
-        nothing
-    end
+    # pre_optimize_ret = if node.pre_optimize_hook !== nothing
+    #     node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
+    # else
+    #     nothing
+    # end
 
     @infiltrate
 
     JuMP.optimize!(node.subproblem)
 
-    if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
-        SDDP.attempt_numerical_recovery(node)
-    end
+    #if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
+    #    SDDP.attempt_numerical_recovery(node)
+    #end
+
+    @infiltrate
 
     state = SDDP.get_outgoing_state(node)
     stage_objective = SDDP.stage_objective_value(node.stage_objective)
@@ -233,9 +241,9 @@ function solve_subproblem_forward_outer(
         Dict{Symbol,Float64}()
     end
 
-    if node.post_optimize_hook !== nothing
-        node.post_optimize_hook(pre_optimize_ret)
-    end
+    # if node.post_optimize_hook !== nothing
+    #     node.post_optimize_hook(pre_optimize_ret)
+    # end
 
     return (
         state = state,

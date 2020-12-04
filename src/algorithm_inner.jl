@@ -27,6 +27,7 @@ function inner_loop_iteration(
     # increase the binary precision (for all stages)
     if !isnothing(previousSolution)
         solutionCheck = true
+        @infiltrate
 
         # Check if solution has changed since last iteration
         # TODO: Maybe make this more efficient
@@ -53,6 +54,7 @@ function inner_loop_iteration(
             end
         end
     end
+    @infiltrate
 
     # BACKWARD PASS
     ############################################################################
@@ -70,15 +72,17 @@ function inner_loop_iteration(
     end
     #@infiltrate
 
+    @infiltrate
     # CALCULATE LOWER BOUND
     ############################################################################
     TimerOutputs.@timeit NCNBD_TIMER "calculate_bound" begin
         bound = calculate_bound(model)
     end
+    @infiltrate
 
     # PREPARE LOGGING
     ############################################################################
-    @infiltrate
+    #@infiltrate
     push!(
          options.log_inner,
          Log(
@@ -90,6 +94,7 @@ function inner_loop_iteration(
              time() - options.start_time,
              #Distributed.myid(),
              #model.ext[:total_solves],
+             algoParams.sigma,
              algoParams.binaryPrecision,
              algoParams.epsilon_innerLoop
          ),
@@ -97,8 +102,9 @@ function inner_loop_iteration(
 
     # CHECK IF THE INNER LOOP CONVERGED YET
     ############################################################################
-    has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules)
+    has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules, :inner)
 
+    @infiltrate
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
         bound,
@@ -229,6 +235,8 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
         end
     end
 
+    @infiltrate
+
     # ===== End: drop off starting state if terminated due to cycle =====
     return (
         scenario_path = scenario_path,
@@ -280,7 +288,9 @@ function solve_subproblem_forward_inner(
 
     # SOLUTION
     ############################################################################
+    @infiltrate
     JuMP.optimize!(linearizedSubproblem)
+    @infiltrate
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -293,9 +303,8 @@ function solve_subproblem_forward_inner(
     # end
 
     state = get_outgoing_state(node)
-    stage_objective = JuMP.value(node.ext[:lin_stage_objective])
-    #stage_objective_value(node.ext[:lin_stage_objective])
     objective = JuMP.objective_value(node.ext[:linSubproblem])
+    stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -330,6 +339,7 @@ function solve_subproblem_forward_inner(
     # DE-REGULARIZE SUBPROBLEM
     ############################################################################
     deregularize_subproblem!(node, linearizedSubproblem)
+    @infiltrate
 
     return (
         state = state,
@@ -616,7 +626,7 @@ function solve_subproblem_backward(
     # PRIMAL SOLUTION
     ############################################################################
     JuMP.optimize!(linearizedSubproblem)
-    #@infiltrate
+    @infiltrate
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -644,6 +654,7 @@ function solve_subproblem_backward(
         dual_values = Dict{Symbol,Float64}()
         bin_state_values = Dict{Symbol,Float64}()
     end
+    @infiltrate
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
@@ -683,6 +694,7 @@ function get_dual_variables_backward(
 
     try
         kelley_obj = _kelley(node, node_index, dual_vars, integrality_handler, algoParams, appliedSolvers)::Float64
+        @infiltrate
         @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
