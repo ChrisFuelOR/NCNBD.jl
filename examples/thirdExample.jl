@@ -108,6 +108,7 @@ function thirdExample()
                 x = problem[:x]
                 JuMP.@variable(problem, 0.0 <= y_loc[i=1:2] <= 4.0)
                 JuMP.@constraint(problem, lin_con, sum(y_loc[i] for i in 1:2) == 2 * x.in)
+                JuMP.@constraint(problem, x.out == 0)
 
                 # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
                 # --------------------------------------------------------------
@@ -158,7 +159,7 @@ function thirdExample()
 
     # SET-UP PARAMETERS
     ############################################################################
-    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, GAMS.Optimizer)
+    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, SCIP.Optimizer)
 
     epsilon_outerLoop = 0.001
     epsilon_innerLoop = 0.001
@@ -178,8 +179,15 @@ function thirdExample()
     # SET-UP NONLINEARITIES
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 100, print_level = 0,
-                time_limit = 1800, stopping_rules = [NCNBD.DeterministicStopping()])
+                iteration_limit = 5, print_level = 1,
+                time_limit = 600, stopping_rules = [NCNBD.DeterministicStopping()])
+
+    @infiltrate
+
+    # WRITE LOGS TO FILE
+    ############################################################################
+    NCNBD.write_log_to_csv(model, "test_results.csv", algoParameters)
+
 end
 
 thirdExample()
