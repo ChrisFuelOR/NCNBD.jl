@@ -85,7 +85,7 @@ function initialize_bellman_function_MILP(
     if length(node.children) == 0
         lower_bound = upper_bound = 0.0
     end
-    Θᴳ = JuMP.@variable(node.ext[:linSubproblem], base_name="Θᴳ")
+    Θᴳ = JuMP.@variable(node.ext[:linSubproblem], Θ, base_name="Θᴳ")
     lower_bound > -Inf && JuMP.set_lower_bound(Θᴳ, lower_bound)
     upper_bound < Inf && JuMP.set_upper_bound(Θᴳ, upper_bound)
     # Initialize bounds for the objective states. If objective_state==nothing,
@@ -504,7 +504,7 @@ function add_cut_projection_to_model!(
     kkt_constraints = JuMP.@constraint(
         model,
         [k=1:K],
-        relatedCoefficients[k] - ν[k] + μ[k] + 2^(k-1) * epsilon * η == 0
+        -relatedCoefficients[k] - ν[k] + μ[k] + 2^(k-1) * epsilon * η == 0
     )
     append!(cutConstraints, kkt_constraints)
 
