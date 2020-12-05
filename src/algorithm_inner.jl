@@ -110,6 +110,7 @@ function inner_loop_iteration(
         bound,
         forward_trajectory.cumulative_value,
         forward_trajectory.sampled_states,
+        forward_trajectory.scenario_path,
         has_converged,
         status,
         cuts,
@@ -322,19 +323,19 @@ function solve_subproblem_forward_inner(
 
     # STORE RESULTS FOR NL-CONSTRAINT VARIABLES FOR PLA REFINEMENT
     ############################################################################
-    number_of_nonlinearities = size(node.ext[:nlFunctions], 1)
-
-    for i = 1:number_of_nonlinearities
-        nlFunction = node.ext[:nlFunctions][i]
-        dimension = size(nlFunction.variablesContained, 1)
-
-        nlFunction.ext[:optSolution] = Dict{JuMP.VariableRef, Float64}()
-
-        for j = 1:dimension
-            variableReference = nlFunction.variablesContained[j]
-            nlFunction.ext[:optSolution][variableReference] = JuMP.value(variableReference)
-        end
-    end
+    # number_of_nonlinearities = size(node.ext[:nlFunctions], 1)
+    #
+    # for i = 1:number_of_nonlinearities
+    #     nlFunction = node.ext[:nlFunctions][i]
+    #     dimension = size(nlFunction.variablesContained, 1)
+    #
+    #     nlFunction.ext[:optSolution] = Dict{JuMP.VariableRef, Float64}()
+    #
+    #     for j = 1:dimension
+    #         variableReference = nlFunction.variablesContained[j]
+    #         nlFunction.ext[:optSolution][variableReference] = JuMP.value(variableReference)
+    #     end
+    # end
 
     # DE-REGULARIZE SUBPROBLEM
     ############################################################################
@@ -846,6 +847,216 @@ function solve_first_stage_problem(
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
     # end
+
+    return (
+        state = state,
+        duals = dual_values,
+        objective = objective,
+        stage_objective = stage_objective,
+    )
+end
+
+
+function inner_loop_forward_sigma_test(
+    model::SDDP.PolicyGraph{T}, options::NCNBD.Options,
+    algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
+    scenario_path::Vector{Tuple{T,S}}, ::SDDP.DefaultForwardPass) where {T}
+
+    # INITIALIZATION (NO SAMPLING HERE!)
+    ############################################################################
+    # scenario path is given as an argument
+
+    #TODO: Has something here to be adapted such that it relates to the linearizedSubproblem?
+    # Storage for the list of outgoing states that we visit on the forward pass.
+    sampled_states = Dict{Symbol,Float64}[]
+    # Storage for the belief states: partition index and the belief dictionary.
+    belief_states = Tuple{Int,Dict{T,Float64}}[]
+    current_belief = SDDP.initialize_belief(model)
+    # Our initial incoming state.
+    incoming_state_value = copy(model.ext[:lin_initial_root_state])
+    # A cumulator for the stage-objectives.
+    cumulative_value = 0.0
+    # Objective state interpolation.
+    objective_state_vector, N = SDDP.initialize_objective_state(model[scenario_path[1][1]])
+    objective_states = NTuple{N,Float64}[]
+
+    # ACTUAL ITERATION
+    ########################################################################
+    # Iterate down the scenario.
+    for (depth, (node_index, noise)) in enumerate(scenario_path)
+        node = model[node_index]
+
+        # Objective state interpolation.
+        objective_state_vector =
+            SDDP.update_objective_state(node.objective_state, objective_state_vector, noise)
+        if objective_state_vector !== nothing
+            push!(objective_states, objective_state_vector)
+        end
+        # Update belief state, etc.
+        if node.belief_state !== nothing
+            belief = node.belief_state::SDDP.BeliefState{T}
+            partition_index = belief.partition_index
+            current_belief =
+                belief.updater(belief.belief, current_belief, partition_index, noise)
+            push!(belief_states, (partition_index, copy(current_belief)))
+        end
+        # ===== Begin: starting state for infinite horizon =====
+        starting_states = options.starting_states[node_index]
+        if length(starting_states) > 0
+            # There is at least one other possible starting state. If our
+            # incoming state is more than δ away from the other states, add it
+            # as a possible starting state.
+            if distance(starting_states, incoming_state_value) >
+               options.cycle_discretization_delta
+                push!(starting_states, incoming_state_value)
+            end
+            # TODO(odow):
+            # - A better way of randomly sampling a starting state.
+            # - Is is bad that we splice! here instead of just sampling? For
+            #   convergence it is probably bad, since our list of possible
+            #   starting states keeps changing, but from a computational
+            #   perspective, we don't want to keep a list of discretized points
+            #   in the state-space δ distance apart...
+            incoming_state_value = splice!(starting_states, rand(1:length(starting_states)))
+        end
+        # ===== End: starting state for infinite horizon =====
+
+        # Set optimizer to MILP optimizer
+        linearizedSubproblem = node.ext[:linSubproblem]
+        #set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
+        set_optimizer(linearizedSubproblem, GAMS.Optimizer)
+        JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", "Gurobi")
+
+        # SUBPROBLEM SOLUTION
+        ############################################################################
+        # Solve the subproblem, note that `require_duals = false`.
+        TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
+            subproblem_results = solve_subproblem_forward_sigma_test(
+                model,
+                node,
+                incoming_state_value, # only values, no State struct!
+                noise,
+                scenario_path[1:depth],
+                sigma,
+                require_duals = false,
+            )
+        end
+        # Cumulate the stage_objective.
+        cumulative_value += subproblem_results.stage_objective
+        # Set the outgoing state value as the incoming state value for the next
+        # node.
+        incoming_state_value = copy(subproblem_results.state)
+        # Add the outgoing state variable to the list of states we have sampled
+        # on this forward pass.
+        push!(sampled_states, incoming_state_value)
+
+    end
+    if terminated_due_to_cycle
+        # Get the last node in the scenario.
+        final_node_index = scenario_path[end][1]
+        # We terminated due to a cycle. Here is the list of possible starting
+        # states for that node:
+        starting_states = options.starting_states[final_node_index]
+        # We also need the incoming state variable to the final node, which is
+        # the outgoing state value of the last node:
+        incoming_state_value = sampled_states[end]
+        # If this incoming state value is more than δ away from another state,
+        # add it to the list.
+        if distance(starting_states, incoming_state_value) >
+           options.cycle_discretization_delta
+            push!(starting_states, incoming_state_value)
+        end
+    end
+
+    @infiltrate
+
+    # ===== End: drop off starting state if terminated due to cycle =====
+    return (
+        scenario_path = scenario_path,
+        sampled_states = sampled_states,
+        objective_states = objective_states,
+        belief_states = belief_states,
+        cumulative_value = cumulative_value,
+    )
+end
+
+
+function solve_subproblem_sigma_test(
+    model::SDDP.PolicyGraph{T},
+    node::SDDP.Node{T},
+    state::Dict{Symbol,Float64},
+    noise,
+    scenario_path::Vector{Tuple{T,S}},
+    sigma::Float64;
+    require_duals::Bool,
+) where {T,S}
+    #TODO: We can actually delete the duals part here
+
+    # MODEL PARAMETRIZATION (-> LINEARIZED SUBPROBLEM!)
+    ############################################################################
+    linearizedSubproblem = node.ext[:linSubproblem]
+
+    # Parameterize the model. First, fix the value of the incoming state
+    # variables. Then parameterize the model depending on `noise`. Finally,
+    # set the objective.
+    set_incoming_lin_state(node, state)
+    parameterize_lin(node, noise)
+
+    # pre_optimize_ret = if node.pre_optimize_hook !== nothing
+    #     node.pre_optimize_hook(model, node, state, noise, scenario_path, require_duals)
+    # else
+    #     nothing
+    # end
+
+    # SOLUTION
+    ############################################################################
+    @infiltrate
+    JuMP.optimize!(linearizedSubproblem)
+    @infiltrate
+
+    if haskey(model.ext, :total_solves)
+        model.ext[:total_solves] += 1
+    else
+        model.ext[:total_solves] = 1
+    end
+
+    # if JuMP.primal_status(node.ext[:linSubproblem]) != JuMP.MOI.FEASIBLE_POINT
+    #     SDDP.attempt_numerical_recovery(node)
+    # end
+
+    state = get_outgoing_state(node)
+    objective = JuMP.objective_value(node.ext[:linSubproblem])
+    stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
+
+    # If require_duals = true, check for dual feasibility and return a dict with
+    # the dual on the fixed constraint associated with each incoming state
+    # variable. If require_duals=false, return an empty dictionary for
+    # type-stability.
+    dual_values = if require_duals
+        get_dual_variables(node, node.integrality_handler)
+    else
+        Dict{Symbol,Float64}()
+    end
+
+    # if node.post_optimize_hook !== nothing
+    #     node.post_optimize_hook(pre_optimize_ret)
+    # end
+
+    # STORE RESULTS FOR NL-CONSTRAINT VARIABLES FOR PLA REFINEMENT
+    ############################################################################
+    number_of_nonlinearities = size(node.ext[:nlFunctions], 1)
+
+    for i = 1:number_of_nonlinearities
+        nlFunction = node.ext[:nlFunctions][i]
+        dimension = size(nlFunction.variablesContained, 1)
+
+        nlFunction.ext[:optSolution] = Dict{JuMP.VariableRef, Float64}()
+
+        for j = 1:dimension
+            variableReference = nlFunction.variablesContained[j]
+            nlFunction.ext[:optSolution][variableReference] = JuMP.value(variableReference)
+        end
+    end
 
     return (
         state = state,

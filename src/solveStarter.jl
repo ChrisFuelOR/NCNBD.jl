@@ -444,13 +444,16 @@ function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{
        # INCREASE SIGMA - METHOD II
        #########################################################################
        # Increase sigma for all stages based on iteration
-       # every sigmaCounter-th iteration, sigma is increased instead of PLA refinement
-       if mod(model.ext[:outer_iteration] / algoParams.sigmaCounter) == 0
-           algoParams.sigma = algoParams.sigma * 5
-       else
-           # Piecewise linear refinement
-           piecewise_linear_refinement(model, appliedSolvers)
-       end
+       # every sigma_counter-th iteration, sigma is increased instead of PLA refinement
+       # if mod(model.ext[:outer_iteration] / algoParams.sigma_counter) == 0
+       #     algoParams.sigma = algoParams.sigma * 5
+       # else
+       #     # Piecewise linear refinement
+       #     piecewise_linear_refinement(model, appliedSolvers)
+       # end
+
+       # Piecewise linear refinement
+       piecewise_linear_refinement(model, appliedSolvers)
 
     end
 end
@@ -468,6 +471,9 @@ function master_loop_ncbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Policy
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
         log_iteration(options, options.log_outer)
         if result_inner.has_converged
+            #TODO
+
+
             return result_inner.status
         end
     end
@@ -492,8 +498,30 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         # logging
         log_iteration(options, options.log_inner)
         if result_inner.has_converged
+            sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
+
+            upper_bound_non_reg = sigma_test_results.cumulative_value
+            upper_bound_reg = reuslt_inner.upper_bound
+
+            if isapprox(upper_bound_non_reg - upper_bound_reg, 0)
+                # by solving the regularized problem, approximately the real MILP has been solved
+
+                # update information for MINLP
+                result_inner.upper_bound = upper_bound_non_reg
+                result_inner.current_sol = sigma_test_results.sampled_states
+
+                # return all results here to keep them accessible in outer pass
+                return result_inner
+
+            else
+                # increase sigma
+                algoParams.sigma = algoParams.sigma * 5
+                # for first stage, sigma should be always zero
+                algoParams.sigma[1] = 0
+
+            end
             # return all results here to keep them accessible in outer pass
-            return result_inner
+            # return result_inner
         end
 
         previousSolution = result_inner.current_sol
