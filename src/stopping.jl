@@ -22,6 +22,7 @@ function convergence_test(graph::SDDP.PolicyGraph, log::Vector{Log}, rule::SDDP.
         return false
     elseif loop == :outer
         return log[end].outer_iteration >= rule.limit
+    end
 end
 
 # ========================= Time Limit Stopping Rule ========================= #
