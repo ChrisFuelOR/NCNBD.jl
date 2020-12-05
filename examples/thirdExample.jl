@@ -161,11 +161,11 @@ function thirdExample()
     ############################################################################
     appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, SCIP.Optimizer)
 
-    epsilon_outerLoop = 0.001
+    epsilon_outerLoop = 0.01
     epsilon_innerLoop = 0.001
     binaryPrecision = Dict(:x => 0.5)
     plaPrecision = [2, 4]
-    sigma = [1.0, 1.0]
+    sigma = [0.0, 1.0]
     sigma_counter = 5
 
     #@infiltrate
@@ -191,3 +191,11 @@ function thirdExample()
 end
 
 thirdExample()
+
+
+# NOTE: Solving the model in GAMS with BARON gives the optimal solution:
+# v* = 2.3732
+# x_1* = 1.2536
+# y_loc_1[1]* = 1.1196 (y_1*)
+# y_loc_2[1]* = 1.2536 (x_2*)
+# y_loc_2[2]* = 1.2536 (x_3*)
