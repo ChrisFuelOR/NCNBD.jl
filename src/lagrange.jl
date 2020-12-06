@@ -1,6 +1,7 @@
 function _kelley(
     node::SDDP.Node,
     node_index::Int64,
+    obj::Float64,
     dual_vars::Vector{Float64},
     integrality_handler::SDDP.SDDiP,
     algoParams::NCNBD.AlgoParams,
@@ -15,8 +16,10 @@ function _kelley(
     # Assume the model has been solved. Solving the MIP is usually very quick
     # relative to solving for the Lagrangian duals, so we cheat and use the
     # solved model's objective as our bound while searching for the optimal duals
-    @assert JuMP.termination_status(model) == MOI.OPTIMAL
-    obj = JuMP.objective_value(model)
+
+    # This does not work since the problem has been changed since then
+    #assert JuMP.termination_status(model) == MOI.OPTIMAL
+    #obj = JuMP.objective_value(model)
 
     for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
         integrality_handler.old_rhs[i] = JuMP.fix_value(bin_state)

@@ -202,6 +202,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
             subproblem_results = solve_subproblem_forward_inner(
                 model,
                 node,
+                node_index,
                 incoming_state_value, # only values, no State struct!
                 noise,
                 scenario_path[1:depth],
@@ -256,6 +257,7 @@ end
 function solve_subproblem_forward_inner(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
+    node_index::Int64,
     state::Dict{Symbol,Float64},
     noise,
     scenario_path::Vector{Tuple{T,S}},
@@ -282,10 +284,12 @@ function solve_subproblem_forward_inner(
 
     # REGULARIZE SUBPROBLEM
     ############################################################################
-    # storage for regularization data
-    node.ext[:regularization_data] = Dict{Symbol,Any}()
+    if node_index > 1
+        # storage for regularization data
+        node.ext[:regularization_data] = Dict{Symbol,Any}()
 
-    regularize_subproblem!(node, linearizedSubproblem, sigma)
+        regularize_subproblem!(node, linearizedSubproblem, sigma)
+    end
 
     # SOLUTION
     ############################################################################
@@ -339,7 +343,7 @@ function solve_subproblem_forward_inner(
 
     # DE-REGULARIZE SUBPROBLEM
     ############################################################################
-    deregularize_subproblem!(node, linearizedSubproblem)
+    #deregularize_subproblem!(node, linearizedSubproblem)
     @infiltrate
 
     return (
@@ -362,6 +366,8 @@ function inner_loop_backward_pass(
     belief_states::Vector{Tuple{Int,Dict{T,Float64}}}) where {T,NoiseType,N}
 
     cuts = Dict{T,Vector{Any}}(index => Any[] for index in keys(model.nodes))
+
+    @infiltrate
 
     for index = length(scenario_path):-1:1
         outgoing_state = sampled_states[index]
@@ -610,7 +616,7 @@ function solve_subproblem_backward(
     # Parameterize the model. First, fix the value of the incoming state
     # variables. Then parameterize the model depending on `noise`. Finally,
     # set the objective.
-    set_incoming_state(node, state)
+    #set_incoming_lin_state(node, state)
     parameterize(node, noise)
 
     # pre_optimize_ret = if node.pre_optimize_hook !== nothing
@@ -619,15 +625,24 @@ function solve_subproblem_backward(
     #     nothing
     # end
 
-    # BACKWARD PASS PREPARATION
+    # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
-    # Also adapt solver here
-    changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
+    # Get approximate trial state (is later also determined in changeToBinarySpace and before refine_bellman_function)
+    used_trial_points = Dict{Symbol,Float64}()
+    for (name, value) in state
+        state_comp = node.ext[:lin_states][name]
+        epsilon = algoParams.binaryPrecision[name]
+        (approx_state_value, )  = determine_used_trial_states(state_comp, value, epsilon)
+        used_trial_points[name] = approx_state_value
+    end
+
+    @infiltrate
+    regularize_backward!(node, linearizedSubproblem, algoParams.sigma[node_index], used_trial_points)
 
     # PRIMAL SOLUTION
     ############################################################################
-    JuMP.optimize!(linearizedSubproblem)
     @infiltrate
+    JuMP.optimize!(linearizedSubproblem)
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -639,7 +654,36 @@ function solve_subproblem_backward(
     #     attempt_numerical_recovery(node)
     # end
 
-    objective = JuMP.objective_value(linearizedSubproblem)
+    solver_obj = JuMP.objective_value(linearizedSubproblem)
+    @assert JuMP.termination_status(linearizedSubproblem) == MOI.OPTIMAL
+    @infiltrate
+
+    # PREPARE ACTUAL BACKWARD PASS METHOD BY DEREGULARIZATION
+    ############################################################################
+    deregularize_subproblem!(node, linearizedSubproblem, state)
+    @infiltrate
+
+    # BACKWARD PASS PREPARATION
+    ############################################################################
+    # Also adapt solver here
+    changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
+
+    # # PRIMAL SOLUTION
+    # ############################################################################
+    # JuMP.optimize!(linearizedSubproblem)
+    # @infiltrate
+    #
+    # if haskey(model.ext, :total_solves)
+    #     model.ext[:total_solves] += 1
+    # else
+    #     model.ext[:total_solves] = 1
+    # end
+    #
+    # # if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
+    # #     attempt_numerical_recovery(node)
+    # # end
+    #
+    # objective = JuMP.objective_value(linearizedSubproblem)
 
     # DUAL SOLUTION
     ############################################################################
@@ -648,7 +692,7 @@ function solve_subproblem_backward(
     # variable. If require_duals=false, return an empty dictionary for
     # type-stability.
     if require_duals
-        lagrangian_results = get_dual_variables_backward(node, node_index, algoParams, appliedSolvers)
+        lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers)
         dual_values = lagrangian_results.dual_values
         bin_state_values = lagrangian_results.bin_state_values
     else
@@ -675,6 +719,7 @@ end
 function get_dual_variables_backward(
     node::SDDP.Node,
     node_index::Int64,
+    solver_obj::Float64,
     algoParams::NCNBD.AlgoParams,
     appliedSolvers::NCNBD.AppliedSolvers)
 
@@ -685,7 +730,7 @@ function get_dual_variables_backward(
     # TODO implement smart choice for initial duals
     number_of_states = length(node.ext[:backward_data][:bin_states])
     dual_vars = zeros(number_of_states)
-    solver_obj = JuMP.objective_value(node.ext[:linSubproblem])
+    #solver_obj = JuMP.objective_value(node.ext[:linSubproblem])
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
@@ -694,7 +739,7 @@ function get_dual_variables_backward(
     node.ext[:lagrange] = integrality_handler
 
     try
-        kelley_obj = _kelley(node, node_index, dual_vars, integrality_handler, algoParams, appliedSolvers)::Float64
+        kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers)::Float64
         @infiltrate
         @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
     catch e
@@ -860,7 +905,7 @@ end
 function inner_loop_forward_sigma_test(
     model::SDDP.PolicyGraph{T}, options::NCNBD.Options,
     algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
-    scenario_path::Vector{Tuple{T,S}}, ::SDDP.DefaultForwardPass) where {T}
+    scenario_path::Vector{Tuple{T,S}}, ::SDDP.DefaultForwardPass) where {T,S}
 
     # INITIALIZATION (NO SAMPLING HERE!)
     ############################################################################

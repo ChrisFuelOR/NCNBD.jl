@@ -3,9 +3,6 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     #NOTE: The copy constraint is not modeled explicitly here. Instead,
     # the state variable is unfixed and takes the role of z in our paper.
     # It is then subtracted from the fixed value to obtain the so called slack.
-    # TODO: Check if this should be changed later. We manage to avoid introducing
-    # an additional variable here, but it becomes a bit confusing. Moreover,
-    # this is maybe not possible in the backward pass.
 
     reg_data = node.ext[:regularization_data]
     reg_data[:fixed_state_value] = Dict{Symbol,Float64}()
@@ -39,7 +36,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     slack = reg_data[:slacks]
 
     # Variable for objective
-    v = JuMP.@variable(linearizedSubproblem, base_name = "reg_v")
+    v = JuMP.@variable(linearizedSubproblem, reg_v, base_name = "reg_v")
     push!(reg_data[:reg_variables], v)
 
     # Get sign for regularization term
@@ -50,7 +47,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     JuMP.set_objective_function(linearizedSubproblem, new_obj)
 
     # Variables
-    alpha = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "alpha")
+    alpha = JuMP.@variable(linearizedSubproblem, alpha[i=1:number_of_states], base_name = "alpha")
     append!(reg_data[:reg_variables], alpha)
 
     # Constraints
@@ -64,7 +61,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
 
 end
 
-function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Model)
+function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Model, state::Dict{Symbol,Float64})
 
     reg_data = node.ext[:regularization_data]
 
@@ -73,6 +70,9 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
     for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
         #TODO: Check if required
         prepare_state_fixing!(node, state_comp)
+
+        # assert that value stored in the forward pass equals state required now
+        @assert reg_data[:fixed_state_value][name] == state[name]
 
         JuMP.fix(state_comp.in, reg_data[:fixed_state_value][name], force=true)
     end
@@ -84,11 +84,55 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
     # DELETE ALL REGULARIZATION-BASED VARIABLES AND CONSTRAINTS
     ############################################################################
     delete(linearizedSubproblem, reg_data[:reg_variables])
+    @infiltrate
     for constraint in reg_data[:reg_constraints]
         delete(linearizedSubproblem, constraint)
     end
 
     delete!(node.ext, :regularization_data)
+
+end
+
+
+function regularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Model, sigma::Float64, approx_state::Dict{Symbol,Float64})
+
+    number_of_states = size(collect(values(approx_state)), 1)
+    reg_data = node.ext[:regularization_data]
+
+    # DELETE EXISTING REGULARIZATION CONSTRAINTS AND SLACKS
+    ############################################################################
+    for constraint in reg_data[:reg_constraints]
+        delete(linearizedSubproblem, constraint)
+    end
+    delete!(reg_data, :reg_constraints)
+    reg_data[:reg_constraints] = JuMP.ConstraintRef[]
+    reg_data[:slacks] = Any[]
+
+    # DETERMINE NEW SLACKS
+    ############################################################################
+    for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
+        @infiltrate
+        push!(reg_data[:slacks], approx_state[name] - state_comp.in)
+    end
+    @infiltrate
+
+    # DEFINE NEW CONSTRAINTS
+    ############################################################################
+    slack = reg_data[:slacks]
+
+    # Get existing regularization variables
+    v = linearizedSubproblem[:reg_v]
+    alpha = linearizedSubproblem[:alpha]
+
+    # Define new constraints
+    const_plus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], -alpha[i] <= slack[i])
+    const_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack[i] <= alpha[i])
+    append!(reg_data[:reg_constraints], const_plus)
+    append!(reg_data[:reg_constraints], const_minus)
+
+    const_norm = JuMP.@constraint(linearizedSubproblem, v >= sum(alpha[i] for i in 1:number_of_states))
+    push!(reg_data[:reg_constraints], const_norm)
+    @infiltrate
 
 end
 
