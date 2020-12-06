@@ -112,7 +112,14 @@ function prepare_state_fixing!(node::SDDP.Node, state::State)
     end
 end
 
+function prepare_state_fixing_binary!(node::SDDP.Node, state::JuMP.VariableRef)
 
+    if JuMP.is_binary(state)
+        JuMP.unset_binary(state)
+    elseif JuMP.is_integer(state)
+        JuMP.unset_integer(state)
+    end
+end
 
 # Reset binary and integer type of state variables.
 # Reset bounds.
@@ -130,5 +137,12 @@ function follow_state_unfixing!(state::State)
     elseif state.info.in.integer
         JuMP.set_integer(state.in)
     end
+
+end
+
+function follow_state_unfixing_binary!(state::JuMP.VariableRef)
+
+    JuMP.set_lower_bound(state, 0)
+    JuMP.set_upper_bound(state, 1)
 
 end

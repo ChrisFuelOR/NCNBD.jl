@@ -257,7 +257,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams,
     initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-    @infiltrate
+    #@infiltrate
 
     # SET UP LINEARIZED SUBPROBLEM DATA
     ############################################################################
@@ -337,7 +337,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
     end
 
-    @infiltrate
+    #@infiltrate
 
     # INITIALIZE PIECEWISE LINEAR RELAXATION
     ############################################################################
@@ -352,7 +352,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
     end
 
-    @infiltrate
+    #@infiltrate
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################
@@ -516,12 +516,16 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             else
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * 5
-                # for first stage, sigma should be always zero
-                algoParams.sigma[1] = 0
 
             end
             # return all results here to keep them accessible in outer pass
             # return result_inner
+        else
+            if result_inner.upper_bound < result_inner.lower_bound
+                # increase sigma
+                algoParams.sigma = algoParams.sigma * 5
+            end
+
         end
 
         previousSolution = result_inner.current_sol

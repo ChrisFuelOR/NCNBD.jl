@@ -36,7 +36,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     slack = reg_data[:slacks]
 
     # Variable for objective
-    v = JuMP.@variable(linearizedSubproblem, reg_v, base_name = "reg_v")
+    v = JuMP.@variable(linearizedSubproblem, base_name = "reg_v")
     push!(reg_data[:reg_variables], v)
 
     # Get sign for regularization term
@@ -47,7 +47,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     JuMP.set_objective_function(linearizedSubproblem, new_obj)
 
     # Variables
-    alpha = JuMP.@variable(linearizedSubproblem, alpha[i=1:number_of_states], base_name = "alpha")
+    alpha = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "alpha")
     append!(reg_data[:reg_variables], alpha)
 
     # Constraints
@@ -61,7 +61,7 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
 
 end
 
-function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Model, state::Dict{Symbol,Float64})
+function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Model)
 
     reg_data = node.ext[:regularization_data]
 
@@ -70,9 +70,6 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
     for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
         #TODO: Check if required
         prepare_state_fixing!(node, state_comp)
-
-        # assert that value stored in the forward pass equals state required now
-        @assert reg_data[:fixed_state_value][name] == state[name]
 
         JuMP.fix(state_comp.in, reg_data[:fixed_state_value][name], force=true)
     end
@@ -84,55 +81,12 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
     # DELETE ALL REGULARIZATION-BASED VARIABLES AND CONSTRAINTS
     ############################################################################
     delete(linearizedSubproblem, reg_data[:reg_variables])
-    @infiltrate
+    #@infiltrate
     for constraint in reg_data[:reg_constraints]
         delete(linearizedSubproblem, constraint)
     end
 
     delete!(node.ext, :regularization_data)
-
-end
-
-
-function regularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Model, sigma::Float64, approx_state::Dict{Symbol,Float64})
-
-    number_of_states = size(collect(values(approx_state)), 1)
-    reg_data = node.ext[:regularization_data]
-
-    # DELETE EXISTING REGULARIZATION CONSTRAINTS AND SLACKS
-    ############################################################################
-    for constraint in reg_data[:reg_constraints]
-        delete(linearizedSubproblem, constraint)
-    end
-    delete!(reg_data, :reg_constraints)
-    reg_data[:reg_constraints] = JuMP.ConstraintRef[]
-    reg_data[:slacks] = Any[]
-
-    # DETERMINE NEW SLACKS
-    ############################################################################
-    for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
-        @infiltrate
-        push!(reg_data[:slacks], approx_state[name] - state_comp.in)
-    end
-    @infiltrate
-
-    # DEFINE NEW CONSTRAINTS
-    ############################################################################
-    slack = reg_data[:slacks]
-
-    # Get existing regularization variables
-    v = linearizedSubproblem[:reg_v]
-    alpha = linearizedSubproblem[:alpha]
-
-    # Define new constraints
-    const_plus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], -alpha[i] <= slack[i])
-    const_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack[i] <= alpha[i])
-    append!(reg_data[:reg_constraints], const_plus)
-    append!(reg_data[:reg_constraints], const_minus)
-
-    const_norm = JuMP.@constraint(linearizedSubproblem, v >= sum(alpha[i] for i in 1:number_of_states))
-    push!(reg_data[:reg_constraints], const_norm)
-    @infiltrate
 
 end
 
@@ -430,4 +384,107 @@ function determine_used_trial_states(
         end
     end
     return approx_state_value, fixed_binary_values
+end
+
+
+function regularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Model, sigma::Float64)
+
+    bw_data = node.ext[:backward_data]
+    binary_states = bw_data[:bin_states]
+
+    number_of_states = size(collect(values(binary_states)), 1)
+
+    reg_data = node.ext[:regularization_data]
+    reg_data[:fixed_state_value] = Dict{Symbol,Float64}()
+    reg_data[:slacks] = Any[]
+    reg_data[:reg_variables] = JuMP.VariableRef[]
+    reg_data[:reg_constraints] = JuMP.ConstraintRef[]
+
+    # DETERMINE SIGMA TO BE USED IN BINARY SPACE
+    ############################################################################
+    Umax = 0
+    for (i, (name, state_comp)) in enumerate(node.ext[:lin_states])
+        if state_comp.info.out.upper_bound > Umax
+            Umax = state_comp.info.out.upper_bound
+        end
+    end
+    # Here, not sigma, but a different regularization parameter is used
+    sigma_bin = sigma * Umax
+
+    # UNFIX THE STATE VARIABLES
+    ############################################################################
+    for (i, (name, state_comp)) in enumerate(binary_states)
+        reg_data[:fixed_state_value][name] = JuMP.fix_value(state_comp)
+        push!(reg_data[:slacks], reg_data[:fixed_state_value][name] - state_comp)
+        JuMP.unfix(state_comp)
+
+        #TODO: Check if required
+        follow_state_unfixing_binary!(state_comp)
+    end
+
+    # STORE ORIGINAL OBJECTIVE FUNCTION
+    ############################################################################
+    old_obj = reg_data[:old_objective] = JuMP.objective_function(linearizedSubproblem)
+
+    # DEFINE NEW VARIABLES, CONSTRAINTS AND OBJECTIVE
+    ############################################################################
+    # These variables and constraints are used to define the norm of the slack as a MILP
+    # Using the lifting approach without binary requirements
+    slack = reg_data[:slacks]
+
+    # Variable for objective
+    v = JuMP.@variable(linearizedSubproblem, base_name = "reg_v")
+    push!(reg_data[:reg_variables], v)
+
+    # Get sign for regularization term
+    fact = (JuMP.objective_sense(linearizedSubproblem) == JuMP.MOI.MIN_SENSE ? 1 : -1)
+
+    # New objective
+    new_obj = old_obj + fact * sigma_bin * v
+    JuMP.set_objective_function(linearizedSubproblem, new_obj)
+
+    # Variables
+    alpha = JuMP.@variable(linearizedSubproblem, [i=1:number_of_states], base_name = "alpha")
+    append!(reg_data[:reg_variables], alpha)
+
+    # Constraints
+    const_plus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], -alpha[i] <= slack[i])
+    const_minus = JuMP.@constraint(linearizedSubproblem, [i=1:number_of_states], slack[i] <= alpha[i])
+    append!(reg_data[:reg_constraints], const_plus)
+    append!(reg_data[:reg_constraints], const_minus)
+
+    const_norm = JuMP.@constraint(linearizedSubproblem, v >= sum(alpha[i] for i in 1:number_of_states))
+    push!(reg_data[:reg_constraints], const_norm)
+
+end
+
+
+function deregularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Model)
+
+    reg_data = node.ext[:regularization_data]
+    bw_data = node.ext[:backward_data]
+
+    # FIX THE STATE VARIABLES
+    ############################################################################
+    for (i, (name, state_comp)) in enumerate(bw_data[:bin_states])
+        #TODO: Check if required
+        prepare_state_fixing_binary!(node, state_comp)
+
+        JuMP.fix(state_comp, reg_data[:fixed_state_value][name], force=true)
+    end
+
+    # REPLACE THE NEW BY THE OLD OBJECTIVE
+    ############################################################################
+    JuMP.set_objective_function(linearizedSubproblem, reg_data[:old_objective])
+
+    # DELETE ALL REGULARIZATION-BASED VARIABLES AND CONSTRAINTS
+    ############################################################################
+    delete(linearizedSubproblem, reg_data[:reg_variables])
+    #@infiltrate
+    for constraint in reg_data[:reg_constraints]
+        delete(linearizedSubproblem, constraint)
+    end
+
+    delete!(node.ext, :regularization_data)
+
 end

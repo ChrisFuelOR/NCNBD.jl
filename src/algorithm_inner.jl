@@ -43,12 +43,12 @@ function inner_loop_iteration(
         end
 
         # Increase binary precision such that K = K + 1
-        if solutionCheck == false
+        if solutionCheck == true
             # Consider stage 2 here (should be the same for all following stages)
             for (name, state_comp) in model.nodes[2].ext[:lin_states]
                 current_prec = algoParams.binaryPrecision[name]
                 ub = state_comp.info.in.upper_bound
-                K = SDDP._bitsrequired(round(Int, ub / epsilon))
+                K = SDDP._bitsrequired(round(Int, ub / current_prec))
                 new_prec = ub / sum(2^(k-1) for k in 1:K+1)
                 algoParams.binaryPrecision[name] = new_prec
             end
@@ -70,9 +70,8 @@ function inner_loop_iteration(
             forward_trajectory.belief_states,
         )
     end
-    #@infiltrate
 
-    @infiltrate
+    #@infiltrate
     # CALCULATE LOWER BOUND
     ############################################################################
     TimerOutputs.@timeit NCNBD_TIMER "calculate_bound" begin
@@ -104,7 +103,7 @@ function inner_loop_iteration(
     ############################################################################
     has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules, :inner)
 
-    @infiltrate
+    #@infiltrate
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
         bound,
@@ -237,7 +236,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
         end
     end
 
-    @infiltrate
+    #@infiltrate
 
     # ===== End: drop off starting state if terminated due to cycle =====
     return (
@@ -293,9 +292,9 @@ function solve_subproblem_forward_inner(
 
     # SOLUTION
     ############################################################################
-    @infiltrate
+    #@infiltrate
     JuMP.optimize!(linearizedSubproblem)
-    @infiltrate
+    #@infiltrate
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -310,6 +309,7 @@ function solve_subproblem_forward_inner(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
+    @infiltrate
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -343,8 +343,10 @@ function solve_subproblem_forward_inner(
 
     # DE-REGULARIZE SUBPROBLEM
     ############################################################################
-    #deregularize_subproblem!(node, linearizedSubproblem)
-    @infiltrate
+    if node_index > 1
+        deregularize_subproblem!(node, linearizedSubproblem)
+    end
+    #@infiltrate
 
     return (
         state = state,
@@ -367,7 +369,7 @@ function inner_loop_backward_pass(
 
     cuts = Dict{T,Vector{Any}}(index => Any[] for index in keys(model.nodes))
 
-    @infiltrate
+    #@infiltrate
 
     for index = length(scenario_path):-1:1
         outgoing_state = sampled_states[index]
@@ -616,7 +618,7 @@ function solve_subproblem_backward(
     # Parameterize the model. First, fix the value of the incoming state
     # variables. Then parameterize the model depending on `noise`. Finally,
     # set the objective.
-    #set_incoming_lin_state(node, state)
+    set_incoming_lin_state(node, state)
     parameterize(node, noise)
 
     # pre_optimize_ret = if node.pre_optimize_hook !== nothing
@@ -625,23 +627,20 @@ function solve_subproblem_backward(
     #     nothing
     # end
 
+    # BACKWARD PASS PREPARATION
+    ############################################################################
+    # Also adapt solver here
+    changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
+
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
-    # Get approximate trial state (is later also determined in changeToBinarySpace and before refine_bellman_function)
-    used_trial_points = Dict{Symbol,Float64}()
-    for (name, value) in state
-        state_comp = node.ext[:lin_states][name]
-        epsilon = algoParams.binaryPrecision[name]
-        (approx_state_value, )  = determine_used_trial_states(state_comp, value, epsilon)
-        used_trial_points[name] = approx_state_value
-    end
-
-    @infiltrate
-    regularize_backward!(node, linearizedSubproblem, algoParams.sigma[node_index], used_trial_points)
+    #@infiltrate
+    node.ext[:regularization_data] = Dict{Symbol,Any}()
+    regularize_backward!(node, linearizedSubproblem, algoParams.sigma[node_index])
 
     # PRIMAL SOLUTION
     ############################################################################
-    @infiltrate
+    #@infiltrate
     JuMP.optimize!(linearizedSubproblem)
 
     if haskey(model.ext, :total_solves)
@@ -656,17 +655,12 @@ function solve_subproblem_backward(
 
     solver_obj = JuMP.objective_value(linearizedSubproblem)
     @assert JuMP.termination_status(linearizedSubproblem) == MOI.OPTIMAL
-    @infiltrate
+    #@infiltrate
 
     # PREPARE ACTUAL BACKWARD PASS METHOD BY DEREGULARIZATION
     ############################################################################
-    deregularize_subproblem!(node, linearizedSubproblem, state)
+    deregularize_backward!(node, linearizedSubproblem)
     @infiltrate
-
-    # BACKWARD PASS PREPARATION
-    ############################################################################
-    # Also adapt solver here
-    changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
 
     # # PRIMAL SOLUTION
     # ############################################################################
@@ -711,7 +705,7 @@ function solve_subproblem_backward(
     return (
         duals = dual_values,
         bin_state_values = bin_state_values,
-        objective = objective
+        objective = solver_obj
     )
 end
 
@@ -740,7 +734,7 @@ function get_dual_variables_backward(
 
     try
         kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers)::Float64
-        @infiltrate
+        #@infiltrate
         @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
@@ -976,13 +970,13 @@ function inner_loop_forward_sigma_test(
         ############################################################################
         # Solve the subproblem, note that `require_duals = false`.
         TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
-            subproblem_results = solve_subproblem_forward_sigma_test(
+            subproblem_results = solve_subproblem_sigma_test(
                 model,
                 node,
                 incoming_state_value, # only values, no State struct!
                 noise,
                 scenario_path[1:depth],
-                sigma,
+                algoParams.sigma[node_index],
                 require_duals = false,
             )
         end
@@ -1055,9 +1049,9 @@ function solve_subproblem_sigma_test(
 
     # SOLUTION
     ############################################################################
-    @infiltrate
+    #@infiltrate
     JuMP.optimize!(linearizedSubproblem)
-    @infiltrate
+    #@infiltrate
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -1072,6 +1066,7 @@ function solve_subproblem_sigma_test(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
+    @infiltrate
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state

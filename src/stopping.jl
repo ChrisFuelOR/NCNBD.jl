@@ -11,7 +11,10 @@ end
 stopping_rule_status(::DeterministicStopping) = :DeterministicStopping
 
 function convergence_test(graph::SDDP.PolicyGraph, log::Vector{Log}, rule::DeterministicStopping, loop::Symbol)
-    return log[end].upper_bound - log[end].lower_bound <= log[end].opt_tolerance
+    bool_1 = log[end].upper_bound - log[end].lower_bound <= log[end].opt_tolerance
+    bool_2 = log[end].upper_bound - log[end].lower_bound >= 0
+
+    return bool_1 && bool_2
 end
 
 # ======================= Iteration Limit Stopping Rule ====================== #
@@ -40,7 +43,7 @@ function convergence_test(
     loop::Symbol
 )
     for stopping_rule in stopping_rules
-        @infiltrate
+        #@infiltrate
         if convergence_test(graph, log, stopping_rule, loop)
             return true, stopping_rule_status(stopping_rule)
         end
