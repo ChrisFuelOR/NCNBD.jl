@@ -301,6 +301,7 @@ function _add_cut(
     ############################################################################
     #TODO: Should we add λᵏ? Actually, this is information is not required.
     cut = NonlinearCut(θᵏ, πᵏ, xᵏ, binaryPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
+    @infiltrate
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
     ############################################################################
@@ -315,6 +316,7 @@ function _add_cut(
         push!(V.cut_oracle.cuts, cut)
         push!(V_lin.cut_oracle.cuts, cut)
     end
+    @infiltrate
     return
 end
 
@@ -512,7 +514,16 @@ function add_cut_projection_to_model!(
 
     # ADD BIG M CONSTRAINTS
     ####################################################################
-    bigM = 2 * sigma * Umax
+    #bigM = 2 * sigma * Umax
+
+    # new method for Big-M, since earlier method was probably not correct
+    bigM = 0
+    for k in 1:K
+        candidate = relatedCoefficients[k] / (2^(k-1) * epsilon)
+        if bigM < candidate
+            bigM = candidate
+        end
+    end
 
     bigM_11_constraints = JuMP.@constraint(
         model,

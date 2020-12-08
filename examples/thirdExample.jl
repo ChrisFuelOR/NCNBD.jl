@@ -4,7 +4,7 @@ using NCNBD
 using Revise
 using Gurobi
 using GAMS
-#using SCIP
+using SCIP
 using Infiltrator
 
 
