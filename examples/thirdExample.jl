@@ -4,7 +4,7 @@ using NCNBD
 using Revise
 using Gurobi
 using GAMS
-using SCIP
+#using SCIP
 using Infiltrator
 
 
@@ -159,7 +159,7 @@ function thirdExample()
 
     # SET-UP PARAMETERS
     ############################################################################
-    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, SCIP.Optimizer)
+    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, GAMS.Optimizer)
 
     epsilon_outerLoop = 0.01
     epsilon_innerLoop = 0.001
