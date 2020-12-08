@@ -5,7 +5,8 @@ function _kelley(
     dual_vars::Vector{Float64},
     integrality_handler::SDDP.SDDiP,
     algoParams::NCNBD.AlgoParams,
-    appliedSolvers::NCNBD.AppliedSolvers
+    appliedSolvers::NCNBD.AppliedSolvers,
+    dual_bound::Union{Float64,Nothing}
     )
 
     # INITIALIZATION
@@ -63,25 +64,14 @@ function _kelley(
     end
     #@infiltrate
 
-    # DETERMINE AND ADD BOUNDS FOR DUALVARIABLES
+    # BOUND DUAL VARIABLES IF INTENDED
     ############################################################################
-    #TODO: Determine a norm of B (coefficient matrix of binary expansion)
-    # We use the column sum norm here
-    # But instead of calculating it exactly, we can also use the maximum
-    # upper bound of all state variables as a bound
-    B_norm_bound = 0
-    for (name, state_comp) in node.ext[:lin_states]
-        if state_comp.info.in.upper_bound > B_norm_bound
-            B_norm_bound = state_comp.info.in.upper_bound
+    if !isnothing(dual_bound)
+        for i in 1:length(dual_vars)
+            JuMP.set_lower_bound(x[i], -dual_bound)
+            JuMP.set_upper_bound(x[i], dual_bound)
         end
     end
-    dual_bound = algoParams.sigma[node_index] * B_norm_bound
-
-    for i in 1:length(dual_vars)
-        JuMP.set_lower_bound(x[i], -dual_bound)
-        JuMP.set_upper_bound(x[i], dual_bound)
-    end
-
     @infiltrate
 
     # CUTTING-PLANE METHOD

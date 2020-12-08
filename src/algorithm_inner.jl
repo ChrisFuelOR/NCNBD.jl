@@ -732,10 +732,43 @@ function get_dual_variables_backward(
     integrality_handler = SDDP.update_integrality_handler!(integrality_handler, appliedSolvers.MILP, number_of_states)
     node.ext[:lagrange] = integrality_handler
 
+    # DETERMINE AND ADD BOUNDS FOR DUALVARIABLES
+    ############################################################################
+    #TODO: Determine a norm of B (coefficient matrix of binary expansion)
+    # We use the column sum norm here
+    # But instead of calculating it exactly, we can also use the maximum
+    # upper bound of all state variables as a bound
+
+    B_norm_bound = 0
+    for (name, state_comp) in node.ext[:lin_states]
+        if state_comp.info.in.upper_bound > B_norm_bound
+            B_norm_bound = state_comp.info.in.upper_bound
+        end
+    end
+    dual_bound = algoParams.sigma[node_index] * B_norm_bound
+
     try
-        kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers)::Float64
-        #@infiltrate
+        # KELLEY WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
+        ########################################################################
+        kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
         @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
+
+        # if one of the dual variables exceeds the bounds (e.g. in case of an
+        # discontinuous value function), use bounded version of Kelley's method
+        boundCheck = true
+        for dual_var in dual_vars
+            if dual_var > dual_bound
+                boundCheck = false
+            end
+        end
+
+        # KELLEY WITH BOUNDED DUAL VARIABLES
+        ########################################################################
+        if boundCheck == false
+            kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+            @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
+        end
+
         @infiltrate
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
