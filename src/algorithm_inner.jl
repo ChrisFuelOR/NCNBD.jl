@@ -736,6 +736,7 @@ function get_dual_variables_backward(
         kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers)::Float64
         #@infiltrate
         @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
+        @infiltrate
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
         rethrow(e)

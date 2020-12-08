@@ -289,11 +289,13 @@ function _add_cut(
     cut_selection::Bool = false
 ) where {N,T}
 
+    @infiltrate
     # CORRECT INTERCEPT
     ############################################################################
     for (key, λ) in λᵏ
         θᵏ -= πᵏ[key] * λᵏ[key]
     end
+    @infiltrate
 
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
