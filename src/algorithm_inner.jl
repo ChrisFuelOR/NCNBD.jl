@@ -27,7 +27,7 @@ function inner_loop_iteration(
     # increase the binary precision (for all stages)
     if !isnothing(previousSolution)
         solutionCheck = true
-        @infiltrate
+        #@infiltrate
 
         # Check if solution has changed since last iteration
         # TODO: Maybe make this more efficient
@@ -75,7 +75,7 @@ function inner_loop_iteration(
     TimerOutputs.@timeit NCNBD_TIMER "calculate_bound" begin
         bound = calculate_bound(model)
     end
-    @infiltrate
+    #@infiltrate
 
     # PREPARE LOGGING
     ############################################################################
@@ -303,7 +303,7 @@ function solve_subproblem_forward_inner(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
-    @infiltrate
+    #@infiltrate
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -660,7 +660,7 @@ function solve_subproblem_backward(
     # # PRIMAL SOLUTION
     # ############################################################################
     # JuMP.optimize!(linearizedSubproblem)
-    # @infiltrate
+    # #@infiltrate
     #
     # if haskey(model.ext, :total_solves)
     #     model.ext[:total_solves] += 1
@@ -688,7 +688,7 @@ function solve_subproblem_backward(
         dual_values = Dict{Symbol,Float64}()
         bin_state = Dict{Symbol,BinaryState}()
     end
-    @infiltrate
+    #@infiltrate
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
@@ -1101,7 +1101,7 @@ function solve_subproblem_sigma_test(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
-    @infiltrate
+    #@infiltrate
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state

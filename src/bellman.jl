@@ -545,16 +545,6 @@ function add_cut_projection_to_model!(
     end
     append!(allCoefficients, relatedCoefficients)
 
-    # @infiltrate
-    # for (i, (name, value)) in enumerate(coefficients)
-    #     @infiltrate
-    #     if i >= duals_so_far && i <= duals_so_far + K
-    #         relatedCoefficients[duals_so_far+i] = value
-    #     end
-    # end
-
-    #@infiltrate
-
     kkt_constraints = JuMP.@constraint(
         model,
         [k=1:K],

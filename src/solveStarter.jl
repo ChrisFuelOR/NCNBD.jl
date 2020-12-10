@@ -257,7 +257,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams,
     initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-    #@infiltrate
+    ##@infiltrate
 
     # SET UP LINEARIZED SUBPROBLEM DATA
     ############################################################################
@@ -337,7 +337,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
     end
 
-    #@infiltrate
+    ##@infiltrate
 
     # INITIALIZE PIECEWISE LINEAR RELAXATION
     ############################################################################
@@ -352,7 +352,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
     end
 
-    #@infiltrate
+    ##@infiltrate
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################
@@ -408,7 +408,7 @@ function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{
     #previousSolution = nothing
 
     while true
-        @infiltrate
+        #@infiltrate
         result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
         log_iteration(options, options.log_inner)
         if result_outer.has_converged
@@ -493,7 +493,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
     while true
         # start an inner loop
-        @infiltrate
+        #@infiltrate
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution)
         # logging
         log_iteration(options, options.log_inner)
@@ -511,7 +511,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 result_inner.current_sol = sigma_test_results.sampled_states
 
                 # return all results here to keep them accessible in outer pass
-                @infiltrate
+                #@infiltrate
                 return result_inner
 
             else

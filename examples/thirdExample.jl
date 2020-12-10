@@ -182,7 +182,7 @@ function thirdExample()
                 iteration_limit = 5, print_level = 1,
                 time_limit = 6000, stopping_rules = [NCNBD.DeterministicStopping()])
 
-    @infiltrate
+    #@infiltrate
 
     # WRITE LOGS TO FILE
     ############################################################################
