@@ -501,7 +501,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
 
             upper_bound_non_reg = sigma_test_results.cumulative_value
-            upper_bound_reg = reuslt_inner.upper_bound
+            upper_bound_reg = result_inner.upper_bound
 
             if isapprox(upper_bound_non_reg - upper_bound_reg, 0)
                 # by solving the regularized problem, approximately the real MILP has been solved
@@ -511,6 +511,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 result_inner.current_sol = sigma_test_results.sampled_states
 
                 # return all results here to keep them accessible in outer pass
+                @infiltrate
                 return result_inner
 
             else

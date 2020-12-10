@@ -1,10 +1,21 @@
 ITERATION 1
 outer_iteration, inner_iteration, inner_upper_bound, inner_lower_bound, time
-1, nothing, 0.0, 1.9500000000000002, 8969.046999931335
+1, nothing, 2.5750279958817646, 2.2666666666666666, 107.60500001907349
 
 current solution: 
 Stage 1 :
+state: x 0.6666666666666667
+Stage 2 :
 state: x 0.0
+
+binary precision: 
+state: x 0.5
+outer_iteration, inner_iteration, inner_upper_bound, inner_lower_bound, time
+1, nothing, 2.5750279958817646, 2.2666666666666666, 107.60500001907349
+
+current solution: 
+Stage 1 :
+state: x 0.6666666666666667
 Stage 2 :
 state: x 0.0
 
@@ -12,15 +23,52 @@ binary precision:
 state: x 0.5
 ------------------------------------------------------
 outer_iteration, inner_iteration, upper_bound, lower_bound, time
-1, nothing, 0.0, 1.9500000000000002, 8969.046999931335
+1, nothing, 2.5750279958817646, 2.2666666666666666, 107.60500001907349
 
 current solution: 
 Stage 1 :
-state: x 0.0
+state: x 0.6666666666666667
 Stage 2 :
 state: x 0.0
 
 sigma: 
-stage 1 : 1.0
-stage 2 : 1.0
+stage 1 : 0.0
+stage 2 : 5.0
+######################################################
+ITERATION 2
+outer_iteration, inner_iteration, inner_upper_bound, inner_lower_bound, time
+2, nothing, 2.5631721219631096, 2.2708333125, 919.2550001144409
+
+current solution: 
+Stage 1 :
+state: x 0.708333125
+Stage 2 :
+state: x 0.0
+
+binary precision: 
+state: x 0.5
+outer_iteration, inner_iteration, inner_upper_bound, inner_lower_bound, time
+2, nothing, 2.5631721219631096, 2.2708333125, 919.2550001144409
+
+current solution: 
+Stage 1 :
+state: x 0.708333125
+Stage 2 :
+state: x 0.0
+
+binary precision: 
+state: x 0.5
+------------------------------------------------------
+outer_iteration, inner_iteration, upper_bound, lower_bound, time
+2, nothing, 2.5631721219631096, 2.2708333125, 919.2550001144409
+
+current solution: 
+Stage 1 :
+state: x 0.708333125
+Stage 2 :
+state: x 0.0
+
+sigma: 
+stage 1 : 0.0
+stage 2 : 25.0
 ######################################################

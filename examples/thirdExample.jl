@@ -180,7 +180,7 @@ function thirdExample()
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = 5, print_level = 1,
-                time_limit = 600, stopping_rules = [NCNBD.DeterministicStopping()])
+                time_limit = 6000, stopping_rules = [NCNBD.DeterministicStopping()])
 
     @infiltrate
 

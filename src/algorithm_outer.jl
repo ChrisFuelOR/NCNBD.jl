@@ -182,8 +182,6 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         end
     end
 
-    @infiltrate
-
     # ===== End: drop off starting state if terminated due to cycle =====
     return (
         scenario_path = scenario_path,
@@ -217,7 +215,7 @@ function solve_subproblem_forward_outer(
     #     nothing
     # end
 
-    @infiltrate
+    #@infiltrate
 
     JuMP.optimize!(node.subproblem)
 
@@ -225,11 +223,13 @@ function solve_subproblem_forward_outer(
     #    SDDP.attempt_numerical_recovery(node)
     #end
 
-    @infiltrate
+    #@infiltrate
 
     state = SDDP.get_outgoing_state(node)
     stage_objective = SDDP.stage_objective_value(node.stage_objective)
     objective = JuMP.objective_value(node.subproblem)
+
+    @infiltrate
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
