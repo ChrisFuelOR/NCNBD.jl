@@ -146,3 +146,9 @@ function follow_state_unfixing_binary!(state::JuMP.VariableRef)
     JuMP.set_upper_bound(state, 1)
 
 end
+
+struct BinaryState
+    value::Float64
+    x_name::Symbol # name of original state it is related to
+    k::Int64 # index and exponent
+end

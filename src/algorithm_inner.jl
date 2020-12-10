@@ -54,7 +54,6 @@ function inner_loop_iteration(
             end
         end
     end
-    @infiltrate
 
     # BACKWARD PASS
     ############################################################################
@@ -71,7 +70,6 @@ function inner_loop_iteration(
         )
     end
 
-    #@infiltrate
     # CALCULATE LOWER BOUND
     ############################################################################
     TimerOutputs.@timeit NCNBD_TIMER "calculate_bound" begin
@@ -81,7 +79,6 @@ function inner_loop_iteration(
 
     # PREPARE LOGGING
     ############################################################################
-    #@infiltrate
     push!(
          options.log_inner,
          Log(
@@ -103,7 +100,6 @@ function inner_loop_iteration(
     ############################################################################
     has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules, :inner)
 
-    #@infiltrate
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
         bound,
@@ -235,8 +231,6 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
             push!(starting_states, incoming_state_value)
         end
     end
-
-    #@infiltrate
 
     # ===== End: drop off starting state if terminated due to cycle =====
     return (
@@ -456,7 +450,8 @@ function inner_loop_backward_pass(
                 used_trial_points[name] = approx_state_value
             end
 
-            @infiltrate
+            #@infiltrate
+
             # REFINE BELLMAN FUNCTION BY ADDING CUTS
             ####################################################################
             new_cuts = refine_bellman_function(
@@ -466,7 +461,7 @@ function inner_loop_backward_pass(
                 node.bellman_function,
                 options.risk_measures[node_index],
                 used_trial_points,
-                items.bin_state_values,
+                items.bin_state,
                 items.duals,
                 items.supports,
                 items.probability,
@@ -539,7 +534,7 @@ function solve_all_children(
                 push!(items.probability, items.probability[sol_index])
                 push!(items.objectives, items.objectives[sol_index])
                 push!(items.belief, belief)
-                push!(items.bin_state_values, items.bin_state_values[sol_index])
+                push!(items.bin_state, items.bin_state[sol_index])
             else
                 # Update belief state, etc.
                 if belief_state !== nothing
@@ -577,7 +572,7 @@ function solve_all_children(
                 push!(items.probability, child.probability * noise.probability)
                 push!(items.objectives, subproblem_results.objective)
                 push!(items.belief, belief)
-                push!(items.bin_state_values, subproblem_results.bin_state_values)
+                push!(items.bin_state, subproblem_results.bin_state)
                 items.cached_solutions[(child.term, noise.term)] = length(items.duals)
                 #TODO: Maybe add binary precision
             end
@@ -660,7 +655,7 @@ function solve_subproblem_backward(
     # PREPARE ACTUAL BACKWARD PASS METHOD BY DEREGULARIZATION
     ############################################################################
     deregularize_backward!(node, linearizedSubproblem)
-    @infiltrate
+    #@infiltrate
 
     # # PRIMAL SOLUTION
     # ############################################################################
@@ -688,10 +683,10 @@ function solve_subproblem_backward(
     if require_duals
         lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers)
         dual_values = lagrangian_results.dual_values
-        bin_state_values = lagrangian_results.bin_state_values
+        bin_state = lagrangian_results.bin_state
     else
         dual_values = Dict{Symbol,Float64}()
-        bin_state_values = Dict{Symbol,Float64}()
+        bin_state = Dict{Symbol,BinaryState}()
     end
     @infiltrate
 
@@ -704,7 +699,7 @@ function solve_subproblem_backward(
     changeToOriginalSpace!(node, linearizedSubproblem, state)
     return (
         duals = dual_values,
-        bin_state_values = bin_state_values,
+        bin_state = bin_state,
         objective = solver_obj
     )
 end
@@ -719,7 +714,7 @@ function get_dual_variables_backward(
 
     # storages for return of dual values and binary state values (trial point)
     dual_values = Dict{Symbol,Float64}()
-    bin_state_values = Dict{Symbol, Float64}()
+    bin_state = Dict{Symbol, BinaryState}()
 
     # TODO implement smart choice for initial duals
     number_of_states = length(node.ext[:backward_data][:bin_states])
@@ -728,7 +723,7 @@ function get_dual_variables_backward(
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
-    integrality_handler = SDDP.SDDiP(iteration_limit = 100, atol = 1e-8, rtol = 1e-8)
+    integrality_handler = SDDP.SDDiP(iteration_limit = 100, atol = 1e-5, rtol = 1e-5)
     integrality_handler = SDDP.update_integrality_handler!(integrality_handler, appliedSolvers.MILP, number_of_states)
     node.ext[:lagrange] = integrality_handler
 
@@ -751,7 +746,7 @@ function get_dual_variables_backward(
         # KELLEY WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################
         kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
-        @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
+        @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
 
         # if one of the dual variables exceeds the bounds (e.g. in case of an
         # discontinuous value function), use bounded version of Kelley's method
@@ -766,24 +761,30 @@ function get_dual_variables_backward(
         ########################################################################
         if boundCheck == false
             kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
-            @assert isapprox(solver_obj, kelley_obj, atol = 1e-8, rtol = 1e-8)
+            @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         end
 
-        @infiltrate
+        #@infiltrate
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
         rethrow(e)
     end
+    #@infiltrate
 
     for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
         # TODO (maybe) change dual signs inside kelley to match LP duals
         dual_values[name] = -dual_vars[i]
-        bin_state_values[name] = integrality_handler.old_rhs[i]
+
+        value = integrality_handler.old_rhs[i]
+        x_name = node.ext[:backward_data][:bin_x_names][name]
+        k = node.ext[:backward_data][:bin_k][name]
+        bin_state[name] = BinaryState(value, x_name, k)
     end
+    #@infiltrate
 
     return (
         dual_values=dual_values,
-        bin_state_values=bin_state_values
+        bin_state=bin_state
     )
 end
 
@@ -1024,24 +1025,24 @@ function inner_loop_forward_sigma_test(
         push!(sampled_states, incoming_state_value)
 
     end
-    if terminated_due_to_cycle
-        # Get the last node in the scenario.
-        final_node_index = scenario_path[end][1]
-        # We terminated due to a cycle. Here is the list of possible starting
-        # states for that node:
-        starting_states = options.starting_states[final_node_index]
-        # We also need the incoming state variable to the final node, which is
-        # the outgoing state value of the last node:
-        incoming_state_value = sampled_states[end]
-        # If this incoming state value is more than δ away from another state,
-        # add it to the list.
-        if distance(starting_states, incoming_state_value) >
-           options.cycle_discretization_delta
-            push!(starting_states, incoming_state_value)
-        end
-    end
+    # if terminated_due_to_cycle
+    #     # Get the last node in the scenario.
+    #     final_node_index = scenario_path[end][1]
+    #     # We terminated due to a cycle. Here is the list of possible starting
+    #     # states for that node:
+    #     starting_states = options.starting_states[final_node_index]
+    #     # We also need the incoming state variable to the final node, which is
+    #     # the outgoing state value of the last node:
+    #     incoming_state_value = sampled_states[end]
+    #     # If this incoming state value is more than δ away from another state,
+    #     # add it to the list.
+    #     if distance(starting_states, incoming_state_value) >
+    #        options.cycle_discretization_delta
+    #         push!(starting_states, incoming_state_value)
+    #     end
+    # end
 
-    @infiltrate
+    #@infiltrate
 
     # ===== End: drop off starting state if terminated due to cycle =====
     return (

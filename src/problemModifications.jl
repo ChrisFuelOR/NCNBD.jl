@@ -107,6 +107,8 @@ function changeToBinarySpace!(
     #bw_data[:bin_variables] = JuMP.VariableRef[]
     bw_data[:bin_constraints] = JuMP.ConstraintRef[]
     bw_data[:bin_states] = Dict{Symbol,JuMP.VariableRef}()
+    bw_data[:bin_x_names] = Dict{Symbol,Symbol}()
+    bw_data[:bin_k] = Dict{Symbol,Int64}()
 
     number_of_states = 0
 
@@ -159,6 +161,8 @@ function setup_state_backward(
         # store in list for later access and deletion
         sym_name = Symbol(JuMP.name(binary_var))
         bw_data[:bin_states][sym_name] = binary_var
+        bw_data[:bin_x_names][sym_name] = state_name
+        bw_data[:bin_k][sym_name] = 0
 
         # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
         ####################################################################
@@ -210,11 +214,14 @@ function setup_state_backward(
                 base_name = "bin_" * name,
             )
             subproblem[:binary_vars] = binary_vars
+
             # store in list for later access and deletion
             for i in 1:num_vars
                #push!(bw_data[:bin_variables], binary_vars[i])
                sym_name = Symbol(JuMP.name(binary_vars[i]))
                bw_data[:bin_states][sym_name] = binary_vars[i]
+               bw_data[:bin_x_names][sym_name] = state_name
+               bw_data[:bin_k][sym_name] = i
            end
 
             # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
@@ -275,6 +282,8 @@ function setup_state_backward(
                 sym_name = Symbol(JuMP.name(binary_vars[i]))
                 # Store binary state reference for later
                 bw_data[:bin_states][sym_name] = binary_vars[i]
+                bw_data[:bin_x_names][sym_name] = state_name
+                bw_data[:bin_k][sym_name] = i
             end
             subproblem[:binary_vars] = binary_vars
 

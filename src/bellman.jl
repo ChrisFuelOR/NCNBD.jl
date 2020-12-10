@@ -158,7 +158,7 @@ function refine_bellman_function(
     bellman_function::BellmanFunction,
     risk_measure::SDDP.AbstractRiskMeasure,
     used_trial_points::Dict{Symbol,Float64},
-    bin_state_values::Vector{Dict{Symbol,Float64}},
+    bin_states::Vector{Dict{Symbol,BinaryState}},
     dual_variables::Vector{Dict{Symbol,Float64}},
     noise_supports::Vector,
     nominal_probability::Vector{Float64},
@@ -170,7 +170,7 @@ function refine_bellman_function(
     length(noise_supports) ==
     length(nominal_probability) ==
     length(objective_realizations) ==
-    length(bin_state_values)
+    length(bin_states)
     # Preliminaries that are common to all cut types.
     risk_adjusted_probability = similar(nominal_probability)
     offset = SDDP.adjust_probability(
@@ -188,7 +188,7 @@ function refine_bellman_function(
             node,
             node_index,
             used_trial_points,
-            bin_state_values,
+            bin_states,
             risk_adjusted_probability,
             objective_realizations,
             dual_variables,
@@ -218,7 +218,7 @@ function _add_average_cut(
     node::SDDP.Node,
     node_index::Int64,
     used_trial_points::Dict{Symbol,Float64},
-    bin_state_values::Vector{Dict{Symbol,Float64}},
+    bin_states::Vector{Dict{Symbol,BinaryState}},
     risk_adjusted_probability::Vector{Float64},
     objective_realizations::Vector{Float64},
     dual_variables::Vector{Dict{Symbol,Float64}},
@@ -228,12 +228,12 @@ function _add_average_cut(
 )
 
     N = length(risk_adjusted_probability)
-    @assert N == length(objective_realizations) == length(dual_variables) == length(bin_state_values)
-    bin_state_values = bin_state_values[1]
+    @assert N == length(objective_realizations) == length(dual_variables) == length(bin_states)
+    bin_states = bin_states[1]
 
     # Calculate the expected intercept and dual variables with respect to the
     # risk-adjusted probability distribution.
-    πᵏ = Dict(key => 0.0 for key in keys(bin_state_values))
+    πᵏ = Dict(key => 0.0 for key in keys(bin_states))
     θᵏ = offset
     #@infiltrate
     for i = 1:length(objective_realizations)
@@ -259,7 +259,7 @@ function _add_average_cut(
         node.ext[:lin_bellman_function].global_theta,
         θᵏ,
         πᵏ,
-        bin_state_values,
+        bin_states,
         used_trial_points,
         obj_y,
         belief_y,
@@ -268,7 +268,7 @@ function _add_average_cut(
         iteration
     )
 
-    return (theta = θᵏ, pi = πᵏ, x = bin_state_values, obj_y = obj_y, belief_y = belief_y)
+    return (theta = θᵏ, pi = πᵏ, λ = bin_states, obj_y = obj_y, belief_y = belief_y)
 end
 
 
@@ -279,7 +279,7 @@ function _add_cut(
     V_lin::NonConvexApproximation,
     θᵏ::Float64,
     πᵏ::Dict{Symbol,Float64},
-    λᵏ::Dict{Symbol,Float64},
+    λᵏ::Dict{Symbol,BinaryState},
     xᵏ::Dict{Symbol,Float64},
     obj_y::Union{Nothing,NTuple{N,Float64}},
     belief_y::Union{Nothing,Dict{T,Float64}},
@@ -289,19 +289,19 @@ function _add_cut(
     cut_selection::Bool = false
 ) where {N,T}
 
-    @infiltrate
+    #@infiltrate
     # CORRECT INTERCEPT
     ############################################################################
     for (key, λ) in λᵏ
-        θᵏ -= πᵏ[key] * λᵏ[key]
+        θᵏ -= πᵏ[key] * λᵏ[key].value
     end
-    @infiltrate
+    #@infiltrate
 
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
-    #TODO: Should we add λᵏ? Actually, this is information is not required.
-    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, binaryPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
-    @infiltrate
+    #TODO: Should we add λᵏ? Actually, this information is not required.
+    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, λᵏ, binaryPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
+    #@infiltrate
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
     ############################################################################
@@ -316,7 +316,7 @@ function _add_cut(
         push!(V.cut_oracle.cuts, cut)
         push!(V_lin.cut_oracle.cuts, cut)
     end
-    @infiltrate
+    #@infiltrate
     return
 end
 
@@ -345,6 +345,9 @@ function add_cut_constraints_to_models(
     # All other constraints and variables are introduced per state component
     gamma = JuMP.VariableRef[]
     gamma_lin = JuMP.VariableRef[]
+    allCoefficients = Float64[]
+    allCoefficients_lin = Float64[]
+
     duals_so_far = 0
     duals_lin_so_far = 0
 
@@ -387,8 +390,40 @@ function add_cut_constraints_to_models(
 
             # Call function to add projection constraints and variables to
             # model and model_Lin
-            duals_so_far = add_cut_projection_to_model!(model, V.states[name], cut.coefficients, gamma, iteration, K, epsilon, sigma, cut.cutVariables, cut.cutConstraints, i, duals_so_far, Umax)
-            duals_lin_so_far = add_cut_projection_to_model!(model_lin, V_lin.states[name], cut.coefficients, gamma_lin, iteration, K, epsilon, sigma, cut.cutVariables_lin, cut.cutConstraints_lin, i, duals_lin_so_far, Umax)
+            duals_so_far = add_cut_projection_to_model!(
+                                model,
+                                V.states[name],
+                                name,
+                                cut.coefficients,
+                                cut.binary_state,
+                                gamma,
+                                allCoefficients,
+                                iteration,
+                                K,
+                                epsilon,
+                                sigma,
+                                cut.cutVariables,
+                                cut.cutConstraints,
+                                i,
+                                duals_so_far,
+                                Umax)
+            duals_lin_so_far = add_cut_projection_to_model!(
+                                model_lin,
+                                V_lin.states[name],
+                                name,
+                                cut.coefficients,
+                                cut.binary_state,
+                                gamma_lin,
+                                allCoefficients_lin,
+                                iteration,
+                                K,
+                                epsilon,
+                                sigma,
+                                cut.cutVariables_lin,
+                                cut.cutConstraints_lin,
+                                i,
+                                duals_lin_so_far,
+                                Umax)
 
         end
     end
@@ -407,17 +442,16 @@ function add_cut_constraints_to_models(
     #     end
     # end
 
+    #@infiltrate
     @assert (size(gamma, 1) == size(collect(values(cut.coefficients)), 1)
                            == duals_so_far
                            == duals_lin_so_far
-                           == size(gamma_lin, 1))
+                           == size(gamma_lin, 1)
+                           == size(allCoefficients, 1)
+                           == size(allCoefficients_lin, 1)
+                           )
                            # == size(collect(values(λᵏ)), 1)
     number_of_duals = size(gamma, 1)
-
-    allCoefficients = Vector{Float64}(undef, number_of_duals)
-    for (i, (name, value)) in enumerate(cut.coefficients)
-        allCoefficients[i] = value
-    end
 
     # TO ORIGINAL MODEL
     ############################################################################
@@ -457,8 +491,11 @@ end
 function add_cut_projection_to_model!(
     model::JuMP.Model,
     state_comp::JuMP.VariableRef,
+    state_name::Symbol,
     coefficients::Dict{Symbol,Float64},
+    binary_state::Dict{Symbol,BinaryState},
     gamma::Vector{JuMP.VariableRef},
+    allCoefficients::Vector{Float64},
     iteration::Int64,
     K::Int64,
     epsilon::Float64,
@@ -499,11 +536,24 @@ function add_cut_projection_to_model!(
     # ADD KKT CONSTRAINT
     ####################################################################
     relatedCoefficients = Vector{Float64}(undef, K)
+
     for (i, (name, value)) in enumerate(coefficients)
-        if i >= duals_so_far && i <= duals_so_far + K
-            relatedCoefficients[duals_so_far+i] = value
+        if binary_state[name].x_name == state_name
+            index = binary_state[name].k
+            relatedCoefficients[index] = coefficients[name]
         end
     end
+    append!(allCoefficients, relatedCoefficients)
+
+    # @infiltrate
+    # for (i, (name, value)) in enumerate(coefficients)
+    #     @infiltrate
+    #     if i >= duals_so_far && i <= duals_so_far + K
+    #         relatedCoefficients[duals_so_far+i] = value
+    #     end
+    # end
+
+    #@infiltrate
 
     kkt_constraints = JuMP.@constraint(
         model,
@@ -519,7 +569,7 @@ function add_cut_projection_to_model!(
     # new method for Big-M, since earlier method was probably not correct
     bigM = 0
     for k in 1:K
-        candidate = relatedCoefficients[k] / (2^(k-1) * epsilon)
+        candidate = Umax * (sigma + relatedCoefficients[k] / (2^(k-1) * epsilon))
         if bigM < candidate
             bigM = candidate
         end
