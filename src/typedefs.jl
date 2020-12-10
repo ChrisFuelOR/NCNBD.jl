@@ -108,14 +108,15 @@ end
 
 # Struct to store information on a nonlinear cut
 struct NonlinearCut
-    intercept   ::  Float64 # intercept of the cut (Lagrangian function value)
-    coefficients  ::  Dict{Symbol,Float64} # optimal dual variables in binary space
-    trial_state  ::  Dict{Symbol,Float64} # point at which this cut was created
-    binary_precision :: Dict{Symbol,Float64} # binary precision at moment of creation
-    cutVariables :: Vector{JuMP.VariableRef}
-    cutConstraints :: Vector{JuMP.ConstraintRef}
-    cutVariables_lin :: Vector{JuMP.VariableRef}
-    cutConstraints_lin :: Vector{JuMP.ConstraintRef}
+    intercept::Float64 # intercept of the cut (Lagrangian function value)
+    coefficients::Dict{Symbol,Float64} # optimal dual variables in binary space
+    trial_state::Dict{Symbol,Float64} # point at which this cut was created
+    binary_state::Dict{Symbol,BinaryState} # point in binary space where cut was created
+    binary_precision::Dict{Symbol,Float64} # binary precision at moment of creation
+    cutVariables::Vector{JuMP.VariableRef}
+    cutConstraints::Vector{JuMP.ConstraintRef}
+    cutVariables_lin::Vector{JuMP.VariableRef}
+    cutConstraints_lin::Vector{JuMP.ConstraintRef}
     obj_y::Union{Nothing,NTuple{N,Float64} where {N}} # SDDP
     belief_y::Union{Nothing,Dict{T,Float64} where {T}} # SDDP
     non_dominated_count::Int # SDDP
@@ -141,7 +142,7 @@ struct OuterLoopIterationResult#{T}
 end
 
 # struct for inner loop iteration results
-struct InnerLoopIterationResult{T,S}
+mutable struct InnerLoopIterationResult{T,S}
     # pid
     lower_bound :: Float64
     upper_bound :: Float64 # should be renamed as cumulative_value as in SDDP if we solve stochastic problems
@@ -162,7 +163,7 @@ struct BackwardPassItems{T,U}
     probability::Vector{Float64}
     objectives::Vector{Float64}
     belief::Vector{Float64}
-    bin_state_values::Vector{Dict{Symbol,Float64}}
+    bin_state::Vector{Dict{Symbol,BinaryState}}
     #TODO: We could also store sigma and binary precision here possibly
     function BackwardPassItems(T, U)
         return new{T,U}(
