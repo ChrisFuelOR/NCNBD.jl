@@ -72,7 +72,7 @@ function _kelley(
             JuMP.set_upper_bound(x[i], dual_bound)
         end
     end
-    @infiltrate
+    #@infiltrate
 
     # CUTTING-PLANE METHOD
     ############################################################################
@@ -85,7 +85,7 @@ function _kelley(
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
 
-        @infiltrate
+        #@infiltrate
 
         # ADD CUTTING PLANE
         ########################################################################
@@ -122,7 +122,7 @@ function _kelley(
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
         # More reliable than checking whether subgradient is zero
-        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol)
+        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
