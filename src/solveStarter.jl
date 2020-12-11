@@ -356,7 +356,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################
-    status = master_loop_ncbd(parallel_scheme, model, options, algoParams, appliedSolvers)
+    status = master_loop_ncnbd(parallel_scheme, model, options, algoParams, appliedSolvers)
     return status
 
 end
@@ -371,7 +371,8 @@ Solves the `model` (MILP) using the inner loop of NCNBD in a serial scheme.
 function solve_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-    status = master_loop_ncbd_inner(parallel_scheme, model, options, algoParams)
+    status = master_loop_ncnbd_inner(parallel_scheme, model, options, algoParams, appliedSolvers)
+
     return status
 
     # TODO: Hier muss man linearizedSubproblem = subproblem setzen.
@@ -402,7 +403,7 @@ end
 Outer loop function of NCNBD.
 """
 
-function master_loop_ncbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
+function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     #previousSolution = nothing
@@ -465,17 +466,50 @@ end
 Inner loop function of NCNBD, if only inner loop is used.
 """
 
-function master_loop_ncbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
+function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
+
+    previousSolution = nothing
+
     while true
-        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers)
-        log_iteration(options, options.log_outer)
+        # start an inner loop
+        #@infiltrate
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution)
+        # logging
+        log_iteration(options, options.log_inner)
         if result_inner.has_converged
-            #TODO
+            sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
 
+            upper_bound_non_reg = sigma_test_results.cumulative_value
+            upper_bound_reg = result_inner.upper_bound
 
-            return result_inner.status
+            if isapprox(upper_bound_non_reg - upper_bound_reg, 0)
+                # by solving the regularized problem, approximately the real MILP has been solved
+
+                # update information for MINLP
+                result_inner.upper_bound = upper_bound_non_reg
+                result_inner.current_sol = sigma_test_results.sampled_states
+
+                # return all results here to keep them accessible in outer pass
+                #@infiltrate
+                return result_inner
+
+            else
+                # increase sigma
+                algoParams.sigma = algoParams.sigma * 5
+
+            end
+            # return all results here to keep them accessible in outer pass
+            # return result_inner
+        else
+            if result_inner.upper_bound < result_inner.lower_bound
+                # increase sigma
+                algoParams.sigma = algoParams.sigma * 5
+            end
+
         end
+
+        previousSolution = result_inner.current_sol
     end
 end
 
