@@ -56,7 +56,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     ############################################################################
     has_converged, status = convergence_test(model, options.log_outer, options.stopping_rules, :outer)
 
-    #@infiltrate
+    @infiltrate
 
     # RETURN RESULTS
     ############################################################################
@@ -229,7 +229,7 @@ function solve_subproblem_forward_outer(
     stage_objective = SDDP.stage_objective_value(node.stage_objective)
     objective = JuMP.objective_value(node.subproblem)
 
-    #@infiltrate
+    @infiltrate
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state

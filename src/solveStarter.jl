@@ -412,7 +412,7 @@ function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
     #previousSolution = nothing
 
     while true
-        #@infiltrate
+        @infiltrate
         result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
         log_iteration(options, options.log_inner)
         if result_outer.has_converged
