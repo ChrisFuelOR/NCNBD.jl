@@ -352,7 +352,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
     end
 
-    @infiltrate
+    #@infiltrate
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################
