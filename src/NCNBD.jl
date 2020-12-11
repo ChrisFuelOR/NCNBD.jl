@@ -8,7 +8,7 @@ import PiecewiseLinearOpt
 import Revise
 import TimerOutputs
 import GAMS
-import SCIP
+#import SCIP
 import MathOptInterface
 import Distances
 import LinearAlgebra
