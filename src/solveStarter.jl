@@ -334,6 +334,9 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 oracle.cut_oracle.deletion_minimum = deletion_minimum
             end
 
+            JuMP.set_silent(node.subproblem)
+            JuMP.set_silent(node.ext[:linearizedSubproblem])
+
         end
     end
 

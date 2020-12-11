@@ -43,6 +43,7 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
         #JuMP.set_silent(estimationProblem)
         #JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
+        JuMP.set_silent(estimationProblem)
 
         # Determine Piecewise Linear Approximation
         piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
