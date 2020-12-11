@@ -270,9 +270,6 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         node.ext[:linSubproblem] = node.subproblem.ext[:linSubproblem]
         node.subproblem.ext[:linSubproblem] = nothing
 
-        #JuMP.set_silent(node.subproblem)
-        #JuMP.set_silent(node.ext[:linSubproblem])
-
         # Set info for x_in (taking bounds, binary, integer info from previous stage's x_out)
         #-----------------------------------------------------------------------
         if node_index > 1
@@ -334,8 +331,8 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 oracle.cut_oracle.deletion_minimum = deletion_minimum
             end
 
-            JuMP.set_silent(node.subproblem)
-            JuMP.set_silent(node.ext[:linSubproblem])
+            #JuMP.set_silent(node.subproblem)
+            #JuMP.set_silent(node.ext[:linSubproblem])
 
         end
     end
