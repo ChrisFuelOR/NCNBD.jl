@@ -554,6 +554,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             e = linearizedSubproblem[:e]
 
             number_of_simplices = size(nlFunction.triangulation.simplices, 1)
+            @infiltrate
             relax_1 = JuMP.@constraint(linearizedSubproblem, -sum(nlFunction.triangulation.simplices[i].maxOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
             relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
             push!(nlFunction.triangulation.plrConstraints, relax_1)
