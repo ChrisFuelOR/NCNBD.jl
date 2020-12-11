@@ -335,7 +335,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             end
 
             JuMP.set_silent(node.subproblem)
-            JuMP.set_silent(node.ext[:linearizedSubproblem])
+            JuMP.set_silent(node.ext[:linSubproblem])
 
         end
     end
