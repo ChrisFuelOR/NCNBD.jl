@@ -41,7 +41,7 @@ function discontExample()
             # ------------------------------------------------------------------
             for problem in [subproblem, linearizedSubproblem]
                 b = problem[:b]
-                JuMP.@constraint(problem, b.out == 1.1 + b.in)
+                JuMP.@constraint(problem, b.out == 1.2 + b.in)
             end
 
             # DEFINE STAGE OBJECTIVE
@@ -92,7 +92,7 @@ function discontExample()
 
     epsilon_outerLoop = 0.01
     epsilon_innerLoop = 0.001
-    binaryPrecision = Dict(:b => 2/15)
+    binaryPrecision = Dict(:b => 2/63)
     plaPrecision = [0, 0]
     sigma = [0.0, 1.0]
     sigma_counter = 5

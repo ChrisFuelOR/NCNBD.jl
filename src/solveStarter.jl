@@ -206,7 +206,7 @@ function solve(
 
     status = :not_solved
     try
-        if counter_nonlinear_functions > 0
+        if counter_nonlinear_functions >= 0 #TODO later
             # call ordinary NC-NBD with outer and inner loop
             status = solve_ncnbd(parallel_scheme, model, sddpOptions, algoParams, initialAlgoParams, appliedSolvers)
         elseif counter_integer_variables > 0
@@ -352,7 +352,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
     end
 
-    ##@infiltrate
+    @infiltrate
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################

@@ -139,8 +139,8 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         #set_optimizer(node.subproblem, SCIP.Optimizer)
 
         set_optimizer(node.subproblem, appliedSolvers.MINLP)
-        #JuMP.set_optimizer_attribute(node.subproblem, "Solver", "SCIP")
-        #set_optimizer_attribute(model, GAMS.ModelType(), "MINLP")
+        JuMP.set_optimizer_attribute(node.subproblem, "Solver", "SCIP")
+        set_optimizer_attribute(model, GAMS.ModelType(), "MINLP")
 
         # SUBPROBLEM SOLUTION
         ############################################################################

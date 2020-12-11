@@ -809,3 +809,24 @@ Solver: serial mode
         2          5    2.548611e+00   2.284722e+00   1.813080e+02
         2          6    2.525463e+00   2.300000e+00   3.793500e+02
         2          7    2.500000e+00   2.318056e+00   6.130200e+02
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
