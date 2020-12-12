@@ -520,9 +520,10 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
                     deleteat!(nlFunction.triangulation.simplices, simplex_index)
                     # adapt the indices of the new simplices accordingly
                     @infiltrate
-                    for new_index in new_simplex_indices_list
+                    for i in size(new_simplex_indices_list,1)
+                        new_index = new_simplex_indices_list[i]
                         if new_index > simplex_index
-                            new_index -= 1
+                            new_simplex_indices_list[i] -= 1
                         end
                     end
                     @infiltrate
