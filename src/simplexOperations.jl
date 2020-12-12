@@ -12,12 +12,12 @@ function divide_simplex_by_longest_edge!(simplex_index::Int64, triangulation::NC
     dimension = size(simplex.vertices, 1) - 1
 
     if dimension == 1
-        new_simplices = divide_simplex_by_longest_edge_1D!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
+        new_simplex_indices = divide_simplex_by_longest_edge_1D!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
     elseif dimension == 2
-        new_simplices = divide_simplex_by_longest_edge_2D!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
+        new_simplex_indices = divide_simplex_by_longest_edge_2D!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
     end
 
-    return new_simplices
+    return new_simplex_indices
 end
 
 function divide_simplex_by_longest_edge_1D!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
@@ -43,10 +43,8 @@ function divide_simplex_by_longest_edge_1D!(simplex_index::Int64, triangulation:
     new_simplices[2].vertice_values = [func_value, simplex.vertice_values[2]]
     push!(triangulation.simplices, new_simplices[2])
 
-    # delete old simplex
-    deleteat!(triangulation.simplices, simplex_index)
-
-    return new_simplices
+    new_simplex_indices = [size(triangulation.simplices, 1)-1, size(triangulation.simplices, 1)]
+    return new_simplex_indices
 end
 
 function divide_simplex_by_longest_edge_2D!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
@@ -104,10 +102,9 @@ function divide_simplex_by_longest_edge_2D!(simplex_index::Int64, triangulation:
     new_simplices[1].vertice_values = [simplex.vertice_values[non_edge_vertex], simplex.vertice_values[longest_edge[2]], func_value]
     push!(triangulation.simplices, new_simplices[2])
 
-    # delete old simplex
-    deleteat!(triangulation.simplices, simplex_index)
+    new_simplex_indices = [size(triangulation.simplices, 1)-1, size(triangulation.simplices, 1)]
+    return new_simplex_indices
 
-    return new_simplices
 end
 
 function pointInTriangle(vertices::Array{Float64,2}, point::Vector{Float64})

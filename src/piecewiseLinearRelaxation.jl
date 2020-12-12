@@ -497,7 +497,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             end
 
             # store new simplices
-            new_simplices_list = NCNBD.Simplex[]
+            new_simplex_indices_list = Int64[]
 
             # Iterate over all simplices of current triangulation
             for simplex_index in 1:size(nlFunction.triangulation.simplices,1)
@@ -513,9 +513,16 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
                 # if true, then refine this simplex
                 if interval_check
                     # divide simplex by longest edge and construct two new ones
-                    new_simplices = NCNBD.divide_simplex_by_longest_edge!(simplex_index, nlFunction.triangulation)
+                    new_simplex_indices = NCNBD.divide_simplex_by_longest_edge!(simplex_index, nlFunction.triangulation)
                     # append to list of new simplices
-                    append!(new_simplices_list, new_simplices)
+                    append!(new_simplex_indices_list, new_simplex_indices)
+                    # delete old simplex
+                    deleteat!(nlFunction.triangulation.simplices, simplex_index)
+                    # adapt the indices of the new simplices accordingly
+                    for new_index in new_simplex_indices_list
+                        if new_index > simplex_index
+                            new_index -= 1
+                    end
 
                 end
             end
@@ -544,7 +551,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             ####################################################################
             # Note that this is only required for the new simplices here,
             # since the other approximations essentially did not change
-            for simplex_index in 1:size(new_simplices_list, 1)
+            for simplex_index in new_simplices_list
                 @infiltrate
                 determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
             end
