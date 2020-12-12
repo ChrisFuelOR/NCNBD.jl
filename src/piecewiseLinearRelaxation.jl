@@ -400,7 +400,7 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     #println("Max overestimation error")
     #println(estimationProblem)
 
-    #@infiltrate
+    @infiltrate
 
     JuMP.optimize!(estimationProblem)
     # TODO: Check if globally optimal solution
@@ -439,6 +439,9 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     # println("Max underestimation error")
     # println(estimationProblem)
 
+    @infiltrate
+
+
     JuMP.optimize!(estimationProblem)
     # TODO: Check if globally optimal solution
     underestimation = JuMP.objective_value(estimationProblem)
@@ -453,6 +456,8 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     for l = 1:number_log
         JuMP.unfix(z[l])
     end
+
+    @infiltrate
 
     # STORE ESTIMATION ERRORS
     ############################################################################
@@ -540,6 +545,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # Note that this is only required for the new simplices here,
             # since the other approximations essentially did not change
             for simplex_index in 1:size(new_simplices_list, 1)
+                @infiltrate
                 determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
             end
 
