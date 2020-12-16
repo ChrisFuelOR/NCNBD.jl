@@ -76,6 +76,7 @@ mutable struct NonlinearFunction
     # refToNonlinearConstraint :: JuMP.ConstraintRef # just for allocation # not used anymore and does not work for add_NL_constraint
     variablesContained :: Vector{JuMP.VariableRef} # for getting bounds for Triangulation
     triangulation :: Union{Triangulation, Nothing} # to store related Triangulation
+    refineType :: Symbol #either :replace or :keep
     ext::Dict{Symbol,Any} # required to store solutions later
 
     function NonlinearFunction(
@@ -83,7 +84,8 @@ mutable struct NonlinearFunction
         nonlinfunc_exp::Any, #Function
         auxVariable::JuMP.VariableRef,
         #refToNonlinearConstraint::JuMP.ConstraintRef,
-        variablesContained::Vector{JuMP.VariableRef}
+        variablesContained::Vector{JuMP.VariableRef},
+        refineType::Symbol,
          )
         return new(
             nonlinfunc_eval,
@@ -92,11 +94,10 @@ mutable struct NonlinearFunction
             #refToNonlinearConstraint,
             variablesContained,
             nothing,
+            refineType,
             Dict{Symbol,Any}()
         )
     end
-
-
 end
 
 # struct for solvers to be used (maybe mutable)

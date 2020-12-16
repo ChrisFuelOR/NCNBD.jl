@@ -86,7 +86,7 @@ function thirdExample()
             # define nonlinearFunction struct for PLA
             x = linearizedSubproblem[:x]
             nonlinearAux = linearizedSubproblem[:nonlinearAux]
-            nlf = NCNBD.NonlinearFunction(nlf_eval, nlf_expr, nonlinearAux[1], [x.out])
+            nlf = NCNBD.NonlinearFunction(nlf_eval, nlf_expr, nonlinearAux[1], [x.out], :replace)
             push!(nonlinearFunctionList, nlf)
 
             # store in ext of subproblem
@@ -147,7 +147,7 @@ function thirdExample()
             # define nonlinearFunction struct for PLA
             y_loc = linearizedSubproblem[:y_loc]
             nonlinearAux = linearizedSubproblem[:nonlinearAux]
-            nlf = NCNBD.NonlinearFunction(nlf_eval, nlf_expr, nonlinearAux[1], [y_loc[2]])
+            nlf = NCNBD.NonlinearFunction(nlf_eval, nlf_expr, nonlinearAux[1], [y_loc[2]], :keep)
             push!(nonlinearFunctionList, nlf)
 
             # store in ext of subproblem

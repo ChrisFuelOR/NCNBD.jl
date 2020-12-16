@@ -534,9 +534,11 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
 
             # DELETE PREVIOUS PIECEWISE LINEAR APPROXIMATION
             ####################################################################
-            delete(linearizedSubproblem, nlFunction.triangulation.plrVariables)
-            for constraint in nlFunction.triangulation.plrConstraints
-                delete(linearizedSubproblem, constraint)
+            if nlFunction.refineType == :replace
+                delete(linearizedSubproblem, nlFunction.triangulation.plrVariables)
+                for constraint in nlFunction.triangulation.plrConstraints
+                    delete(linearizedSubproblem, constraint)
+                end
             end
             nlFunction.triangulation.plrVariables = JuMP.VariableRef[]
             nlFunction.triangulation.plrConstraints = JuMP.ConstraintRef[]
