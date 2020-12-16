@@ -161,8 +161,8 @@ function thirdExample()
     ############################################################################
     appliedSolvers = NCNBD.AppliedSolvers(GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer)
 
-    epsilon_outerLoop = 0.01
-    epsilon_innerLoop = 0.001
+    epsilon_outerLoop = 1e-5
+    epsilon_innerLoop = 1e-6
     binaryPrecision = Dict(:x => 0.5)
     plaPrecision = [2, 4]
     sigma = [0.0, 1.0]
