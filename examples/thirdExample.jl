@@ -159,7 +159,7 @@ function thirdExample()
 
     # SET-UP PARAMETERS
     ############################################################################
-    appliedSolvers = NCNBD.AppliedSolvers(Gurobi.Optimizer, Gurobi.Optimizer, GAMS.Optimizer)
+    appliedSolvers = NCNBD.AppliedSolvers(GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer)
 
     epsilon_outerLoop = 0.01
     epsilon_innerLoop = 0.001

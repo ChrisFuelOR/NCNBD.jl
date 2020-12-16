@@ -45,6 +45,8 @@ function _kelley(
 
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(appliedSolvers.MILP)
+    JuMP.set_optimizer_attribute(estimationProblem, "Solver", "Gurobi")
+    JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
     #JuMP.set_silent(approx_model)
 
     # Objective estimate and Lagrangian duals

@@ -186,9 +186,10 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
 
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
-        #set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
-        set_optimizer(linearizedSubproblem, GAMS.Optimizer)
+        set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
+        # set_optimizer(linearizedSubproblem, GAMS.Optimizer)
         JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", "Gurobi")
+        JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
 
         # SUBPROBLEM SOLUTION
         ############################################################################
@@ -997,9 +998,10 @@ function inner_loop_forward_sigma_test(
 
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
-        #set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
-        set_optimizer(linearizedSubproblem, GAMS.Optimizer)
+        set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
+        #set_optimizer(linearizedSubproblem, GAMS.Optimizer)
         JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", "Gurobi")
+        JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
 
         # SUBPROBLEM SOLUTION
         ############################################################################

@@ -41,7 +41,8 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         estimationProblem = JuMP.Model(appliedSolvers.MINLP)
         estimationProblem = JuMP.Model(GAMS.Optimizer)
         JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
-        #JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
+        JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
+        JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)  
         #JuMP.set_silent(estimationProblem)
 
         # Determine Piecewise Linear Approximation
@@ -400,8 +401,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     #println("Max overestimation error")
     #println(estimationProblem)
 
-    @infiltrate
-
     JuMP.optimize!(estimationProblem)
     # TODO: Check if globally optimal solution
     overestimation = JuMP.objective_value(estimationProblem)
@@ -439,8 +438,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     # println("Max underestimation error")
     # println(estimationProblem)
 
-    @infiltrate
-
 
     JuMP.optimize!(estimationProblem)
     # TODO: Check if globally optimal solution
@@ -456,8 +453,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     for l = 1:number_log
         JuMP.unfix(z[l])
     end
-
-    @infiltrate
 
     # STORE ESTIMATION ERRORS
     ############################################################################
@@ -519,14 +514,13 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
                     # delete old simplex
                     deleteat!(nlFunction.triangulation.simplices, simplex_index)
                     # adapt the indices of the new simplices accordingly
-                    @infiltrate
+
                     for i in 1:size(new_simplex_indices_list,1)
                         new_index = new_simplex_indices_list[i]
                         if new_index > simplex_index
                             new_simplex_indices_list[i] -= 1
                         end
                     end
-                    @infiltrate
 
                 end
             end
@@ -558,7 +552,6 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # Note that this is only required for the new simplices here,
             # since the other approximations essentially did not change
             for simplex_index in new_simplex_indices_list
-                @infiltrate
                 determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
             end
 
@@ -572,11 +565,12 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             e = linearizedSubproblem[:e]
 
             number_of_simplices = size(nlFunction.triangulation.simplices, 1)
-            @infiltrate
             relax_1 = JuMP.@constraint(linearizedSubproblem, -sum(nlFunction.triangulation.simplices[i].maxOverestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) <= e)
             relax_2 = JuMP.@constraint(linearizedSubproblem, sum(nlFunction.triangulation.simplices[i].maxUnderestimation * sum(λ[i,j] for j in 1:dimension+1) for i in 1:number_of_simplices) >= e)
             push!(nlFunction.triangulation.plrConstraints, relax_1)
             push!(nlFunction.triangulation.plrConstraints, relax_2)
+
+            @infiltrate
 
         end
     end
