@@ -830,3 +830,96 @@ re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
 Solver: serial mode
 
  Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+        1          1    9.611301e-01   9.611301e-01   2.470850e+02
+        1          1    9.611301e-01   9.611301e-01   2.470850e+02
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
