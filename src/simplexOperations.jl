@@ -95,11 +95,11 @@ function divide_simplex_by_longest_edge_2D!(simplex_index::Int64, triangulation:
     push!(triangulation.simplices, new_simplices[1])
 
     # second simplex
-    new_simplices[1] = NCNBD.Simplex(Array{Float64,2}(undef, 3, 2), Vector{Float64}(undef, 3), Inf, Inf)
-    new_simplices[1].vertices[1, :] = simplex.vertices[non_edge_vertex, :]
-    new_simplices[1].vertices[2, :] = simplex.vertices[longest_edge[2], :]
-    new_simplices[1].vertices[3, :] = [midpoint[1] midpoint[2]]
-    new_simplices[1].vertice_values = [simplex.vertice_values[non_edge_vertex], simplex.vertice_values[longest_edge[2]], func_value]
+    new_simplices[2] = NCNBD.Simplex(Array{Float64,2}(undef, 3, 2), Vector{Float64}(undef, 3), Inf, Inf)
+    new_simplices[2].vertices[1, :] = simplex.vertices[non_edge_vertex, :]
+    new_simplices[2].vertices[2, :] = simplex.vertices[longest_edge[2], :]
+    new_simplices[2].vertices[3, :] = [midpoint[1] midpoint[2]]
+    new_simplices[2].vertice_values = [simplex.vertice_values[non_edge_vertex], simplex.vertice_values[longest_edge[2]], func_value]
     push!(triangulation.simplices, new_simplices[2])
 
     new_simplex_indices = [size(triangulation.simplices, 1)-1, size(triangulation.simplices, 1)]
