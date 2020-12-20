@@ -181,7 +181,7 @@ function refine_bellman_function(
         objective_realizations,
         model.objective_sense == MOI.MIN_SENSE,
     )
-    #@infiltrate
+
     # The meat of the function.
     if bellman_function.cut_type == SDDP.SINGLE_CUT
         return _add_average_cut(
@@ -235,7 +235,7 @@ function _add_average_cut(
     # risk-adjusted probability distribution.
     πᵏ = Dict(key => 0.0 for key in keys(bin_states))
     θᵏ = offset
-    #@infiltrate
+
     for i = 1:length(objective_realizations)
         p = risk_adjusted_probability[i]
         θᵏ += p * objective_realizations[i]
@@ -295,7 +295,7 @@ function _add_cut(
     for (key, λ) in λᵏ
         θᵏ -= πᵏ[key] * λᵏ[key].value
     end
-    #@infiltrate
+    @infiltrate
 
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
@@ -339,9 +339,9 @@ function add_cut_constraints_to_models(
     @assert model_lin == node.ext[:linSubproblem]
 
     # In gamma, all lambda (or here gamma) variables are stored,
-    # such that they can be multiplied with the cut_coefficients which relate
-    # to the lambdas, but cannot be matched with the original states anymore
-    # as they are written into one vector
+    # such that they can be multiplied with the cut_coefficients (the coefficients
+    # relate to the lambdas, but cannot be directly matched with the original states anymore
+    # as they are written into one vector)
     # All other constraints and variables are introduced per state component
     gamma = JuMP.VariableRef[]
     gamma_lin = JuMP.VariableRef[]
@@ -374,6 +374,17 @@ function add_cut_constraints_to_models(
 
             push!(gamma_lin, V_lin.states[name])
             duals_lin_so_far += 1
+
+            # Determine correct coefficient and add it to allCoefficients
+            # Maybe possible with where-statement
+            relatedCoefficient = 0.0
+            for (i, (bin_name, value)) in enumerate(cut.coefficients)
+                if cut.binary_state[bin_name].x_name == name
+                    relatedCoefficient = cut.coefficients[bin_name]
+                end
+            end
+            push!(allCoefficients, relatedCoefficient)
+            push!(allCoefficients_lin, relatedCoefficient)
 
         else
             if !isfinite(state_comp.info.out.upper_bound) || !state_comp.info.out.has_ub
@@ -442,7 +453,7 @@ function add_cut_constraints_to_models(
     #     end
     # end
 
-    #@infiltrate
+    @infiltrate
     @assert (size(gamma, 1) == size(collect(values(cut.coefficients)), 1)
                            == duals_so_far
                            == duals_lin_so_far
@@ -521,7 +532,7 @@ function add_cut_projection_to_model!(
     append!(cutVariables, ν)
     append!(cutVariables, μ)
     push!(cutVariables, η)
-    append!(cutVariables, γ)
+    #append!(cutVariables, γ)
     append!(cutVariables, w)
     append!(cutVariables, u)
 

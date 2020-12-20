@@ -162,7 +162,7 @@ function setup_state_backward(
         sym_name = Symbol(JuMP.name(binary_var))
         bw_data[:bin_states][sym_name] = binary_var
         bw_data[:bin_x_names][sym_name] = state_name
-        bw_data[:bin_k][sym_name] = 0
+        bw_data[:bin_k][sym_name] = 1
 
         # INTRODUCE BINARY EXPANSION CONSTRAINT TO THE PROBLEM
         ####################################################################
@@ -336,6 +336,7 @@ function changeToOriginalSpace!(
     ############################################################################
     for (state_name, value) in state
         state_comp = node.ext[:lin_states][state_name]
+        @infiltrate
         JuMP.delete_lower_bound(state_comp.in)
         JuMP.delete_upper_bound(state_comp.in)
 

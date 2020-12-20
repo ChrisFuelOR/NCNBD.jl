@@ -451,7 +451,7 @@ function inner_loop_backward_pass(
                 used_trial_points[name] = approx_state_value
             end
 
-            #@infiltrate
+            @infiltrate
 
             # REFINE BELLMAN FUNCTION BY ADDING CUTS
             ####################################################################
