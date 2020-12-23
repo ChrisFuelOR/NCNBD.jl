@@ -8,10 +8,50 @@ using GAMS
 using Infiltrator
 
 
+struct Generator
+    comm_ini::Int
+    gen_ini::Float64
+    pmax::Float64
+    pmin::Float64
+    fuel_cost::Float64
+    om_cost::Float64
+    su_cost::Float64
+    sd_cost::Float64
+    ramp_up::Float64
+    ramp_dw::Float64
+    a::Float64
+    b::Float64
+    c::Float64
+end
+
+
 function unitCommitment()
 
+    generators = [
+        Generator(0, 0.0, 200.0, 40.0, 18.0, 2.0, 42.6, 42.6, 40.0, 40.0, -2.375, 1025.0, 0.0),
+        Generator(0, 0.0, 320.0, 64.0, 15.0, 4.0, 50.6, 50.6, 64.0, 64.0, -2.75, 1800.0, 0.0),
+        Generator(0, 0.0, 150.0, 30.0, 17.0, 2.0, 57.1, 57.1, 30.0, 30.0, -3.2, 1025.0, 0.0),
+        Generator(1, 400.0, 520.0, 104.0, 13.2, 4.0, 47.1, 47.1, 104.0, 104.0, -1.5, 1800.0, 0.0),
+        Generator(1, 280.0, 280.0, 56.0, 14.3, 4.0, 56.9, 56.9, 56.0, 56.0, -3, 1800.0, 0.0),
+        Generator(0, 0.0, 80.0, 30.0, 40.2, 4.0, 141.5, 141.5, 30.0, 30.0, -6.8, 1200.0, 0.0),
+        Generator(1, 120.0, 120.0, 24.0, 17.1, 2.0, 113.5, 113.5, 24.0, 24.0, -4, 1025.0, 0.0),
+        Generator(1, 110.0, 100.0, 22.0, 17.3, 2.0, 42.6, 42.6, 22.0, 22.0, -4.75, 1025.0, 0.0),
+        Generator(0, 0.0, 80.0, 16.0, 59.4, 4.0, 50.6, 50.6, 16.0, 16.0, -6.0, 1200.0, 0.0),
+        Generator(0, 0.0, 60.0, 12.0, 19.5, 2.0, 57.1, 57.1, 12.0, 12.0, -8.5, 1025.0, 0.0),
+    ]
+    num_of_generators = size(generators,1)
+
+    demand_penalty = 5e4
+    emission_price = 0.02 #0.02 €/kg = 20 €/t
+
+    demand = [
+            883 915 1010 1149 1236 1331 1397 1419
+            1455 1455 1441 1419 1397 1339 1368 1339
+            1236 1105 1038 959 922 885 915 834
+            ]
+
     model = SDDP.LinearPolicyGraph(
-        stages = 24,
+        stages = 5,
         lower_bound = 0.0,
         optimizer = Gurobi.Optimizer,
         sense = :Min
@@ -30,131 +70,151 @@ function unitCommitment()
 
         # DEFINE STATE VARIABLES
         # ------------------------------------------------------------------
-        JuMP.@variable(subproblem, 0.0 <= x <= 2.0, SDDP.State, initial_value = 0)
-        JuMP.@variable(linearizedSubproblem, 0.0 <= x <= 2.0, NCNBD.State, initial_value = 0)
+        JuMP.@variable(
+                    subproblem,
+                    0.0 <= commit[i = 1:num_of_generators] <= 1.0,
+                    SDDP.State,
+                    Bin,
+                    initial_value = generators[i].comm_ini
+                    )
+        JuMP.@variable(
+                    linearizedSubproblem,
+                    0.0 <= commit[i = 1:num_of_generators] <= 1.0,
+                    NCNBD.State,
+                    Bin,
+                    initial_value = generators[i].comm_ini
+                    )
 
-        # DEFINE STAGE 1 MODEL
+        JuMP.@variable(
+                    subproblem,
+                    0.0 <= gen[i = 1:num_of_generators] <= generators[i].pmax,
+                    SDDP.State,
+                    initial_value = generators[i].gen_ini
+                    )
+
+        JuMP.@variable(
+                    linearizedSubproblem,
+                    0.0 <= gen[i = 1:num_of_generators] <= generators[i].pmax,
+                    NCNBD.State,
+                    initial_value = generators[i].gen_ini
+                    )
+
+        # DEFINE STAGE t MODEL
         ########################################################################
-        if t == 1
+        # DEFINE STORAGE FOR NONLINEAR DATA
+        # ------------------------------------------------------------------
+        nonlinearFunctionList = NCNBD.NonlinearFunction[]
+        numberOfNonlinearFunctions = num_of_generators
 
-            # DEFINE STORAGE FOR NONLINEAR DATA
-            # ------------------------------------------------------------------
-            nonlinearFunctionList = NCNBD.NonlinearFunction[]
-            numberOfNonlinearFunctions = 1
+        # DEFINE LINEAR PART OF MODEL
+        # ------------------------------------------------------------------
+        for problem in [subproblem, linearizedSubproblem]
+            gen = problem[:gen]
+            commit = problem[:commit]
 
-            # DEFINE LINEAR PART OF MODEL
-            # ------------------------------------------------------------------
-            for problem in [subproblem, linearizedSubproblem]
-                x = problem[:x]
-                JuMP.@variable(problem, 0.0 <= y_loc <= 2.0)
-                JuMP.@constraint(problem, lin_con, y_loc + 3/2*x.out >= 3 + x.in)
+            # start-up variables
+            JuMP.@variable(problem, up[i=1:num_of_generators], Bin)
+            JuMP.@variable(problem, down[i=1:num_of_generators], Bin)
 
-                # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
-                # --------------------------------------------------------------
-                JuMP.@variable(problem, nonlinearAux[1:numberOfNonlinearFunctions])
-                JuMP.@constraint(problem, actual_nlcon, y_loc - nonlinearAux[1] >= 0)
-            end
+            # demand slack
+            JuMP.@variable(problem, demand_slack >= 0.0)
 
-            # DEFINE STAGE OBJECTIVE
-            # ------------------------------------------------------------------
-            y_loc = subproblem[:y_loc]
-            SDDP.@stageobjective(subproblem, y_loc)
+            # cost variables
+            JuMP.@variable(problem, startup_costs[i=1:num_of_generators] >= 0.0)
+            JuMP.@variable(problem, shutdown_costs[i=1:num_of_generators] >= 0.0)
+            JuMP.@variable(problem, fuel_costs[i=1:num_of_generators] >= 0.0)
+            JuMP.@variable(problem, om_costs[i=1:num_of_generators] >= 0.0)
+            JuMP.@variable(problem, emission_costs[i=1:num_of_generators] >= 0.0)
 
-            y_loc = linearizedSubproblem[:y_loc]
-            NCNBD.@lin_stageobjective(linearizedSubproblem, y_loc)
+            # generation bounds
+            JuMP.@constraint(problem, genmin[i=1:num_of_generators], gen[i].out >= commit[i].out * generators[i].pmin)
+            JuMP.@constraint(problem, genmax[i=1:num_of_generators], gen[i].out <= commit[i].out * generators[i].pmax)
 
-            # DEFINE NONLINEARITY
-            # ------------------------------------------------------------------
+            # ramping
+            # we do not need a case distinction as we defined initial_values
+            JuMP.@constraint(problem, rampup[i=1:num_of_generators], gen[i].out - gen[i].in <= generators[i].ramp_up)
+            JuMP.@constraint(problem, rampdown[i=1:num_of_generators], gen[i].in - gen[i].out <= generators[i].ramp_dw)
+
+            # start-up and shut-down
+            # we do not need a case distinction as we defined initial_values
+            JuMP.@constraint(problem, startup[i=1:num_of_generators], up[i] >= commit[i].out - commit[i].in)
+            JuMP.@constraint(problem, startup[i=1:num_of_generators], down[i] >= commit[i].in - commit[i].out)
+
+            # load balance
+            JuMP.@constraint(problem, load, sum(gen[i] for i in 1:num_of_generators) + demand_slack == demand[t] )
+
+            # costs
+            JuMP.@constraint(problem, startupcost[i=1:num_of_generators], generators[i].su_cost * up[i] == startup_costs[i])
+            JuMP.@constraint(problem, shutdowncost[i=1:num_of_generators], generators[i].sd_cost * down[i] == shutdown_costs[i])
+            JuMP.@constraint(problem, fuelcost[i=1:num_of_generators], generators[i].fuel_cost * gen[i].out == fuel_costs[i])
+            JuMP.@constraint(problem, omcost[i=1:num_of_generators], generators[i].om_cost * gen[i].out == om_costs[i])
+
+            # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
+            # --------------------------------------------------------------
+            JuMP.@variable(problem, emission_aux[1:num_of_generators])
+            JuMP.@constraint(problem, emissioncost[i=1:num_of_generators], emission_price * emission_aux[i] == emission_costs[i])
+        end
+
+        # DEFINE STAGE OBJECTIVE
+        # ------------------------------------------------------------------
+        su_costs = subproblem[:startup_costs]
+        sd_costs = subproblem[:shutdown_costs]
+        f_costs = subproblem[:fuel_costs]
+        om_costs = subproblem[:om_costs]
+        em_costs = subproblem[:emission_costs]
+        demand_slack = subproblem[:demand_slack]
+        SDDP.@stageobjective(subproblem,
+                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in num_of_generators)
+                            + demand_slack * demand_penalty)
+
+        su_costs = linearizedSubproblem[:startup_costs]
+        sd_costs = linearizedSubproblem[:shutdown_costs]
+        f_costs = linearizedSubproblem[:fuel_costs]
+        om_costs = linearizedSubproblem[:om_costs]
+        em_costs = linearizedSubproblem[:emission_costs]
+        demand_slack = linearizedSubproblem[:demand_slack]
+        NCNBD.@lin_stageobjective(linearizedSubproblem,
+                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in num_of_generators)
+                            + demand_slack * demand_penalty)
+
+        # DEFINE NONLINEARITY
+        # ------------------------------------------------------------------
+        # TODO: Add c*commit, but then two-dimensional
+        # TODO: Use same function only ones, but insert correct paramters
+
+        nlf_emission_eval =
+
+        for i in 1:num_of_generators
             # user-defined function for evaluation
-            nlf_eval = function nonl_function_1_eval(y::Float64)
-                return sqrt(y)
+            nlf_emission_eval = function nonl_function_eval(y::Float64)
+                return generators[i].a * gen[i] + generators[i].b * gen[i]^2
             end
 
             # user-defined function for expression building
-            nlf_expr = function nonl_function_1_expr(y::JuMP.VariableRef)
-                return :(sqrt($(y)))
+            nlf_emission_expr = function nonl_function_expr(y::JuMP.VariableRef)
+                return :(generators[i].a * $(y) + generators[i].b * $(y)^2)
             end
 
             # define nonlinear expression
-            x = subproblem[:x]
-            nonlinear_exp = nlf_expr(x.out)
+            gen = subproblem[:gen][i]
+            nonlinear_exp = nlf_emission_expr(gen.out)
 
             # nonlinear constraint
-            nonlinearAux = subproblem[:nonlinearAux]
-            JuMP.add_NL_constraint(subproblem, :($(nonlinearAux[1]) == $(nonlinear_exp)))
+            emission_aux = subproblem[:emission_aux][i]
+            JuMP.add_NL_constraint(subproblem, :($(emission_aux) == $(nonlinear_exp)))
 
             # define nonlinearFunction struct for PLA
-            x = linearizedSubproblem[:x]
-            nonlinearAux = linearizedSubproblem[:nonlinearAux]
-            nlf = NCNBD.NonlinearFunction(nlf_eval, nlf_expr, nonlinearAux[1], [x.out], :replace)
+            gen = linearizedSubproblem[:gen][i]
+            emission_aux = linearizedSubproblem[:emission_aux]
+            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, emission_aux, [gen], :replace)
             push!(nonlinearFunctionList, nlf)
-
-            # store in ext of subproblem
-            subproblem.ext[:nlFunctions] = nonlinearFunctionList
-            subproblem.ext[:linSubproblem] = linearizedSubproblem
-
-        # DEFINE STAGE 2 MODEL
-        ########################################################################
-        else
-
-            # DEFINE STORAGE FOR NONLINEAR DATA
-            # ------------------------------------------------------------------
-            nonlinearFunctionList = NCNBD.NonlinearFunction[]
-            numberOfNonlinearFunctions = 1
-
-            # DEFINE LINEAR PART OF MODEL
-            # ------------------------------------------------------------------
-            for problem in [subproblem, linearizedSubproblem]
-                x = problem[:x]
-                JuMP.@variable(problem, 0.0 <= y_loc[i=1:2] <= 4.0)
-                JuMP.@constraint(problem, lin_con, sum(y_loc[i] for i in 1:2) == 2 * x.in)
-                JuMP.@constraint(problem, x.out == 0)
-
-                # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
-                # --------------------------------------------------------------
-                JuMP.@variable(problem, nonlinearAux[1:numberOfNonlinearFunctions])
-                JuMP.@constraint(problem, actual_nlcon, 2 - nonlinearAux[1] >= 0)
-            end
-
-            # DEFINE STAGE OBJECTIVE
-            # ------------------------------------------------------------------
-            y_loc = subproblem[:y_loc]
-            SDDP.@stageobjective(subproblem, y_loc[1])
-
-            y_loc = linearizedSubproblem[:y_loc]
-            NCNBD.@lin_stageobjective(linearizedSubproblem, y_loc[1])
-
-            # DEFINE NONLINEARITY
-            # ------------------------------------------------------------------
-            # user-defined function for evaluation
-            nlf_eval = function nonl_function_2_eval(x::Float64, y::Float64)
-                return x*y
-            end
-
-            # user-defined function for expression building
-            nlf_expr = function nonl_function_2_expr(x::JuMP.VariableRef, y::JuMP.VariableRef)
-                return :($(x)*$(y))
-            end
-
-            # define nonlinear expression
-            y_loc = subproblem[:y_loc]
-            nonlinear_exp = nlf_expr(y_loc[1], y_loc[2])
-
-            # nonlinear constraint
-            nonlinearAux = subproblem[:nonlinearAux]
-            JuMP.add_NL_constraint(subproblem, :($(nonlinearAux[1]) == $(nonlinear_exp)))
-
-            # define nonlinearFunction struct for PLA
-            y_loc = linearizedSubproblem[:y_loc]
-            nonlinearAux = linearizedSubproblem[:nonlinearAux]
-            nlf = NCNBD.NonlinearFunction(nlf_eval, nlf_expr, nonlinearAux[1], [y_loc[1], y_loc[2]], :keep)
-            push!(nonlinearFunctionList, nlf)
-
-            # store in ext of subproblem
-            subproblem.ext[:nlFunctions] = nonlinearFunctionList
-            subproblem.ext[:linSubproblem] = linearizedSubproblem
 
         end
+
+        # store in ext of subproblem
+        subproblem.ext[:nlFunctions] = nonlinearFunctionList
+        subproblem.ext[:linSubproblem] = linearizedSubproblem
+
     end
 
     # SET-UP PARAMETERS
@@ -164,11 +224,25 @@ function unitCommitment()
     epsilon_outerLoop = 1e-3
     epsilon_innerLoop = 1e-4
     binaryPrecision = Dict(:x => 0.5)
-    plaPrecision = [2, 4]
-    sigma = [0.0, 1.0]
+
+    #200/7
+    #320/7
+    #150/7
+    #520/7
+    #280/7
+    #80/5
+    #120/5
+    #100/5
+    #80/5
+    #60/5
+
+    plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
+    sigma = [0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
+            10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
+            10.0, 10.0, 10.0, 10.0]
     sigma_counter = 5
 
-    #@infiltrate
+    @infiltrate
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision,
@@ -179,14 +253,14 @@ function unitCommitment()
     # SET-UP NONLINEARITIES
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 2, print_level = 1,
+                iteration_limit = 1, print_level = 1,
                 time_limit = 6000, stopping_rules = [NCNBD.DeterministicStopping()])
 
     #@infiltrate
 
     # WRITE LOGS TO FILE
     ############################################################################
-    NCNBD.write_log_to_csv(model, "test_results.csv", algoParameters)
+    NCNBD.write_log_to_csv(model, "uc_results.csv", algoParameters)
 
 end
 

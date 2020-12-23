@@ -112,7 +112,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   ",
+        " Outer_Iteration   Inner_Iteration    Upper Bound     Lower Bound     Time (s)   ",
     )
 end
 
@@ -121,11 +121,11 @@ print_value(x::Int) = Printf.@sprintf("%9d", x)
 
 function print_iteration(io, log::Log)
     print(io, print_value(log.outer_iteration))
-    print(io, "  ", print_value(log.iteration))
-    print(io, "   ", print_value(log.upper_bound))
-    print(io, "  ", print_value(log.lower_bound))
+    print(io, "                  ", print_value(log.iteration))
+    print(io, "                        ", print_value(log.upper_bound))
+    print(io, "   ", print_value(log.lower_bound))
     #print(io, "  ", print_value(log.current_state[1][:x]))
-    print(io, "  ", print_value(log.time))
+    print(io, "   ", print_value(log.time))
     # print(io, "  ", print_value(log.pid))
     # print(io, "  ", print_value(log.total_solves))
     #print(io, "  ", print_value(log.binaryPrecision))
@@ -162,22 +162,35 @@ function write_log_to_csv(model::SDDP.PolicyGraph, filename::String, algoParams:
     open(filename, "w") do io
         for log in model.ext[:results].log_outer
 
-            println(io, "ITERATION ", log.outer_iteration)
+            println(io, "OUTER LOOP ITERATION ", log.outer_iteration)
+            println(io, "################################################################################")
 
             for log_inner in model.ext[:results].log_inner
                 if log_inner.outer_iteration == log.outer_iteration
-                    println(io, "outer_iteration, inner_iteration, inner_upper_bound, inner_lower_bound, time")
+                    println(io, "solving inner loop problem")
+                    println(io)
+                    println(io, "binary precision: " )
+                    # should be the same for all nodes
+                    for (name, state) in model.nodes[1].ext[:lin_states]
+                        println(io, "state: ", string(name), " ", algoParams.binaryPrecision[name])
+                    end
+                    println(io)
+                    println(io, "sigma: " )
+                    for i in 1:size(log.sigma, 1)
+                        println(io, "stage $i :", " ", log.sigma[i])
+                    end
+                    println(io)
+
+                    println(io, "inner_iteration, inner_lower_bound, inner_upper_bound, time")
                     println(
                         io,
-                        log.outer_iteration,
+                        @sprintf("%.6f",log_inner.iteration),
                         ", ",
-                        log.iteration,
+                        @sprintf("%.6f",log_inner.lower_bound),
                         ", ",
-                        log.upper_bound,
+                        @sprintf("%.6f",log_inner.upper_bound),
                         ", ",
-                        log.lower_bound,
-                        ", ",
-                        log.time,
+                        @sprintf("%.6f",log_inner.time),
                     )
 
                     println(io)
@@ -186,34 +199,32 @@ function write_log_to_csv(model::SDDP.PolicyGraph, filename::String, algoParams:
                     for i in 1:size(log.current_state, 1)
                         println(io, "Stage $i :")
                         for (name, state) in model.nodes[i].ext[:lin_states]
-                            println(io, "state: ", string(name), " ", log.current_state[i][name])
+                            println(io, "state: ", string(name), " ", @sprintf("%.6f", log.current_state[i][name]))
                         end
                     end
 
                     println(io)
-                    println(io, "binary precision: " )
-                    # should be the same for all nodes
-                    for (name, state) in model.nodes[1].ext[:lin_states]
-                        println(io, "state: ", string(name), " ", algoParams.binaryPrecision[name])
-                    end
 
                 end
+
+                println(io, "--------------------------------------------------------------------------------")
+
             end
+            println(io, "################################################################################")
 
-            println(io, "------------------------------------------------------")
-
-            println(io, "outer_iteration, inner_iteration, upper_bound, lower_bound, time")
+            println(io, "solving outer loop problem")
+            println(io)
+            
+            println(io, "outer_iteration, lower_bound, upper_bound, time")
             println(
                 io,
-                log.outer_iteration,
+                @sprintf("%.6f",log.outer_iteration),
                 ", ",
-                log.iteration,
+                @sprintf("%.6f",log.lower_bound),
                 ", ",
-                log.upper_bound,
+                @sprintf("%.6f",log.upper_bound),
                 ", ",
-                log.lower_bound,
-                ", ",
-                log.time,
+                @sprintf("%.6f",log.time),
             )
 
             println(io)
@@ -222,14 +233,8 @@ function write_log_to_csv(model::SDDP.PolicyGraph, filename::String, algoParams:
             for i in 1:size(log.current_state, 1)
                 println(io, "Stage $i :")
                 for (name, state) in model.nodes[i].states
-                    println(io, "state: ", string(name), " ", log.current_state[i][name])
+                    println(io, "state: ", string(name), " ", @sprintf("%.6f", log.current_state[i][name]))
                 end
-            end
-
-            println(io)
-            println(io, "sigma: " )
-            for i in 1:size(log.sigma, 1)
-                println(io, "stage $i :", " ", log.sigma[i])
             end
 
             println(io, "######################################################")

@@ -12,7 +12,7 @@ import GAMS
 import MathOptInterface
 import Distances
 import LinearAlgebra
-import Printf
+using Printf
 
 import Reexport
 Reexport.@reexport using JuMP
