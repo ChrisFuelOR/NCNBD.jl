@@ -51,7 +51,7 @@ function unitCommitment()
             ]
 
     model = SDDP.LinearPolicyGraph(
-        stages = 5,
+        stages = 1,
         lower_bound = 0.0,
         optimizer = Gurobi.Optimizer,
         sense = :Min
