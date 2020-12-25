@@ -178,6 +178,8 @@ function unitCommitment()
                             sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in num_of_generators)
                             + demand_slack * demand_penalty)
 
+        @infiltrate
+
         # DEFINE NONLINEARITY
         # ------------------------------------------------------------------
         # TODO: Add c*commit, but then two-dimensional
