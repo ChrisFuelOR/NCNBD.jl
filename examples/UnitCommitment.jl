@@ -33,7 +33,7 @@ function unitCommitment()
         Generator(0, 0.0, 150.0, 30.0, 17.0, 2.0, 57.1, 57.1, 30.0, 30.0, -3.2, 1025.0, 0.0),
         Generator(1, 400.0, 520.0, 104.0, 13.2, 4.0, 47.1, 47.1, 104.0, 104.0, -1.5, 1800.0, 0.0),
         Generator(1, 280.0, 280.0, 56.0, 14.3, 4.0, 56.9, 56.9, 56.0, 56.0, -3, 1800.0, 0.0),
-        Generator(0, 0.0, 80.0, 30.0, 40.2, 4.0, 141.5, 141.5, 30.0, 30.0, -6.8, 1200.0, 0.0),
+        Generator(0, 0.0, 80.0, 16.0, 40.2, 4.0, 141.5, 141.5, 30.0, 30.0, -6.8, 1200.0, 0.0),
         Generator(1, 120.0, 120.0, 24.0, 17.1, 2.0, 113.5, 113.5, 24.0, 24.0, -4, 1025.0, 0.0),
         Generator(1, 110.0, 100.0, 22.0, 17.3, 2.0, 42.6, 42.6, 22.0, 22.0, -4.75, 1025.0, 0.0),
         Generator(0, 0.0, 80.0, 16.0, 59.4, 4.0, 50.6, 50.6, 16.0, 16.0, -6.0, 1200.0, 0.0),
@@ -138,10 +138,10 @@ function unitCommitment()
             # start-up and shut-down
             # we do not need a case distinction as we defined initial_values
             JuMP.@constraint(problem, startup[i=1:num_of_generators], up[i] >= commit[i].out - commit[i].in)
-            JuMP.@constraint(problem, startup[i=1:num_of_generators], down[i] >= commit[i].in - commit[i].out)
+            JuMP.@constraint(problem, shutdown[i=1:num_of_generators], down[i] >= commit[i].in - commit[i].out)
 
             # load balance
-            JuMP.@constraint(problem, load, sum(gen[i] for i in 1:num_of_generators) + demand_slack == demand[t] )
+            JuMP.@constraint(problem, load, sum(gen[i].out for i in 1:num_of_generators) + demand_slack == demand[t] )
 
             # costs
             JuMP.@constraint(problem, startupcost[i=1:num_of_generators], generators[i].su_cost * up[i] == startup_costs[i])
@@ -187,12 +187,12 @@ function unitCommitment()
         for i in 1:num_of_generators
             # user-defined function for evaluation
             nlf_emission_eval = function nonl_function_eval(y::Float64)
-                return generators[i].a * gen[i] + generators[i].b * gen[i]^2
+                return generators[i].a * y + generators[i].b * y^2
             end
 
             # user-defined function for expression building
             nlf_emission_expr = function nonl_function_expr(y::JuMP.VariableRef)
-                return :(generators[i].a * $(y) + generators[i].b * $(y)^2)
+                return :($(generators[i].a) * $(y) + $(generators[i].b) * $(y)^2)
             end
 
             # define nonlinear expression
@@ -200,13 +200,14 @@ function unitCommitment()
             nonlinear_exp = nlf_emission_expr(gen.out)
 
             # nonlinear constraint
-            emission_aux = subproblem[:emission_aux][i]
-            JuMP.add_NL_constraint(subproblem, :($(emission_aux) == $(nonlinear_exp)))
+            aux = subproblem[:emission_aux][i]
+            JuMP.add_NL_constraint(subproblem, :($(aux) == $(nonlinear_exp)))
 
             # define nonlinearFunction struct for PLA
             gen = linearizedSubproblem[:gen][i]
-            emission_aux = linearizedSubproblem[:emission_aux]
-            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, emission_aux, [gen], :replace)
+            aux = linearizedSubproblem[:emission_aux][i]
+
+            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, aux, [gen.out], :replace)
             push!(nonlinearFunctionList, nlf)
 
         end
@@ -223,18 +224,21 @@ function unitCommitment()
 
     epsilon_outerLoop = 1e-3
     epsilon_innerLoop = 1e-4
-    binaryPrecision = Dict(:x => 0.5)
 
-    #200/7
-    #320/7
-    #150/7
-    #520/7
-    #280/7
-    #80/5
-    #120/5
-    #100/5
-    #80/5
-    #60/5
+    binaryPrecision = Dict{Symbol, Float64}()
+
+    for (name, state_comp) in model.nodes[1].ext[:lin_states]
+        ub = JuMP.upper_bound(state_comp.out)
+
+        string_name = string(name)
+        if occursin("gen", string_name)
+            binaryPrecision[name] = 1/7 * ub
+        else
+            binaryPrecision[name] = 1/5
+        end
+    end
+
+    @infiltrate
 
     plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
     sigma = [0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0,

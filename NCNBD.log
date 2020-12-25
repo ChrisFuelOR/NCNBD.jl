@@ -923,3 +923,10 @@ re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
 Solver: serial mode
 
  Outer_Iteration   Inner_Iteration    Upper Bound    Lower Bound    Time (s)   
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration    Upper Bound     Lower Bound     Time (s)   
