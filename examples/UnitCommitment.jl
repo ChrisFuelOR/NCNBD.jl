@@ -187,12 +187,12 @@ function unitCommitment()
         for i in 1:num_of_generators
             # user-defined function for evaluation
             nlf_emission_eval = function nonl_function_eval(y::Float64)
-                return generators[i].a * y + generators[i].b * y^2
+                return generators[i].b * y + generators[i].a * y^2
             end
 
             # user-defined function for expression building
             nlf_emission_expr = function nonl_function_expr(y::JuMP.VariableRef)
-                return :($(generators[i].a) * $(y) + $(generators[i].b) * $(y)^2)
+                return :($(generators[i].b) * $(y) + $(generators[i].a) * $(y)^2)
             end
 
             # define nonlinear expression
