@@ -259,8 +259,8 @@ function unitCommitment()
     # SET-UP NONLINEARITIES
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 1, print_level = 1,
-                time_limit = 6000, stopping_rules = [NCNBD.DeterministicStopping()])
+                iteration_limit = 1000, print_level = 1,
+                time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()])
 
     #@infiltrate
 
