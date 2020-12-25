@@ -165,7 +165,7 @@ function unitCommitment()
         em_costs = subproblem[:emission_costs]
         demand_slack = subproblem[:demand_slack]
         SDDP.@stageobjective(subproblem,
-                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in num_of_generators)
+                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
                             + demand_slack * demand_penalty)
 
         su_costs = linearizedSubproblem[:startup_costs]
@@ -175,7 +175,7 @@ function unitCommitment()
         em_costs = linearizedSubproblem[:emission_costs]
         demand_slack = linearizedSubproblem[:demand_slack]
         NCNBD.@lin_stageobjective(linearizedSubproblem,
-                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in num_of_generators)
+                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
                             + demand_slack * demand_penalty)
 
         @infiltrate
