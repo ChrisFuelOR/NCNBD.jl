@@ -55,6 +55,8 @@ function inner_loop_iteration(
         end
     end
 
+    @infiltrate
+
     # BACKWARD PASS
     ############################################################################
     TimerOutputs.@timeit NCNBD_TIMER "backward_pass" begin
