@@ -120,7 +120,7 @@ function _kelley(
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        #@infiltrate
+        @infiltrate
 
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
