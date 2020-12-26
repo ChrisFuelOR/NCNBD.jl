@@ -576,6 +576,8 @@ function add_cut_projection_to_model!(
         end
     end
 
+    @infiltrate
+
     bigM_11_constraints = JuMP.@constraint(
         model,
         [k=1:K],
