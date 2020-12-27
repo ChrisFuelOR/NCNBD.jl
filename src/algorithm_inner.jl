@@ -768,7 +768,7 @@ function get_dual_variables_backward(
             @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         end
 
-        #@infiltrate
+        @infiltrate
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
         rethrow(e)
