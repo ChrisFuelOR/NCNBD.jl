@@ -59,8 +59,8 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
             if nlFunction.shift == :shift
                 determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
             elseif nlFunction.shift == :noshift
-                nlfunction.triangulation.simplices[simplex_index].maxOverestimation = 0
-                nlfunction.triangulation.simplices[simplex_index].maxUnderestimation = 0
+                nlFunction.triangulation.simplices[simplex_index].maxOverestimation = 0
+                nlFunction.triangulation.simplices[simplex_index].maxUnderestimation = 0
             end
         end
 
