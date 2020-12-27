@@ -290,7 +290,7 @@ function solve_subproblem_forward_inner(
 
     # SOLUTION
     ############################################################################
-    #@infiltrate
+    @infiltrate
     JuMP.optimize!(linearizedSubproblem)
     #@infiltrate
 
@@ -895,6 +895,7 @@ function solve_first_stage_problem(
 
     # SOLUTION
     ############################################################################
+    @infiltrate
     JuMP.optimize!(linearizedSubproblem)
 
     if haskey(model.ext, :total_solves)
