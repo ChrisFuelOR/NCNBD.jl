@@ -51,9 +51,17 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         # Determine number of simplices in triangulation
         number_of_simplices = size(nlFunction.triangulation.simplices, 1)
 
-        # Shift approximation to obtain a relaxation
+        @assert nlFunction.refineType == :replace || nlFunction.refineType == :keep
+        @assert nlFunction.shift == :shift || nlFunction.shift == :noshift
+
+        # Shift approximation to obtain a relaxation (if required)
         for simplex_index in 1:number_of_simplices
-            determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
+            if nlFunction.shift == :shift
+                determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
+            elseif nlFunction.shift == :noshift
+                nlfunction.triangulation.simplices[simplex_index].maxOverestimation = 0
+                nlfunction.triangulation.simplices[simplex_index].maxUnderestimation = 0
+            end
         end
 
         # Get dimension
@@ -525,7 +533,6 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
 
                 end
             end
-
 
             # DELETE PREVIOUS PIECEWISE LINEAR APPROXIMATION
             ####################################################################

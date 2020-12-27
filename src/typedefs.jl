@@ -76,6 +76,7 @@ mutable struct NonlinearFunction
     # refToNonlinearConstraint :: JuMP.ConstraintRef # just for allocation # not used anymore and does not work for add_NL_constraint
     variablesContained :: Vector{JuMP.VariableRef} # for getting bounds for Triangulation
     triangulation :: Union{Triangulation, Nothing} # to store related Triangulation
+    shift :: Symbol #either :shift or :noshift (for some concave cases)
     refineType :: Symbol #either :replace or :keep
     ext::Dict{Symbol,Any} # required to store solutions later
 
