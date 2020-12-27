@@ -562,8 +562,14 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             ####################################################################
             # Note that this is only required for the new simplices here,
             # since the other approximations essentially did not change
-            for simplex_index in new_simplex_indices_list
-                determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
+            # Shift approximation to obtain a relaxation (if required)
+            for simplex_index in 1:new_simplex_indices_list
+                if nlFunction.shift == :shift
+                    determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
+                elseif nlFunction.shift == :noshift
+                    nlFunction.triangulation.simplices[simplex_index].maxOverestimation = 0
+                    nlFunction.triangulation.simplices[simplex_index].maxUnderestimation = 0
+                end
             end
 
             # CREATE RELAXATION
