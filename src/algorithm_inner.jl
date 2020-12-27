@@ -896,6 +896,9 @@ function solve_first_stage_problem(
     # SOLUTION
     ############################################################################
     @infiltrate
+    set_optimizer(linearizedSubproblem, Gurobi.Optimizer)
+    JuMP.set_optimizer_attribute(model, "MIPGap", 0)
+
     JuMP.optimize!(linearizedSubproblem)
 
     if haskey(model.ext, :total_solves)
