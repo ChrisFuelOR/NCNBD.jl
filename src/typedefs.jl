@@ -86,6 +86,7 @@ mutable struct NonlinearFunction
         auxVariable::JuMP.VariableRef,
         #refToNonlinearConstraint::JuMP.ConstraintRef,
         variablesContained::Vector{JuMP.VariableRef},
+        shift::Symbol,
         refineType::Symbol,
          )
         return new(
@@ -95,6 +96,7 @@ mutable struct NonlinearFunction
             #refToNonlinearConstraint,
             variablesContained,
             nothing,
+            shift,
             refineType,
             Dict{Symbol,Any}()
         )

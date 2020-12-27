@@ -208,7 +208,7 @@ function unitCommitment()
             gen = linearizedSubproblem[:gen][i]
             aux = linearizedSubproblem[:emission_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, aux, [gen.out], :replace)
+            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, aux, [gen.out], :noshift, :replace)
             push!(nonlinearFunctionList, nlf)
 
         end
