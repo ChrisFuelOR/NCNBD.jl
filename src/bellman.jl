@@ -493,6 +493,7 @@ function add_cut_constraints_to_models(
         @constraint(model_lin, expr_lin <= cut.intercept)
     end
     push!(cut.cutConstraints_lin, constraint_ref_lin)
+    @infiltrate
 
     return
 
