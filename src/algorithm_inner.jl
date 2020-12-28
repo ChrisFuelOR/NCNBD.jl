@@ -895,10 +895,10 @@ function solve_first_stage_problem(
 
     # SOLUTION
     ############################################################################
-    @infiltrate
-    MathOptInterface.Utilities.reset_optimizer(linearizedSubproblem)
-    set_optimizer(linearizedSubproblem, Gurobi.Optimizer)
-    JuMP.set_optimizer_attribute(linearizedSubproblem, "MIPGap", 0)
+    #@infiltrate
+    #MathOptInterface.Utilities.reset_optimizer(linearizedSubproblem)
+    #set_optimizer(linearizedSubproblem, Gurobi.Optimizer)
+    #JuMP.set_optimizer_attribute(linearizedSubproblem, "MIPGap", 0)
 
     JuMP.optimize!(linearizedSubproblem)
 
