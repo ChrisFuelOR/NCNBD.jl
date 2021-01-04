@@ -504,8 +504,6 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             new_simplex_indices_list = Int64[]
             simplices_to_refine_list = Int64[]
 
-            @infiltrate
-
             # Iterate over all simplices of current triangulation
             for simplex_index in 1:size(nlFunction.triangulation.simplices,1)
                 simplex = nlFunction.triangulation.simplices[simplex_index]
@@ -527,7 +525,6 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
 
             # Refine all simplices in simplices_to_refine_list
             for simplex_index in simplices_to_refine_list
-                @infiltrate
                 # divide simplex by longest edge and construct two new ones
                 new_simplex_indices = NCNBD.divide_simplex_by_longest_edge!(simplex_index, nlFunction.triangulation)
                 # append to list of new simplices
@@ -536,14 +533,13 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
                 deleteat!(nlFunction.triangulation.simplices, simplex_index)
 
                 # adapt the indices of the new simplices accordingly
-                @infiltrate
                 for i in 1:size(new_simplex_indices_list,1)
                     new_index = new_simplex_indices_list[i]
                     if new_index > simplex_index
                         new_simplex_indices_list[i] -= 1
                     end
                 end
-                
+
                 # adapt the indices of the remaining simplices to be refined accordingly
                 for i in 1:size(simplices_to_refine_list,1)
                     refine_index = simplices_to_refine_list[i]
@@ -551,8 +547,6 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
                         simplices_to_refine_list[i] -= 1
                     end
                 end
-
-                @infiltrate
             end
 
             # DELETE PREVIOUS PIECEWISE LINEAR APPROXIMATION
@@ -584,7 +578,6 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # Note that this is only required for the new simplices here,
             # since the other approximations essentially did not change
             # Shift approximation to obtain a relaxation (if required)
-            @infiltrate
             for simplex_index in new_simplex_indices_list
                 if nlFunction.shift == :shift
                     determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
