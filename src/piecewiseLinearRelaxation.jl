@@ -502,6 +502,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
 
             # store new simplices
             new_simplex_indices_list = Int64[]
+            simplices_to_refine_list = Int64[]
 
             @infiltrate
 
@@ -516,25 +517,42 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
                     interval_check = NCNBD.pointInTriangle(simplex.vertices, optpoint)
                 end
 
-                # if true, then refine this simplex
+                # if yes, then add this simplex to the simplices to be refined
+                # (note that we cannot break here, since the optimal point may
+                # (be contained in several simplices)
                 if interval_check
-                    @infiltrate
-                    # divide simplex by longest edge and construct two new ones
-                    new_simplex_indices = NCNBD.divide_simplex_by_longest_edge!(simplex_index, nlFunction.triangulation)
-                    # append to list of new simplices
-                    append!(new_simplex_indices_list, new_simplex_indices)
-                    # delete old simplex
-                    deleteat!(nlFunction.triangulation.simplices, simplex_index)
-                    # adapt the indices of the new simplices accordingly
-                    @infiltrate
-                    for i in 1:size(new_simplex_indices_list,1)
-                        new_index = new_simplex_indices_list[i]
-                        if new_index > simplex_index
-                            new_simplex_indices_list[i] -= 1
-                        end
-                    end
-                    @infiltrate
+                    push!(simplices_to_refine_list, simplex_index)
                 end
+            end
+
+            # Refine all simplices in simplices_to_refine_list
+            for simplex_index in simplices_to_refine_list
+                @infiltrate
+                # divide simplex by longest edge and construct two new ones
+                new_simplex_indices = NCNBD.divide_simplex_by_longest_edge!(simplex_index, nlFunction.triangulation)
+                # append to list of new simplices
+                append!(new_simplex_indices_list, new_simplex_indices)
+                # delete old simplex
+                deleteat!(nlFunction.triangulation.simplices, simplex_index)
+
+                # adapt the indices of the new simplices accordingly
+                @infiltrate
+                for i in 1:size(new_simplex_indices_list,1)
+                    new_index = new_simplex_indices_list[i]
+                    if new_index > simplex_index
+                        new_simplex_indices_list[i] -= 1
+                    end
+                end
+                
+                # adapt the indices of the remaining simplices to be refined accordingly
+                for i in 1:size(simplices_to_refine_list,1)
+                    refine_index = simplices_to_refine_list[i]
+                    if refine_index > simplex_index
+                        simplices_to_refine_list[i] -= 1
+                    end
+                end
+
+                @infiltrate
             end
 
             # DELETE PREVIOUS PIECEWISE LINEAR APPROXIMATION
