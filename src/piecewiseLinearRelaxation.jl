@@ -563,6 +563,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # Note that this is only required for the new simplices here,
             # since the other approximations essentially did not change
             # Shift approximation to obtain a relaxation (if required)
+            @infiltrate
             for simplex_index in 1:new_simplex_indices_list
                 if nlFunction.shift == :shift
                     determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
