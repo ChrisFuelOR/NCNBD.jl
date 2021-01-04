@@ -503,6 +503,8 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # store new simplices
             new_simplex_indices_list = Int64[]
 
+            @infiltrate
+
             # Iterate over all simplices of current triangulation
             for simplex_index in 1:size(nlFunction.triangulation.simplices,1)
                 simplex = nlFunction.triangulation.simplices[simplex_index]
@@ -516,6 +518,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
 
                 # if true, then refine this simplex
                 if interval_check
+                    @infiltrate
                     # divide simplex by longest edge and construct two new ones
                     new_simplex_indices = NCNBD.divide_simplex_by_longest_edge!(simplex_index, nlFunction.triangulation)
                     # append to list of new simplices
@@ -523,14 +526,13 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
                     # delete old simplex
                     deleteat!(nlFunction.triangulation.simplices, simplex_index)
                     # adapt the indices of the new simplices accordingly
-
                     for i in 1:size(new_simplex_indices_list,1)
                         new_index = new_simplex_indices_list[i]
                         if new_index > simplex_index
                             new_simplex_indices_list[i] -= 1
                         end
                     end
-
+                    @infiltrate
                 end
             end
 
@@ -564,7 +566,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # since the other approximations essentially did not change
             # Shift approximation to obtain a relaxation (if required)
             @infiltrate
-            for simplex_index in 1:new_simplex_indices_list
+            for simplex_index in new_simplex_indices_list
                 if nlFunction.shift == :shift
                     determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
                 elseif nlFunction.shift == :noshift
