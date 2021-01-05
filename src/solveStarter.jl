@@ -483,6 +483,8 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
             upper_bound_non_reg = sigma_test_results.cumulative_value
             upper_bound_reg = result_inner.upper_bound
 
+            @infiltrate
+
             if isapprox(upper_bound_non_reg - upper_bound_reg, 0)
                 # by solving the regularized problem, approximately the real MILP has been solved
 

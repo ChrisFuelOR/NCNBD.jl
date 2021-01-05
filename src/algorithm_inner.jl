@@ -77,7 +77,6 @@ function inner_loop_iteration(
     TimerOutputs.@timeit NCNBD_TIMER "calculate_bound" begin
         bound = calculate_bound(model)
     end
-    @infiltrate
 
     # PREPARE LOGGING
     ############################################################################
@@ -101,6 +100,8 @@ function inner_loop_iteration(
     # CHECK IF THE INNER LOOP CONVERGED YET
     ############################################################################
     has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules, :inner)
+
+    @infiltrate
 
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
