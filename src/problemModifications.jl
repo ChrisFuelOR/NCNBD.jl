@@ -336,7 +336,7 @@ function changeToOriginalSpace!(
     ############################################################################
     for (state_name, value) in state
         state_comp = node.ext[:lin_states][state_name]
-        @infiltrate
+        #@infiltrate
         JuMP.delete_lower_bound(state_comp.in)
         JuMP.delete_upper_bound(state_comp.in)
 

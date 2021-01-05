@@ -295,7 +295,7 @@ function _add_cut(
     for (key, λ) in λᵏ
         θᵏ -= πᵏ[key] * λᵏ[key].value
     end
-    @infiltrate
+    #@infiltrate
 
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
@@ -453,7 +453,7 @@ function add_cut_constraints_to_models(
     #     end
     # end
 
-    @infiltrate
+    #@infiltrate
     @assert (size(gamma, 1) == size(collect(values(cut.coefficients)), 1)
                            == duals_so_far
                            == duals_lin_so_far
@@ -493,7 +493,7 @@ function add_cut_constraints_to_models(
         @constraint(model_lin, expr_lin <= cut.intercept)
     end
     push!(cut.cutConstraints_lin, constraint_ref_lin)
-    @infiltrate
+    #@infiltrate
 
     return
 
@@ -577,7 +577,7 @@ function add_cut_projection_to_model!(
         end
     end
 
-    @infiltrate
+    #@infiltrate
 
     bigM_11_constraints = JuMP.@constraint(
         model,
