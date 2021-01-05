@@ -29,7 +29,7 @@ function unitCommitment_2_2()
 
     generators = [
         Generator(0, 0.0, 200.0, 40.0, 18.0, 2.0, 42.6, 42.6, 40.0, 40.0, -2.375, 1025.0, 0.0),
-        Generator(0, 0.0, 320.0, 64.0, 15.0, 4.0, 50.6, 50.6, 64.0, 64.0, -2.75, 1800.0, 0.0),        
+        Generator(0, 0.0, 320.0, 64.0, 15.0, 4.0, 50.6, 50.6, 64.0, 64.0, -2.75, 1800.0, 0.0),
     ]
     num_of_generators = size(generators,1)
 
@@ -232,9 +232,7 @@ function unitCommitment_2_2()
     @infiltrate
 
     plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
-    sigma = [0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-            10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0,
-            10.0, 10.0, 10.0, 10.0]
+    sigma = [0.0, 10.0]
     sigma_counter = 5
 
     @infiltrate
