@@ -477,6 +477,7 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution)
         # logging
         log_iteration(options, options.log_inner)
+        @infiltrate
         if result_inner.has_converged
             sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
 
@@ -512,6 +513,7 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
         end
 
         previousSolution = result_inner.current_sol
+        @infiltrate
     end
 end
 
