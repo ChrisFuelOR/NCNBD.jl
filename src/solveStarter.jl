@@ -486,7 +486,7 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
 
             @infiltrate
 
-            if isapprox(upper_bound_non_reg - upper_bound_reg, 0)
+            if isapprox(upper_bound_non_reg, upper_bound_reg)
                 # by solving the regularized problem, approximately the real MILP has been solved
 
                 # update information for MINLP
@@ -499,7 +499,7 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
 
             else
                 # increase sigma
-                algoParams.sigma = algoParams.sigma * 5
+                algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
 
             end
             # return all results here to keep them accessible in outer pass
@@ -507,7 +507,7 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
         else
             if result_inner.upper_bound < result_inner.lower_bound
                 # increase sigma
-                algoParams.sigma = algoParams.sigma * 5
+                algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
             end
 
         end
@@ -543,8 +543,10 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
             @infiltrate
 
-            if isapprox(upper_bound_non_reg - upper_bound_reg, 0)
+            if isapprox(upper_bound_non_reg, upper_bound_reg)
                 # by solving the regularized problem, approximately the real MILP has been solved
+                # we do not need an epsilon tolerance here, because the values should be exactly equal for a sufficiently high sigma
+                # WARNING: isapprox should not be used with 0 as comparison
 
                 # update information for MINLP
                 result_inner.upper_bound = upper_bound_non_reg
@@ -556,7 +558,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
             else
                 # increase sigma
-                algoParams.sigma = algoParams.sigma * 5
+                algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
 
             end
             # return all results here to keep them accessible in outer pass
@@ -564,7 +566,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         else
             if result_inner.upper_bound < result_inner.lower_bound
                 # increase sigma
-                algoParams.sigma = algoParams.sigma * 5
+                algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
             end
 
         end

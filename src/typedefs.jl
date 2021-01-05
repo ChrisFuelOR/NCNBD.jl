@@ -35,7 +35,7 @@ mutable struct AlgoParams
     #binaryPrecision :: Vector{Float64} # Epsilons for latest/current binary expansion (better vector?)
     binaryPrecision :: Dict{Symbol, Float64}
     sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)
-    sigma_counter :: Int64
+    sigma_factor :: Float64
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run
@@ -45,7 +45,7 @@ struct InitialAlgoParams
     binaryPrecision :: Dict{Symbol, Float64}
     plaPrecision :: Vector{Float64}
     sigma :: Vector{Float64}
-    sigma_counter :: Int64
+    sigma_factor :: Float64
 end
 
 # struct for Simplex
