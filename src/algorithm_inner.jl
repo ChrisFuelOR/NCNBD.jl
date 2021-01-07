@@ -747,6 +747,7 @@ function get_dual_variables_backward(
     end
     dual_bound = algoParams.sigma[node_index] * B_norm_bound
 
+    @infiltrate
     try
         # KELLEY WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################
