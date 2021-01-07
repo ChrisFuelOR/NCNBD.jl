@@ -39,11 +39,10 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
 
         # Define overestimation/underestimation problem
         estimationProblem = JuMP.Model()
-        set_optimizer(estimationProblem, GAMS.Optimizer)
-        JuMP.set_optimizer_attribute(estimationProblem, "Solver", appliedSolvers.NLP)
-        #JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
-        #JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
-        JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
+        set_optimizer(estimationProblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.NLP, "optcr"=>0.0))
+        #set_optimizer(estimationProblem, GAMS.Optimizer)
+        #JuMP.set_optimizer_attribute(estimationProblem, "Solver", appliedSolvers.NLP)
+        #JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
         #JuMP.set_silent(estimationProblem)
 
         # Determine Piecewise Linear Approximation
@@ -564,11 +563,10 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             ####################################################################
             # Define overestimation/underestimation problem
             estimationProblem = JuMP.Model()
-            set_optimizer(estimationProblem, GAMS.Optimizer)
-            JuMP.set_optimizer_attribute(estimationProblem, "Solver", appliedSolvers.NLP)
-            #JuMP.set_optimizer_attribute(estimationProblem, "Solver", "SCIP")
-            #JuMP.set_optimizer_attribute(estimationProblem, GAMS.ModelType(), "MINLP")
-            JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+            #set_optimizer(estimationProblem, GAMS.Optimizer)
+            #JuMP.set_optimizer_attribute(estimationProblem, "Solver", appliedSolvers.NLP)
+            #JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
             #JuMP.set_silent(estimationProblem)
 
             piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)

@@ -564,7 +564,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             # return all results here to keep them accessible in outer pass
             # return result_inner
         else
-            if result_inner.upper_bound < result_inner.lower_bound
+            if result_inner.upper_bound - result_inner.lower_bound < - algoParams.epsilon_innerLoop * 0.1
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
             end

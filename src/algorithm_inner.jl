@@ -189,11 +189,11 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
 
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
-        #set_optimizer(linearizedSubproblem, appliedSolvers.MILP)
-        set_optimizer(linearizedSubproblem, GAMS.Optimizer)
-        #JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", "Gurobi")
-        JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", appliedSolvers.MILP)
-        JuMP.set_optimizer_attribute(linearizedSubproblem, "optcr", 0.0)
+
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+        #set_optimizer(linearizedSubproblem, GAMS.Optimizer)
+        #JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", appliedSolvers.MILP)
+        #JuMP.set_optimizer_attribute(linearizedSubproblem, "optcr", 0.0)
 
         # SUBPROBLEM SOLUTION
         ############################################################################
@@ -897,10 +897,6 @@ function solve_first_stage_problem(
     # SOLUTION
     ############################################################################
     #@infiltrate
-    #MathOptInterface.Utilities.reset_optimizer(linearizedSubproblem)
-    #set_optimizer(linearizedSubproblem, Gurobi.Optimizer)
-    #JuMP.set_optimizer_attribute(linearizedSubproblem, "MIPGap", 0)
-
     JuMP.optimize!(linearizedSubproblem)
 
     if haskey(model.ext, :total_solves)
@@ -1007,10 +1003,10 @@ function inner_loop_forward_sigma_test(
 
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
-        set_optimizer(linearizedSubproblem, GAMS.Optimizer)
-        #JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", "Gurobi")
-        JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", appliedSolvers.MILP)
-        JuMP.set_optimizer_attribute(linearizedSubproblem, "optcr", 0.0)
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+        #set_optimizer(linearizedSubproblem, GAMS.Optimizer)
+        #JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", appliedSolvers.MILP)
+        #JuMP.set_optimizer_attribute(linearizedSubproblem, "optcr", 0.0)
 
         # SUBPROBLEM SOLUTION
         ############################################################################
