@@ -59,7 +59,7 @@ function _kelley(
         JuMP.set_lower_bound(θ, obj)
         (best_actual, f_actual, f_approx) = (Inf, Inf, -Inf)
     else
-        JuMP.set_upper_bound(θ, 10000)
+        JuMP.set_upper_bound(θ, 10000.0)
         #JuMP.set_upper_bound(θ, obj)
         (best_actual, f_actual, f_approx) = (-Inf, -Inf, Inf)
     end
@@ -118,7 +118,7 @@ function _kelley(
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        #@infiltrate
+        @infiltrate
 
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
