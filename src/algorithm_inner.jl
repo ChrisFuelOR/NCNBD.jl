@@ -728,7 +728,8 @@ function get_dual_variables_backward(
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
-    integrality_handler = SDDP.SDDiP(iteration_limit = 1000, atol = 1e-5, rtol = 1e-5)
+    #integrality_handler = SDDP.SDDiP(iteration_limit = 1000, atol = 1e-5, rtol = 1e-5)
+    integrality_handler = SDDP.SDDiP(iteration_limit = 1000, atol = 0.0, rtol = 0.0)
     integrality_handler = SDDP.update_integrality_handler!(integrality_handler, appliedSolvers.MILP, number_of_states)
     node.ext[:lagrange] = integrality_handler
 
