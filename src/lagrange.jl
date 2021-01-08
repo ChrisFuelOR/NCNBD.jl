@@ -59,8 +59,8 @@ function _kelley(
         JuMP.set_lower_bound(θ, obj)
         (best_actual, f_actual, f_approx) = (Inf, Inf, -Inf)
     else
-        JuMP.set_upper_bound(θ, 10000.0)
-        #JuMP.set_upper_bound(θ, obj)
+        #JuMP.set_upper_bound(θ, 10000.0)
+        JuMP.set_upper_bound(θ, obj)
         (best_actual, f_actual, f_approx) = (-Inf, -Inf, Inf)
     end
     ##@infiltrate
