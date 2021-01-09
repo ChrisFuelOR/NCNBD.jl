@@ -39,7 +39,7 @@ function unitCommitment_2_5()
     demand_penalty = 5e4
     emission_price = 0.02 #0.02 €/kg = 20 €/t
 
-    demand = [800 850 1000 970 1020]
+    demand = [800 850]
 
     model = SDDP.LinearPolicyGraph(
         stages = 2,
