@@ -216,8 +216,8 @@ function unitCommitment_2_5()
     # appliedSolvers = NCNBD.AppliedSolvers(GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer)
     appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron")
 
-    epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-4
+    epsilon_outerLoop = 1e-1
+    epsilon_innerLoop = 1e-2
 
     binaryPrecision = Dict{Symbol, Float64}()
 
@@ -236,7 +236,7 @@ function unitCommitment_2_5()
 
     plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
     sigma = [0.0, 10.0]
-    sigma_counter = 5
+    sigma_factor = 5
 
     @infiltrate
 
