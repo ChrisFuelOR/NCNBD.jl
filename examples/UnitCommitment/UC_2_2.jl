@@ -213,8 +213,8 @@ function unitCommitment_2_2()
     # appliedSolvers = NCNBD.AppliedSolvers(GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer)
     appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron")
 
-    epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-4
+    epsilon_outerLoop = 1e-1
+    epsilon_innerLoop = 1e-2
 
     binaryPrecision = Dict{Symbol, Float64}()
 
