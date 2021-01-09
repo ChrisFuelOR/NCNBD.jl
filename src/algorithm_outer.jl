@@ -162,7 +162,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         cumulative_value += subproblem_results.stage_objective
         # Determine the first stage objective
         if node_index == 1
-            first_stage_objective = subproblem_results.stage_objective
+            first_stage_objective = subproblem_results.objective
         end
         # Set the outgoing state value as the incoming state value for the next
         # node.
