@@ -225,7 +225,7 @@ function unitCommitment_2_2()
         if occursin("gen", string_name)
             binaryPrecision[name] = 1/7 * ub
         else
-            binaryPrecision[name] = 1/5
+            binaryPrecision[name] = 1
         end
     end
 
