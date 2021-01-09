@@ -902,7 +902,7 @@ function solve_first_stage_problem(
     # SOLUTION
     ############################################################################
     #@infiltrate
-    set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer))
+    #set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer))
     JuMP.optimize!(linearizedSubproblem)
 
     if haskey(model.ext, :total_solves)
