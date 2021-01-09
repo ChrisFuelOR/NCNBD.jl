@@ -118,6 +118,7 @@ end
 
 print_value(x::Real) = lpad(Printf.@sprintf("%1.6e", x), 13)
 print_value(x::Int) = Printf.@sprintf("%9d", x)
+print_value(x::Nothing) = Print("")
 
 function print_iteration(io, log::Log)
     print(io, print_value(log.outer_iteration))
@@ -214,7 +215,7 @@ function write_log_to_csv(model::SDDP.PolicyGraph, filename::String, algoParams:
 
             println(io, "solving outer loop problem")
             println(io)
-            
+
             println(io, "outer_iteration, lower_bound, upper_bound, time")
             println(
                 io,
