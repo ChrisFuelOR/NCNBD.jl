@@ -118,7 +118,7 @@ end
 
 print_value(x::Real) = lpad(Printf.@sprintf("%1.6e", x), 13)
 print_value(x::Int) = Printf.@sprintf("%9d", x)
-print_value(x::Nothing) = Print("")
+print_value(x::Nothing) = Printf.@sprintf("")
 
 function print_iteration(io, log::Log)
     print(io, print_value(log.outer_iteration))
