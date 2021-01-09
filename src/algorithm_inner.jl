@@ -45,12 +45,15 @@ function inner_loop_iteration(
         # Increase binary precision such that K = K + 1
         if solutionCheck == true
             # Consider stage 2 here (should be the same for all following stages)
+            # Precision is only used (and increased) for continuous variables
             for (name, state_comp) in model.nodes[2].ext[:lin_states]
-                current_prec = algoParams.binaryPrecision[name]
-                ub = state_comp.info.in.upper_bound
-                K = SDDP._bitsrequired(round(Int, ub / current_prec))
-                new_prec = ub / sum(2^(k-1) for k in 1:K+1)
-                algoParams.binaryPrecision[name] = new_prec
+                if !state_comp.info.in.binary and !state_comp.info.in.integer
+                    current_prec = algoParams.binaryPrecision[name]
+                    ub = state_comp.info.in.upper_bound
+                    K = SDDP._bitsrequired(round(Int, ub / current_prec))
+                    new_prec = ub / sum(2^(k-1) for k in 1:K+1)
+                    algoParams.binaryPrecision[name] = new_prec
+                end
             end
         end
     end
