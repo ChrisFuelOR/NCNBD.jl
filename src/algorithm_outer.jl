@@ -40,7 +40,8 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
         Log(
             model.ext[:outer_iteration], #length(options.log) + 1,
             nothing,
-            inner_loop_results.lower_bound,
+            #inner_loop_results.lower_bound,
+            forward_results.first_stage_objective,
             forward_results.cumulative_value,
             forward_results.sampled_states,
             time() - options.start_time,
@@ -62,7 +63,8 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     ############################################################################
     return NCNBD.OuterLoopIterationResult(
         #Distributed.myid(),
-        inner_loop_results.lower_bound,
+        #inner_loop_results.lower_bound,
+        forward_results.first_stage_objective,
         forward_results.cumulative_value,
         forward_results.sampled_states,
         has_converged,
@@ -91,6 +93,8 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
     incoming_state_value = copy(options.initial_state)
     # A cumulator for the stage-objectives.
     cumulative_value = 0.0
+    # First-stage optimal value
+    first_stage_objective = 0.0
     # Objective state interpolation.
     objective_state_vector, N = SDDP.initialize_objective_state(model[scenario_path[1][1]])
     objective_states = NTuple{N,Float64}[]
@@ -156,6 +160,10 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         end
         # Cumulate the stage_objective.
         cumulative_value += subproblem_results.stage_objective
+        # Determine the first stage objective
+        if node_index == 1
+            first_stage_objective = subproblem_results.stage_objective
+        end
         # Set the outgoing state value as the incoming state value for the next
         # node.
         incoming_state_value = copy(subproblem_results.state)
@@ -188,6 +196,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         objective_states = objective_states,
         belief_states = belief_states,
         cumulative_value = cumulative_value,
+        first_stage_objective = first_stage_objective,
     )
 end
 
