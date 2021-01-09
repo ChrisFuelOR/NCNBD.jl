@@ -242,9 +242,9 @@ function unitCommitment_2_5()
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision,
-                            sigma, sigma_counter)
+                            sigma, sigma_factor)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, sigma, sigma_counter)
+                                      binaryPrecision, sigma, sigma_factor)
 
     # SET-UP NONLINEARITIES
     ############################################################################
@@ -256,7 +256,7 @@ function unitCommitment_2_5()
 
     # WRITE LOGS TO FILE
     ############################################################################
-    NCNBD.write_log_to_csv(model, "uc_results.csv", algoParameters)
+    NCNBD.write_log_to_csv(model, "uc_results_2_5.csv", algoParameters)
 
 end
 
