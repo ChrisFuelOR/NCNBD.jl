@@ -47,7 +47,7 @@ function inner_loop_iteration(
             # Consider stage 2 here (should be the same for all following stages)
             # Precision is only used (and increased) for continuous variables
             for (name, state_comp) in model.nodes[2].ext[:lin_states]
-                if !state_comp.info.in.binary and !state_comp.info.in.integer
+                if !state_comp.info.in.binary && !state_comp.info.in.integer
                     current_prec = algoParams.binaryPrecision[name]
                     ub = state_comp.info.in.upper_bound
                     K = SDDP._bitsrequired(round(Int, ub / current_prec))
