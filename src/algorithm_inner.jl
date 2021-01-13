@@ -692,9 +692,11 @@ function solve_subproblem_backward(
         lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers)
         dual_values = lagrangian_results.dual_values
         bin_state = lagrangian_results.bin_state
+        objective = lagrangian_results.intercept
     else
         dual_values = Dict{Symbol,Float64}()
         bin_state = Dict{Symbol,BinaryState}()
+        objective = solver_obj
     end
     #@infiltrate
 
@@ -708,7 +710,7 @@ function solve_subproblem_backward(
     return (
         duals = dual_values,
         bin_state = bin_state,
-        objective = solver_obj
+        objective = objective
     )
 end
 
@@ -793,7 +795,8 @@ function get_dual_variables_backward(
 
     return (
         dual_values=dual_values,
-        bin_state=bin_state
+        bin_state=bin_state,
+        intercept=kelley_obj
     )
 end
 
