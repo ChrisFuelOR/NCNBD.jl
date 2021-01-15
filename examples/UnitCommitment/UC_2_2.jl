@@ -247,7 +247,8 @@ function unitCommitment_2_2()
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = 15, print_level = 1,
-                time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()])
+                time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
+                log_file = "UC_2_2.log")
 
     #@infiltrate
 
