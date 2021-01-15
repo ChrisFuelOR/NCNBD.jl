@@ -3,7 +3,8 @@ function inner_loop_iteration(
     options::NCNBD.Options,
     algoParams::NCNBD.AlgoParams,
     appliedSolvers::NCNBD.AppliedSolvers,
-    previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing}
+    previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
+    sigma_increased::Bool
     ) where {T}
 
     # ITERATION COUNTER
@@ -78,8 +79,10 @@ function inner_loop_iteration(
     # CALCULATE LOWER BOUND
     ############################################################################
     TimerOutputs.@timeit NCNBD_TIMER "calculate_bound" begin
-        bound = calculate_bound(model)
+        first_stage_results = calculate_bound(model)
     end
+    bound = first_stage_results.bound
+    subproblem_size = first_stage_results.problem_size[1]
 
     # PREPARE LOGGING
     ############################################################################
@@ -94,9 +97,12 @@ function inner_loop_iteration(
              time() - options.start_time,
              #Distributed.myid(),
              #model.ext[:total_solves],
-             algoParams.sigma,
-             algoParams.binaryPrecision,
-             algoParams.epsilon_innerLoop
+             #algoParams.sigma,
+             #algoParams.binaryPrecision,
+             sigma_increased,
+             solutionCheck, #binary_refinment
+             subproblem_size,
+             #algoParams.epsilon_innerLoop
          ),
      )
 
@@ -825,6 +831,7 @@ function calculate_bound(
     noise_supports = Any[]
     probabilities = Float64[]
     objectives = Float64[]
+    problem_size = Dict{Symbol,Int64}[]
     current_belief = SDDP.initialize_belief(model)
 
     # Solve all problems that are children of the root node.
@@ -858,6 +865,7 @@ function calculate_bound(
             push!(objectives, subproblem_results.objective)
             push!(probabilities, child.probability * noise.probability)
             push!(noise_supports, noise.term)
+            push!(problem_size, subproblem_results.problem_size)
         end
     end
     # Now compute the risk-adjusted probability measure:
@@ -871,8 +879,8 @@ function calculate_bound(
         model.objective_sense == MOI.MIN_SENSE,
     )
     # Finally, calculate the risk-adjusted value.
-    return sum(obj * prob for (obj, prob) in zip(objectives, risk_adjusted_probability)) +
-           offset
+    return (bound = sum(obj * prob for (obj, prob) in zip(objectives, risk_adjusted_probability)) +
+           offset, problem_size = problem_size)
 end
 
 
@@ -937,11 +945,22 @@ function solve_first_stage_problem(
     #     node.post_optimize_hook(pre_optimize_ret)
     # end
 
+    # DETERMINE THE PROBLEM SIZE
+    ############################################################################
+    problem_size = Dict{Symbol,Int64}()
+    problem_size[:total_var] = size(JuMP.all_variables(linearizedSubproblem))
+    problem_size[:bin_var] = JuMP.num_constraints(linearizedSubproblem, VariableRef, MOI.Binary)
+    problem_size[:int_var] = JuMP.num_constraints(linearizedSubproblem, VariableRef, MOI.Integer)
+    problem_size[:total_con] = JuMP.num_constraints(linearizedSubproblem, GenericAffExpr{Float64,VariableRef}, MOI.LessThan{Float64}) 
+                                + JuMP.num_constraints(linearizedSubproblem, GenericAffExpr{Float64,VariableRef}, MOI.GreaterThan{Float64})
+                                + JuMP.num_constraints(linearizedSubproblem, GenericAffExpr{Float64,VariableRef}, MOI.EqualTo{Float64})
+
     return (
         state = state,
         duals = dual_values,
         objective = objective,
         stage_objective = stage_objective,
+        problem_size = problem_size
     )
 end
 

@@ -2,15 +2,19 @@ struct Log
     outer_iteration::Int
     iteration::Union{Int,Nothing}
     lower_bound::Float64
+    #best_upper_bound::Float64
     upper_bound::Float64
     current_state::Vector{Dict{Symbol,Float64}}
     #simulation_value::Float64
     time::Float64
     #pid::Int
     #total_solves::Int
-    sigma::Vector{Float64}
-    binaryPrecision::Dict{Symbol,Float64}
-    opt_tolerance::Float64
+    #sigma::Vector{Float64}
+    #binaryPrecision::Dict{Symbol,Float64}
+    sigma_increased::Bool
+    bin_refinement::Bool
+    subproblem:size::Dict{Symbol,Int64}
+    #opt_tolerance::Float64
 end
 
 
@@ -112,13 +116,14 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration    Upper Bound     Lower Bound     Time (s)   ",
+        " Outer_Iteration   Inner_Iteration    Upper Bound     Lower Bound     Time (s) 	sigma_ref      bin_ref     Sub_tot_var     Sub_bin_var     Sub_int_var     Sub_con        ",
     )
 end
 
 print_value(x::Real) = lpad(Printf.@sprintf("%1.6e", x), 13)
 print_value(x::Int) = Printf.@sprintf("%9d", x)
 print_value(x::Nothing) = Printf.@sprintf("")
+print_value(x::Bool) = Printf.@sprintf(x)
 
 function print_iteration(io, log::Log)
     print(io, print_value(log.outer_iteration))
@@ -127,9 +132,12 @@ function print_iteration(io, log::Log)
     print(io, "   ", print_value(log.lower_bound))
     #print(io, "  ", print_value(log.current_state[1][:x]))
     print(io, "   ", print_value(log.time))
-    # print(io, "  ", print_value(log.pid))
-    # print(io, "  ", print_value(log.total_solves))
-    #print(io, "  ", print_value(log.binaryPrecision))
+    print(io, "     ", print_value(log.sigma_refinement))
+    print(io, "     ", print_value(log.bin_refinement))
+    print(io, "     ", print_value(log.subproblem_size[:total_var]))
+    print(io, "     ", print_value(log.subproblem_size[:bin_var]))
+    print(io, "     ", print_value(log.subproblem_size[:int_var]))
+    print(io, "     ", print_value(log.subproblem_size[:total_con]))
     println(io)
 end
 
@@ -139,6 +147,9 @@ function print_footer(io, training_results)
         io,
         "------------------------------------------------------------------------------",
     )
+
+    # TODO NCNBD_Timer
+    
 end
 
 function log_iteration(options, log)

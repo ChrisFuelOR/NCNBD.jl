@@ -528,10 +528,11 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     previousSolution = nothing
+    sigma_increased = false
 
     while true
         # start an inner loop
-        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution)
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, sigma_increased)
         # logging
         log_iteration(options, options.log_inner)
         @infiltrate
@@ -551,6 +552,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 # update information for MINLP
                 result_inner.upper_bound = upper_bound_non_reg
                 result_inner.current_sol = sigma_test_results.sampled_states
+                sigma_increased = false
 
                 # return all results here to keep them accessible in outer pass
                 #@infiltrate
@@ -559,6 +561,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             else
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
+                sigma_increased = true
 
             end
             # return all results here to keep them accessible in outer pass
@@ -567,6 +570,9 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             if result_inner.upper_bound - result_inner.lower_bound < - algoParams.epsilon_innerLoop * 0.1
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
+                sigma_increased = true
+            else
+                sigma_increased = false
             end
 
         end

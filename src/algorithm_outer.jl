@@ -47,9 +47,12 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
             time() - options.start_time,
             #Distributed.myid(),
             #model.ext[:total_solves],
-            algoParams.sigma,
-            algoParams.binaryPrecision,
-            algoParams.epsilon_outerLoop
+            #algoParams.sigma,
+            #algoParams.binaryPrecision,
+            nothing,
+            nothing,
+            nothing,
+            #algoParams.epsilon_outerLoop
         ),
     )
 
