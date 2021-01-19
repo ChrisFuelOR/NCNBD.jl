@@ -52,7 +52,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
             nothing,
             nothing,
             nothing,
-            #algoParams.epsilon_outerLoop
+            algoParams.epsilon_outerLoop
         ),
     )
 

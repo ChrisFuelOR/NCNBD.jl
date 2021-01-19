@@ -1,0 +1,30 @@
+OUTER LOOP ITERATION 1
+################################################################################
+solving inner loop problem
+
+inner_iteration, inner_lower_bound, inner_upper_bound, time
+1.000000, 3826.599710, 3826.599710, 72.066000
+
+current solution: 
+Stage 1 :
+state: commit[1] 0.000000
+state: gen[1] 0.000000
+Stage 2 :
+state: commit[1] 0.000000
+state: gen[1] 0.000000
+
+--------------------------------------------------------------------------------
+################################################################################
+solving outer loop problem
+
+outer_iteration, lower_bound, upper_bound, time
+1.000000, 0.000000, 0.000000, 113.931000
+
+current solution: 
+Stage 1 :
+state: commit[1] 0.000000
+state: gen[1] 0.000000
+Stage 2 :
+state: commit[1] 0.000000
+state: gen[1] 0.000000
+######################################################

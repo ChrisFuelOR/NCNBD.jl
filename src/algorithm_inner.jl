@@ -26,10 +26,9 @@ function inner_loop_iteration(
     ############################################################################
     # If the forward pass solution did not change during the last iteration, then
     # increase the binary precision (for all stages)
+    solutionCheck = true
     if !isnothing(previousSolution)
-        solutionCheck = true
         #@infiltrate
-
         # Check if solution has changed since last iteration
         # TODO: Maybe make this more efficient
         for i in 1:size(previousSolution,1)
@@ -102,7 +101,7 @@ function inner_loop_iteration(
              sigma_increased,
              solutionCheck, #binary_refinment
              subproblem_size,
-             #algoParams.epsilon_innerLoop
+             algoParams.epsilon_innerLoop
          ),
      )
 
@@ -948,10 +947,10 @@ function solve_first_stage_problem(
     # DETERMINE THE PROBLEM SIZE
     ############################################################################
     problem_size = Dict{Symbol,Int64}()
-    problem_size[:total_var] = size(JuMP.all_variables(linearizedSubproblem))
-    problem_size[:bin_var] = JuMP.num_constraints(linearizedSubproblem, VariableRef, MOI.Binary)
+    problem_size[:total_var] = size(JuMP.all_variables(linearizedSubproblem),1)
+    problem_size[:bin_var] = JuMP.num_constraints(linearizedSubproblem, VariableRef, MOI.ZeroOne)
     problem_size[:int_var] = JuMP.num_constraints(linearizedSubproblem, VariableRef, MOI.Integer)
-    problem_size[:total_con] = JuMP.num_constraints(linearizedSubproblem, GenericAffExpr{Float64,VariableRef}, MOI.LessThan{Float64}) 
+    problem_size[:total_con] = JuMP.num_constraints(linearizedSubproblem, GenericAffExpr{Float64,VariableRef}, MOI.LessThan{Float64})
                                 + JuMP.num_constraints(linearizedSubproblem, GenericAffExpr{Float64,VariableRef}, MOI.GreaterThan{Float64})
                                 + JuMP.num_constraints(linearizedSubproblem, GenericAffExpr{Float64,VariableRef}, MOI.EqualTo{Float64})
 

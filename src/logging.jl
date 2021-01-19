@@ -11,10 +11,10 @@ struct Log
     #total_solves::Int
     #sigma::Vector{Float64}
     #binaryPrecision::Dict{Symbol,Float64}
-    sigma_increased::Bool
-    bin_refinement::Bool
-    subproblem:size::Dict{Symbol,Int64}
-    #opt_tolerance::Float64
+    sigma_increased::Union{Bool,Nothing}
+    bin_refinement::Union{Bool,Nothing}
+    subproblem_size::Union{Dict{Symbol,Int64},Nothing}
+    opt_tolerance::Float64
 end
 
 
@@ -116,28 +116,31 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration    Upper Bound     Lower Bound     Time (s) 	sigma_ref      bin_ref     Sub_tot_var     Sub_bin_var     Sub_int_var     Sub_con        ",
+        " Outer_Iteration   Inner_Iteration    Upper Bound     Lower Bound     Time (s) 	     sigma_ref      bin_ref     Sub_tot_var     Sub_bin_var     Sub_int_var     Sub_con        ",
     )
 end
 
 print_value(x::Real) = lpad(Printf.@sprintf("%1.6e", x), 13)
 print_value(x::Int) = Printf.@sprintf("%9d", x)
 print_value(x::Nothing) = Printf.@sprintf("")
-print_value(x::Bool) = Printf.@sprintf(x)
+print_value(x::Bool) = Printf.@sprintf("%s", x ? "true" : "false")
 
 function print_iteration(io, log::Log)
     print(io, print_value(log.outer_iteration))
-    print(io, "                  ", print_value(log.iteration))
-    print(io, "                        ", print_value(log.upper_bound))
+    print(io, "        ", print_value(log.iteration))
+    print(io, "           ", print_value(log.upper_bound))
     print(io, "   ", print_value(log.lower_bound))
     #print(io, "  ", print_value(log.current_state[1][:x]))
     print(io, "   ", print_value(log.time))
-    print(io, "     ", print_value(log.sigma_refinement))
-    print(io, "     ", print_value(log.bin_refinement))
-    print(io, "     ", print_value(log.subproblem_size[:total_var]))
-    print(io, "     ", print_value(log.subproblem_size[:bin_var]))
-    print(io, "     ", print_value(log.subproblem_size[:int_var]))
-    print(io, "     ", print_value(log.subproblem_size[:total_con]))
+    print(io, "   ", print_value(log.sigma_increased))
+    print(io, "          ", print_value(log.bin_refinement))
+
+    if !isnothing(log.subproblem_size)
+        print(io, " ", print_value(log.subproblem_size[:total_var]))
+        print(io, "       ", print_value(log.subproblem_size[:bin_var]))
+        print(io, "      ", print_value(log.subproblem_size[:int_var]))
+        print(io, "        ", print_value(log.subproblem_size[:total_con]))
+    end
     println(io)
 end
 
@@ -149,7 +152,7 @@ function print_footer(io, training_results)
     )
 
     # TODO NCNBD_Timer
-    
+
 end
 
 function log_iteration(options, log)
@@ -181,17 +184,17 @@ function write_log_to_csv(model::SDDP.PolicyGraph, filename::String, algoParams:
                 if log_inner.outer_iteration == log.outer_iteration
                     println(io, "solving inner loop problem")
                     println(io)
-                    println(io, "binary precision: " )
+                    #println(io, "binary precision: " )
                     # should be the same for all nodes
-                    for (name, state) in model.nodes[1].ext[:lin_states]
-                        println(io, "state: ", string(name), " ", algoParams.binaryPrecision[name])
-                    end
-                    println(io)
-                    println(io, "sigma: " )
-                    for i in 1:size(log.sigma, 1)
-                        println(io, "stage $i :", " ", log.sigma[i])
-                    end
-                    println(io)
+                    #for (name, state) in model.nodes[1].ext[:lin_states]
+                    #    println(io, "state: ", string(name), " ", algoParams.binaryPrecision[name])
+                    #end
+                    #println(io)
+                    #println(io, "sigma: " )
+                    #for i in 1:size(log.sigma, 1)
+                    #    println(io, "stage $i :", " ", log.sigma[i])
+                    #end
+                    #println(io)
 
                     println(io, "inner_iteration, inner_lower_bound, inner_upper_bound, time")
                     println(
