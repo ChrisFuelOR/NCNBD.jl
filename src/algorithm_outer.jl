@@ -35,6 +35,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     # LOGGING RESULTS?
     ############################################################################
 
+    @infiltrate
     push!(
         options.log_outer,
         Log(

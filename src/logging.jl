@@ -116,33 +116,73 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration    Upper Bound     Lower Bound     Time (s) 	     sigma_ref      bin_ref     Sub_tot_var     Sub_bin_var     Sub_int_var     Sub_con        ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  ",
     )
 end
 
-print_value(x::Real) = lpad(Printf.@sprintf("%1.6e", x), 13)
-print_value(x::Int) = Printf.@sprintf("%9d", x)
-print_value(x::Nothing) = Printf.@sprintf("")
-print_value(x::Bool) = Printf.@sprintf("%s", x ? "true" : "false")
+#print_value(x::Real) = lpad(Printf.@sprintf("%1.6e", x), 13)
+#print_value(x::Int) = Printf.@sprintf("%9d", x)
+#print_value(x::Nothing) = Printf.@sprintf("")
+#print_value(x::Bool) = Printf.@sprintf("%s", x ? "true" : "false")
+
+#function print_iteration(io, log::Log)
+#    print(io, print_value(log.outer_iteration))
+#    print(io, "        ", print_value(log.iteration))
+#    print(io, "           ", print_value(log.upper_bound))
+#    print(io, "   ", print_value(log.lower_bound))
+#    #print(io, "  ", print_value(log.current_state[1][:x]))
+#    print(io, "   ", print_value(log.time))
+#    print(io, "   ", print_value(log.sigma_increased))
+#    print(io, "          ", print_value(log.bin_refinement))
+#
+#    if !isnothing(log.subproblem_size)
+#        print(io, " ", print_value(log.subproblem_size[:total_var]))
+#        print(io, "       ", print_value(log.subproblem_size[:bin_var]))
+#        print(io, "      ", print_value(log.subproblem_size[:int_var]))
+#        print(io, "        ", print_value(log.subproblem_size[:total_con]))
+#    end
+#    println(io)
+#end
 
 function print_iteration(io, log::Log)
-    print(io, print_value(log.outer_iteration))
-    print(io, "        ", print_value(log.iteration))
-    print(io, "           ", print_value(log.upper_bound))
-    print(io, "   ", print_value(log.lower_bound))
-    #print(io, "  ", print_value(log.current_state[1][:x]))
-    print(io, "   ", print_value(log.time))
-    print(io, "   ", print_value(log.sigma_increased))
-    print(io, "          ", print_value(log.bin_refinement))
-
+    print(io, lpad(Printf.@sprintf("%5d", log.outer_iteration), 15))
+    print(io, "   ")
+    if !isnothing(log.iteration)
+       print(io, lpad(Printf.@sprintf("%5d", log.iteration), 15))
+    else
+       print(io, lpad(Printf.@sprintf(""), 15))
+    end
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.6e", log.upper_bound), 13))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.6e", log.lower_bound), 13))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.6e", log.time), 13))
+    print(io, "   ")
+    if !isnothing(log.sigma_increased)
+    	print(io, Printf.@sprintf("%9s", log.sigma_increased ? "true" : "false"))
+    else
+   	    print(io, lpad(Printf.@sprintf(""), 9))
+    end
+    print(io, "   ")
+    if !isnothing(log.bin_refinement)
+    	print(io, Printf.@sprintf("%9s", log.bin_refinement ? "true" : "false"))
+    else
+   	    print(io, lpad(Printf.@sprintf(""), 9))
+    end
+    print(io, "   ")
     if !isnothing(log.subproblem_size)
-        print(io, " ", print_value(log.subproblem_size[:total_var]))
-        print(io, "       ", print_value(log.subproblem_size[:bin_var]))
-        print(io, "      ", print_value(log.subproblem_size[:int_var]))
-        print(io, "        ", print_value(log.subproblem_size[:total_con]))
+       	print(io, Printf.@sprintf("%9d", log.subproblem_size[:total_var]))
+        print(io, "   ")
+       	print(io, Printf.@sprintf("%9d", log.subproblem_size[:bin_var]))
+        print(io, "   ")
+       	print(io, Printf.@sprintf("%9d", log.subproblem_size[:int_var]))
+        print(io, "   ")
+       	print(io, Printf.@sprintf("%9d", log.subproblem_size[:total_con]))
     end
     println(io)
 end
+
 
 function print_footer(io, training_results)
     println(io, "\nTerminating NCNBD with status: $(training_results.status)")
