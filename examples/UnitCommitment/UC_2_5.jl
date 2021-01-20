@@ -234,7 +234,7 @@ function unitCommitment_2_5()
     sigma = [0.0, 10.0]
     sigma_factor = 5
 
-    infiltate_state = :none
+    infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
