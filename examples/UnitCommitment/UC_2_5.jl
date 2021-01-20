@@ -249,7 +249,7 @@ function unitCommitment_2_5()
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = 15, print_level = 2,
                 time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "UC_2_5.log")
+                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_2_5.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
