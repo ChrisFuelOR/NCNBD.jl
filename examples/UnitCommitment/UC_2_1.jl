@@ -164,8 +164,6 @@ function unitCommitment_2_1()
                             sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
                             + demand_slack * demand_penalty)
 
-        @infiltrate
-
         # DEFINE NONLINEARITY
         # ------------------------------------------------------------------
         # TODO: Add c*commit, but then two-dimensional
@@ -234,7 +232,7 @@ function unitCommitment_2_1()
     sigma = [0.0, 10.0]
     sigma_counter = 5
 
-    infiltate_state = :none
+    infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,

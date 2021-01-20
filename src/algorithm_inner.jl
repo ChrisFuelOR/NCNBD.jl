@@ -194,6 +194,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
                 noise,
                 scenario_path[1:depth],
                 sigma,
+                algoParams.infiltrate_state,
                 require_duals = false,
             )
         end
@@ -246,7 +247,8 @@ function solve_subproblem_forward_inner(
     state::Dict{Symbol,Float64},
     noise,
     scenario_path::Vector{Tuple{T,S}},
-    sigma::Float64;
+    sigma::Float64,
+    infiltrate_state::Symbol;
     require_duals::Bool,
 ) where {T,S}
     #TODO: We can actually delete the duals part here
@@ -278,7 +280,7 @@ function solve_subproblem_forward_inner(
 
     # SOLUTION
     ############################################################################
-    @infiltrate algoParams.infiltrate_state in [:all, :inner]
+    @infiltrate infiltrate_state in [:all, :inner]
     JuMP.optimize!(linearizedSubproblem)
 
     if haskey(model.ext, :total_solves)
@@ -294,7 +296,7 @@ function solve_subproblem_forward_inner(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
-    @infiltrate algoParams.infiltrate_state in [:all, :inner]
+    @infiltrate infiltrate_state in [:all, :inner]
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state

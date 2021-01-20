@@ -265,7 +265,8 @@ function _add_average_cut(
         belief_y,
         algoParams.binaryPrecision,
         sigma,
-        iteration
+        iteration,
+        algoParams.infiltrate_state,
     )
 
     return (theta = θᵏ, pi = πᵏ, λ = bin_states, obj_y = obj_y, belief_y = belief_y)
@@ -285,7 +286,8 @@ function _add_cut(
     belief_y::Union{Nothing,Dict{T,Float64}},
     binaryPrecision::Dict{Symbol,Float64},
     sigma::Float64,
-    iteration::Int64;
+    iteration::Int64,
+    infiltrate_state::Symbol;
     cut_selection::Bool = false
 ) where {N,T}
 
@@ -294,7 +296,7 @@ function _add_cut(
     for (key, λ) in λᵏ
         θᵏ -= πᵏ[key] * λᵏ[key].value
     end
-    @infiltrate algoParams.infiltrate_state in [:bellman]
+    @infiltrate infiltrate_state in [:bellman]
 
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
@@ -303,7 +305,7 @@ function _add_cut(
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
     ############################################################################
-    add_cut_constraints_to_models(node, V, V_lin, cut, sigma, binaryPrecision, iteration)
+    add_cut_constraints_to_models(node, V, V_lin, cut, sigma, binaryPrecision, iteration, infiltrate_state)
 
     if cut_selection
         #TODO
@@ -326,7 +328,8 @@ function add_cut_constraints_to_models(
     #λᵏ::Dict{Symbol,Float64},
     sigma::Float64,
     binaryPrecision::Dict{Symbol,Float64},
-    iteration::Int64
+    iteration::Int64,
+    infiltrate_state::Symbol,
     )
 
     model = JuMP.owner_model(V.theta)
@@ -414,7 +417,8 @@ function add_cut_constraints_to_models(
                                 cut.cutConstraints,
                                 i,
                                 duals_so_far,
-                                Umax)
+                                Umax,
+                                infiltrate_state)
             duals_lin_so_far = add_cut_projection_to_model!(
                                 model_lin,
                                 V_lin.states[name],
@@ -431,7 +435,8 @@ function add_cut_constraints_to_models(
                                 cut.cutConstraints_lin,
                                 i,
                                 duals_lin_so_far,
-                                Umax)
+                                Umax,
+                                infiltrate_state)
 
         end
     end
@@ -464,8 +469,6 @@ function add_cut_constraints_to_models(
 
     # TO ORIGINAL MODEL
     ############################################################################
-    #@infiltrate
-
     expr = @expression(
         model,
         V.theta + yᵀμ - sum(allCoefficients[j] * gamma[j]  for j=1:number_of_duals)
@@ -513,7 +516,8 @@ function add_cut_projection_to_model!(
     cutConstraints::Vector{JuMP.ConstraintRef},
     i::Int64,
     duals_so_far::Int64,
-    Umax::Float64
+    Umax::Float64,
+    infiltrate_state::Symbol,
     )
 
     # ADD VARIABLES FOR CUT PROJECTION
@@ -574,7 +578,7 @@ function add_cut_projection_to_model!(
         end
     end
 
-    @infiltrate algoParams.infiltrate_state in [:bellman]
+    @infiltrate infiltrate_state in [:bellman]
 
     bigM_11_constraints = JuMP.@constraint(
         model,

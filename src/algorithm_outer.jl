@@ -157,6 +157,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
                 incoming_state_value, # no State struct!
                 noise,
                 scenario_path[1:depth],
+                algoParams.infiltrate_state,
                 require_duals = false,
             )
         end
@@ -208,7 +209,8 @@ function solve_subproblem_forward_outer(
     node::SDDP.Node{T},
     state::Dict{Symbol,Float64},
     noise,
-    scenario_path::Vector{Tuple{T,S}};
+    scenario_path::Vector{Tuple{T,S}},
+    infiltrate_state::Symbol;
     require_duals::Bool,
 ) where {T,S}
     #TODO: We can actually delete the duals part here
@@ -235,7 +237,7 @@ function solve_subproblem_forward_outer(
     stage_objective = SDDP.stage_objective_value(node.stage_objective)
     objective = JuMP.objective_value(node.subproblem)
 
-    @infiltrate algoParams.infiltrate_state in [:all, :outer]
+    @infiltrate infiltrate_state in [:all, :outer]
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
