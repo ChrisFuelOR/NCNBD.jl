@@ -25,7 +25,7 @@ struct Generator
 end
 
 
-function unitCommitment_2_5()
+function unitCommitment_5_5()
 
     generators = [
         Generator(0, 0.0, 200.0, 40.0, 18.0, 2.0, 42.6, 42.6, 40.0, 40.0, -2.375, 1025.0, 0.0),
@@ -231,7 +231,7 @@ function unitCommitment_2_5()
     end
 
     plaPrecision = [40, 64, 30, 104, 56] # apart from one generator always 1/5 of pmax
-    sigma = [0.0, 10.0]
+    sigma = [0.0, 10.0, 10.0, 10.0, 10.0]
     sigma_factor = 5
 
     infiltrate_state = :none
@@ -247,14 +247,14 @@ function unitCommitment_2_5()
     # SET-UP NONLINEARITIES
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 15, print_level = 2,
+                iteration_limit = 100, print_level = 2,
                 time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "UC_2_5.log")
+                log_file = "UC_5_5.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
-    NCNBD.write_log_to_csv(model, "uc_results_2_5.csv", algoParameters)
+    NCNBD.write_log_to_csv(model, "uc_results_5_5.csv", algoParameters)
 
 end
 
-unitCommitment_2_5()
+unitCommitment_5_5()

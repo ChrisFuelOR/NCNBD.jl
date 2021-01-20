@@ -25,7 +25,7 @@ struct Generator
 end
 
 
-function unitCommitment_5_10()
+function unitCommitment_10_10()
 
     generators = [
         Generator(0, 0.0, 200.0, 40.0, 18.0, 2.0, 42.6, 42.6, 40.0, 40.0, -2.375, 1025.0, 0.0),
@@ -44,10 +44,10 @@ function unitCommitment_5_10()
     demand_penalty = 5e4
     emission_price = 0.02 #0.02 €/kg = 20 €/t
 
-    demand = [800 850 1010 1149 1236]
+    demand = [40 60 1010 1149 1236 1331 1397 1419 1455 1455]
 
     model = SDDP.LinearPolicyGraph(
-        stages = 5,
+        stages = 10,
         lower_bound = 0.0,
         optimizer = Gurobi.Optimizer,
         sense = :Min
@@ -236,7 +236,7 @@ function unitCommitment_5_10()
     end
 
     plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
-    sigma = [0.0, 10.0, 10.0, 10.0, 10.0]
+    sigma = [0.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0]
     sigma_factor = 5
 
     infiltrate_state = :none
@@ -252,14 +252,14 @@ function unitCommitment_5_10()
     # SET-UP NONLINEARITIES
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 100, print_level = 2,
+                iteration_limit = 200, print_level = 2,
                 time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "UC_5_10.log")
+                log_file = "UC_10_10.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
-    NCNBD.write_log_to_csv(model, "uc_results_5_10.csv", algoParameters)
+    NCNBD.write_log_to_csv(model, "uc_results_10_10.csv", algoParameters)
 
 end
 
-unitCommitment_5_10()
+unitCommitment_10_10()
