@@ -28,32 +28,11 @@ function inner_loop_iteration(
     # increase the binary precision (for all stages)
     solutionCheck = true
     if !isnothing(previousSolution)
-        #@infiltrate
-        # Check if solution has changed since last iteration
-        # TODO: Maybe make this more efficient
-        for i in 1:size(previousSolution,1)
-            # Consider stage 2 here (should be the same for all following stages)
-            for (name, state_comp) in model.nodes[i].ext[:lin_states]
-                current_sol = forward_trajectory.sampled_states[i][name]
-                previous_sol = previousSolution[i][name]
-                if current_sol != previous_sol
-                    solutionCheck = false
-                end
-            end
-        end
-
-        # Increase binary precision such that K = K + 1
-        if solutionCheck == true
-            # Consider stage 2 here (should be the same for all following stages)
-            # Precision is only used (and increased) for continuous variables
-            for (name, state_comp) in model.nodes[2].ext[:lin_states]
-                if !state_comp.info.in.binary && !state_comp.info.in.integer
-                    current_prec = algoParams.binaryPrecision[name]
-                    ub = state_comp.info.in.upper_bound
-                    K = SDDP._bitsrequired(round(Int, ub / current_prec))
-                    new_prec = ub / sum(2^(k-1) for k in 1:K+1)
-                    algoParams.binaryPrecision[name] = new_prec
-                end
+        TimerOutputs.@timeit NCNBD_TIMER "bin_refinement" begin
+            solutionCheck = NCNBD.binary_refinement_check(model, previousSolution, forward_trajectory.sampled_states)
+            if solutionCheck == true
+                # Increase binary precision such that K = K + 1
+                NCNBD.binaryRefinement!(model, algoParams)
             end
         end
     end
@@ -132,10 +111,10 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
     ############################################################################
     # First up, sample a scenario. Note that if a cycle is detected, this will
     # return the cycle node as well.
-    TimerOutputs.@timeit NCNBD_TIMER "sample_scenario" begin
-        scenario_path, terminated_due_to_cycle =
+    #TimerOutputs.@timeit NCNBD_TIMER "sample_scenario" begin
+    scenario_path, terminated_due_to_cycle =
             SDDP.sample_scenario(model, options.sampling_scheme)
-    end
+    #end
 
     #TODO: Has something here to be adapted such that it relates to the linearizedSubproblem?
     # Storage for the list of outgoing states that we visit on the forward pass.
@@ -206,7 +185,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
         # SUBPROBLEM SOLUTION
         ############################################################################
         # Solve the subproblem, note that `require_duals = false`.
-        TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
+        TimerOutputs.@timeit NCNBD_TIMER "solve_FP" begin
             subproblem_results = solve_subproblem_forward_inner(
                 model,
                 node,
@@ -567,7 +546,7 @@ function solve_all_children(
                     )
                 end
                 TimerOutputs.@timeit NCNBD_TIMER "solve_bw_subproblem" begin
-                    subproblem_results = solve_subproblem_backward(
+                    subproblem_results = solve_BP(
                         model,
                         child_node,
                         node_index+1,
@@ -1039,7 +1018,7 @@ function inner_loop_forward_sigma_test(
         ############################################################################
         # Solve the subproblem, note that `require_duals = false`.
         TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
-            subproblem_results = solve_subproblem_sigma_test(
+            subproblem_results = solve_sigma_test(
                 model,
                 node,
                 incoming_state_value, # only values, no State struct!

@@ -498,3 +498,51 @@ function deregularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     delete!(node.ext, :regularization_data)
 
 end
+
+
+function binary_refinement_check(
+    model::SDDP.PolicyGraph{T},
+    previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
+    sampled_states::Vector{Dict{Symbol,Float64}},
+    )
+
+    #@infiltrate
+    solutionCheck = true
+
+    # Check if solution has changed since last iteration
+    for i in 1:size(previousSolution,1)
+        # Consider stage 2 here (should be the same for all following stages)
+        for (name, state_comp) in model.nodes[i].ext[:lin_states]
+            current_sol = sampled_states[i][name]
+            previous_sol = previousSolution[i][name]
+            if current_sol != previous_sol
+                solutionCheck = false
+            end
+        end
+    end
+
+    return solutionCheck
+
+end
+
+
+function binary_refinement!(
+    model::SDDP.PolicyGraph{T},
+    algoParams::NCNBD.AlgoParams,
+    )
+
+    #@infiltrate
+
+    # Consider stage 2 here (should be the same for all following stages)
+    # Precision is only used (and increased) for continuous variables
+    for (name, state_comp) in model.nodes[2].ext[:lin_states]
+        if !state_comp.info.in.binary && !state_comp.info.in.integer
+            current_prec = algoParams.binaryPrecision[name]
+            ub = state_comp.info.in.upper_bound
+            K = SDDP._bitsrequired(round(Int, ub / current_prec))
+            new_prec = ub / sum(2^(k-1) for k in 1:K+1)
+            algoParams.binaryPrecision[name] = new_prec
+        end
+    end
+
+end
