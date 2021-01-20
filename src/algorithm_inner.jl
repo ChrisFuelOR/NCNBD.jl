@@ -619,7 +619,9 @@ function solve_subproblem_backward(
     # BACKWARD PASS PREPARATION
     ############################################################################
     # Also adapt solver here
-    changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
+    TimerOutputs.@timeit NCNBD_TIMER "space_change" begin
+        changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
+    end
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
@@ -696,7 +698,10 @@ function solve_subproblem_backward(
 
     #TODO: REGAIN ORIGINAL MODEL
     ############################################################################
-    changeToOriginalSpace!(node, linearizedSubproblem, state)
+    TimerOutputs.@timeit NCNBD_TIMER "space_change" begin
+        changeToOriginalSpace!(node, linearizedSubproblem, state)
+    end
+
     return (
         duals = dual_values,
         bin_state = bin_state,

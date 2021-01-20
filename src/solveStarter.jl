@@ -411,7 +411,7 @@ function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
     #previousSolution = nothing
 
     while true
-        TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
+        TimerOutputs.@timeit NCNBD_TIMER "outer_loop" begin
             result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
         end
 

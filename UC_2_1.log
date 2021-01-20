@@ -249,3 +249,74 @@ Solver: serial mode
 
  Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  
               1                 1    3.826600e+03    3.826600e+03    5.295300e+01       false        true          45          12           0          22
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  
+              1                 1    3.826600e+03    3.826600e+03    1.026060e+02       false        true          45          12           0          22
+              1                      0.000000e+00    0.000000e+00    1.764540e+02                           
+
+Terminating NCNBD with status: DeterministicStopping
+------------------------------------------------------------------------------
+ ──────────────────────────────────────────────────────────────────────────────
+                                       Time                   Allocations      
+                               ──────────────────────   ───────────────────────
+       Tot / % measured:             179s / 158%            3.17GiB / 189%     
+
+ Section               ncalls     time   %tot     avg     alloc   %tot      avg
+ ──────────────────────────────────────────────────────────────────────────────
+ inner_loop                 2     281s  99.3%    141s   5.79GiB  96.9%  2.89GiB
+   outer_loop_solution      1    65.9s  23.3%   65.9s   70.0MiB  1.14%  70.0MiB
+     solve_subproblem       2    65.9s  23.2%   32.9s   69.5MiB  1.14%  34.7MiB
+   forward_pass             1    45.0s  15.9%   45.0s   2.38GiB  39.8%  2.38GiB
+     solve_FP               2    44.8s  15.8%   22.4s   2.37GiB  39.7%  1.19GiB
+   backward_pass            1    44.3s  15.6%   44.3s    442MiB  7.23%   442MiB
+     solve_BP               1    40.6s  14.3%   40.6s    373MiB  6.09%   373MiB
+       solve_lagrange       1    29.0s  10.2%   29.0s    321MiB  5.24%   321MiB
+       solve_primal         1    1.90s  0.67%   1.90s    248KiB  0.00%   248KiB
+     update_bellman         1    1.02s  0.36%   1.02s   22.7MiB  0.37%  22.7MiB
+   sigma_test               1    4.37s  1.54%   4.37s   16.4MiB  0.27%  16.4MiB
+     solve_sigma_test       2    4.21s  1.49%   2.11s   9.17MiB  0.15%  4.58MiB
+   calculate_bound          1    1.47s  0.52%   1.47s   10.3MiB  0.17%  10.3MiB
+ initialize_PLR             2    2.01s  0.71%   1.00s    191MiB  3.12%  95.6MiB
+ ──────────────────────────────────────────────────────────────────────────────
+
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  
+              1                 1    3.826600e+03    3.826600e+03    4.866700e+01       false        true          45          12           0          22
+              1                      0.000000e+00    0.000000e+00    6.289100e+01                           
+
+Terminating NCNBD with status: DeterministicStopping
+------------------------------------------------------------------------------
+ ──────────────────────────────────────────────────────────────────────────────
+                                       Time                   Allocations      
+                               ──────────────────────   ───────────────────────
+       Tot / % measured:            65.5s / 96.0%           3.17GiB / 98.5%    
+
+ Section               ncalls     time   %tot     avg     alloc   %tot      avg
+ ──────────────────────────────────────────────────────────────────────────────
+ outer_loop                 1    60.7s  96.5%   60.7s   2.93GiB  94.0%  2.93GiB
+   inner_loop               1    52.3s  83.2%   52.3s   2.86GiB  91.7%  2.86GiB
+     forward_pass           1    26.3s  41.9%   26.3s   2.38GiB  76.3%  2.38GiB
+       solve_FP             2    26.2s  41.7%   13.1s   2.37GiB  76.2%  1.19GiB
+     backward_pass          1    17.0s  27.0%   17.0s    442MiB  13.9%   442MiB
+       solve_BP             1    14.5s  23.0%   14.5s    374MiB  11.7%   374MiB
+         solve_lagr...      1    7.64s  12.2%   7.64s    321MiB  10.0%   321MiB
+         solve_primal       1    2.29s  3.65%   2.29s    248KiB  0.01%   248KiB
+       update_bellman       1    959ms  1.53%   959ms   22.7MiB  0.71%  22.7MiB
+     sigma_test             1    3.95s  6.29%   3.95s   16.4MiB  0.51%  16.4MiB
+       solve_sigma_...      2    3.80s  6.05%   1.90s   9.17MiB  0.29%  4.59MiB
+     calculate_bound        1    1.71s  2.73%   1.71s   10.3MiB  0.32%  10.3MiB
+   outer_loop_solution      1    6.36s  10.1%   6.36s   70.0MiB  2.19%  70.0MiB
+     solve_subproblem       2    6.33s  10.1%   3.16s   69.5MiB  2.18%  34.8MiB
+ initialize_PLR             2    2.17s  3.45%   1.09s    191MiB  5.99%  95.6MiB
+ ──────────────────────────────────────────────────────────────────────────────
+
