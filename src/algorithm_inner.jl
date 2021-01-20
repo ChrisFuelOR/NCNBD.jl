@@ -446,20 +446,22 @@ function inner_loop_backward_pass(
 
             # REFINE BELLMAN FUNCTION BY ADDING CUTS
             ####################################################################
-            new_cuts = refine_bellman_function(
-                model,
-                node,
-                node_index,
-                node.bellman_function,
-                options.risk_measures[node_index],
-                used_trial_points,
-                items.bin_state,
-                items.duals,
-                items.supports,
-                items.probability,
-                items.objectives,
-                algoParams
-            )
+            TimerOutputs.@timeit NCNBD_TIMER "update_bellman" begin
+                new_cuts = refine_bellman_function(
+                    model,
+                    node,
+                    node_index,
+                    node.bellman_function,
+                    options.risk_measures[node_index],
+                    used_trial_points,
+                    items.bin_state,
+                    items.duals,
+                    items.supports,
+                    items.probability,
+                    items.objectives,
+                    algoParams
+                )
+            end
             push!(cuts[node_index], new_cuts)
             # if options.refine_at_similar_nodes
             #     # Refine the bellman function at other nodes with the same
@@ -545,8 +547,8 @@ function solve_all_children(
                         noise.term,
                     )
                 end
-                TimerOutputs.@timeit NCNBD_TIMER "solve_bw_subproblem" begin
-                    subproblem_results = solve_BP(
+                TimerOutputs.@timeit NCNBD_TIMER "solve_BP" begin
+                    subproblem_results = solve_subproblem_backward(
                         model,
                         child_node,
                         node_index+1,
@@ -628,7 +630,9 @@ function solve_subproblem_backward(
     # PRIMAL SOLUTION
     ############################################################################
     #@infiltrate
-    JuMP.optimize!(linearizedSubproblem)
+    TimerOutputs.@timeit NCNBD_TIMER "solve_primal" begin
+        JuMP.optimize!(linearizedSubproblem)
+    end
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -673,7 +677,9 @@ function solve_subproblem_backward(
     # variable. If require_duals=false, return an empty dictionary for
     # type-stability.
     if require_duals
-        lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers)
+        TimerOutputs.@timeit NCNBD_TIMER "solve_lagrange" begin
+            lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers)
+        end
         dual_values = lagrangian_results.dual_values
         bin_state = lagrangian_results.bin_state
         objective = lagrangian_results.intercept

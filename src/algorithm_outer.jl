@@ -84,10 +84,10 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
     ############################################################################
     # First up, sample a scenario. Note that if a cycle is detected, this will
     # return the cycle node as well.
-    TimerOutputs.@timeit NCNBD_TIMER "sample_scenario_outer" begin
-        scenario_path, terminated_due_to_cycle =
+    #TimerOutputs.@timeit NCNBD_TIMER "sample_scenario_outer" begin
+    scenario_path, terminated_due_to_cycle =
             SDDP.sample_scenario(model, options.sampling_scheme)
-    end
+    #end
     # Storage for the list of outgoing states that we visit on the forward pass.
     sampled_states = Dict{Symbol,Float64}[]
     # Storage for the belief states: partition index and the belief dictionary.

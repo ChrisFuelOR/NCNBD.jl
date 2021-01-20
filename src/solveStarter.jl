@@ -349,7 +349,9 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
         # determines a piecewise linear relaxation for all nonlinear functions
         # in this node
-        piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
+        TimerOutputs.@timeit NCNBD_TIMER "initialize_PLR" begin
+            NCNBD.piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
+        end
     end
 
     #@infiltrate
@@ -409,52 +411,20 @@ function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
     #previousSolution = nothing
 
     while true
-        result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
-        @infiltrate
+        TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
+            result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
+        end
+
+        #@infiltrate
         log_iteration(options, options.log_outer)
         if result_outer.has_converged
             return result_outer.status
         end
 
-       # INCREASE SIGMA - METHOD I
-       #########################################################################
-       # Increase sigma for all stages based on solution change
-       #  if !isnothing(previousSolution)
-       #      solutionCheck = true
-       #
-       #      # Check if solution has changed since last iteration
-       #      # TODO: Maybe make this more efficient
-       #      for i in 1:size(previousSolution,1)
-       #          for (name, state_comp) in model.nodes[i].ext[:lin_states]
-       #              current_sol = forward_trajectory.sampled_states[i][name]
-       #              previous_sol = previousSolution[i][name]
-       #              if current_sol != previous_sol
-       #                  solutionCheck = false
-       #              end
-       #          end
-       #      end
-       #
-       #      # Increase sigma for all stages by factor 5
-    	# if solutionCheck == false
-       #          algoParams.sigma = algoParams.sigma * 5
-       #      end
-       # end
-       #
-       #  previousSolution = result_outer.current_sol
-
-       # INCREASE SIGMA - METHOD II
-       #########################################################################
-       # Increase sigma for all stages based on iteration
-       # every sigma_counter-th iteration, sigma is increased instead of PLA refinement
-       # if mod(model.ext[:outer_iteration] / algoParams.sigma_counter) == 0
-       #     algoParams.sigma = algoParams.sigma * 5
-       # else
-       #     # Piecewise linear refinement
-       #     piecewise_linear_refinement(model, appliedSolvers)
-       # end
-
        # Piecewise linear refinement
-       piecewise_linear_refinement(model, appliedSolvers)
+       TimerOutputs.@timeit NCNBD_TIMER "refine_PLR" begin
+            NCNBD.piecewise_linear_refinement(model, appliedSolvers)
+       end
 
     end
 end
@@ -537,7 +507,10 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         log_iteration(options, options.log_inner)
         @infiltrate
         if result_inner.has_converged
-            sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
+
+            TimerOutputs.@timeit NCNBD_TIMER "sigma_test" begin
+                sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
+            end
 
             upper_bound_non_reg = sigma_test_results.cumulative_value
             upper_bound_reg = result_inner.upper_bound
