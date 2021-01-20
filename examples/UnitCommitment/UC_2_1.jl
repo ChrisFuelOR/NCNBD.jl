@@ -226,8 +226,6 @@ function unitCommitment_2_1()
         end
     end
 
-    @infiltrate
-
     plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
     sigma = [0.0, 10.0]
     sigma_counter = 5
@@ -249,7 +247,6 @@ function unitCommitment_2_1()
                 time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
                 log_file = "UC_2_1.log")
 
-    #@infiltrate
 
     # WRITE LOGS TO FILE
     ############################################################################

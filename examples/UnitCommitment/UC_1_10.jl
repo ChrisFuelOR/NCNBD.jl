@@ -173,8 +173,6 @@ function unitCommitment_1_10()
                             sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
                             + demand_slack * demand_penalty)
 
-        @infiltrate
-
         # DEFINE NONLINEARITY
         # ------------------------------------------------------------------
         # TODO: Add c*commit, but then two-dimensional
@@ -236,8 +234,6 @@ function unitCommitment_1_10()
             binaryPrecision[name] = 1
         end
     end
-
-    @infiltrate
 
     plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
     sigma = [0.0]
