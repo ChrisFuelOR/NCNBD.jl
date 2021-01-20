@@ -252,7 +252,7 @@ function unitCommitment_2_10()
     # SET-UP NONLINEARITIES
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 15, print_level = 1,
+                iteration_limit = 15, print_level = 2,
                 time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
                 log_file = "UC_2_10.log")
 
