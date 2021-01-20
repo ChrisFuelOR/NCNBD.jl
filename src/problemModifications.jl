@@ -504,7 +504,7 @@ function binary_refinement_check(
     model::SDDP.PolicyGraph{T},
     previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
     sampled_states::Vector{Dict{Symbol,Float64}},
-    )
+    ) where {T}
 
     #@infiltrate
     solutionCheck = true
@@ -529,7 +529,7 @@ end
 function binary_refinement!(
     model::SDDP.PolicyGraph{T},
     algoParams::NCNBD.AlgoParams,
-    )
+    ) where {T}
 
     #@infiltrate
 
