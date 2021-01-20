@@ -130,7 +130,7 @@ function _kelley(
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
 
-            #@infiltrate
+            @infiltrate node_index == 2
             return best_actual
         end
         # Next iterate
