@@ -455,7 +455,7 @@ function add_cut_constraints_to_models(
     #     end
     # end
 
-    @infiltrate algoParams.infiltrate_state in [:bellman]
+    @infiltrate infiltrate_state in [:bellman]
 
     @assert (size(gamma, 1) == size(collect(values(cut.coefficients)), 1)
                            == duals_so_far

@@ -361,3 +361,18 @@ Terminating NCNBD with status: DeterministicStopping
                       NCNBD.jl (c) Christian Füllner, 2020
 re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
 
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+outer loop optimality tolerance: 1.0000e-03
+inner loop optimality tolerance: 1.0000e-04
+Initial binary precision:
+Dict(Symbol("commit[1]") => 1.0,Symbol("gen[1]") => 28.57142857142857)
+Initial PLA precision:
+[40.0, 64.0, 30.0, 104.0, 56.0, 20.0, 24.0, 22.0, 16.0, 12.0]
+Initial sigma:
+[0.0, 10.0]
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  
