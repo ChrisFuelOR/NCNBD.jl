@@ -111,6 +111,7 @@ function print_banner(io)
     println(io, "                      NCNBD.jl (c) Christian Füllner, 2020")
     println(io, "re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20")
     println(io)
+    flush(io)
 end
 
 function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
@@ -125,6 +126,7 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
     println(io, initialAlgoParams.sigma)
     # println(io, "Sigma factor:")
     # println(io, initialAlgoParams.sigma_factor)
+    flush(io)
 end
 
 
@@ -133,31 +135,8 @@ function print_iteration_header(io)
         io,
         " Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  ",
     )
+    flush(io)
 end
-
-#print_value(x::Real) = lpad(Printf.@sprintf("%1.6e", x), 13)
-#print_value(x::Int) = Printf.@sprintf("%9d", x)
-#print_value(x::Nothing) = Printf.@sprintf("")
-#print_value(x::Bool) = Printf.@sprintf("%s", x ? "true" : "false")
-
-#function print_iteration(io, log::Log)
-#    print(io, print_value(log.outer_iteration))
-#    print(io, "        ", print_value(log.iteration))
-#    print(io, "           ", print_value(log.upper_bound))
-#    print(io, "   ", print_value(log.lower_bound))
-#    #print(io, "  ", print_value(log.current_state[1][:x]))
-#    print(io, "   ", print_value(log.time))
-#    print(io, "   ", print_value(log.sigma_increased))
-#    print(io, "          ", print_value(log.bin_refinement))
-#
-#    if !isnothing(log.subproblem_size)
-#        print(io, " ", print_value(log.subproblem_size[:total_var]))
-#        print(io, "       ", print_value(log.subproblem_size[:bin_var]))
-#        print(io, "      ", print_value(log.subproblem_size[:int_var]))
-#        print(io, "        ", print_value(log.subproblem_size[:total_con]))
-#    end
-#    println(io)
-#end
 
 function print_iteration(io, log::Log)
     print(io, lpad(Printf.@sprintf("%5d", log.outer_iteration), 15))
@@ -196,6 +175,7 @@ function print_iteration(io, log::Log)
        	print(io, Printf.@sprintf("%9d", log.subproblem_size[:total_con]))
     end
     println(io)
+    flush(io)
 end
 
 
@@ -205,9 +185,7 @@ function print_footer(io, training_results)
         io,
         "------------------------------------------------------------------------------",
     )
-
-    # TODO NCNBD_Timer
-
+    flush(io)
 end
 
 function log_iteration(options, log)
