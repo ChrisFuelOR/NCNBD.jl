@@ -1023,8 +1023,8 @@ function inner_loop_forward_sigma_test(
         # SUBPROBLEM SOLUTION
         ############################################################################
         # Solve the subproblem, note that `require_duals = false`.
-        TimerOutputs.@timeit NCNBD_TIMER "solve_subproblem" begin
-            subproblem_results = solve_sigma_test(
+        TimerOutputs.@timeit NCNBD_TIMER "solve_sigma_test" begin
+            subproblem_results = solve_subproblem_sigma_test(
                 model,
                 node,
                 incoming_state_value, # only values, no State struct!

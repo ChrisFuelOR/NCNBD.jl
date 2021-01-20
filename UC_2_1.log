@@ -241,3 +241,11 @@ Terminating NCNBD with status: DeterministicStopping
    sample_scenario_...      1   17.2μs  0.00%  17.2μs      752B  0.00%     752B
  ──────────────────────────────────────────────────────────────────────────────
 
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
+Solver: serial mode
+
+ Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  
+              1                 1    3.826600e+03    3.826600e+03    5.295300e+01       false        true          45          12           0          22
