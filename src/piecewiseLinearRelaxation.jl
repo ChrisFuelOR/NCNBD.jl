@@ -600,8 +600,6 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             push!(nlFunction.triangulation.plrConstraints, relax_1)
             push!(nlFunction.triangulation.plrConstraints, relax_2)
 
-            #@infiltrate
-
         end
     end
 end

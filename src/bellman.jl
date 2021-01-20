@@ -289,19 +289,17 @@ function _add_cut(
     cut_selection::Bool = false
 ) where {N,T}
 
-    #@infiltrate
     # CORRECT INTERCEPT
     ############################################################################
     for (key, λ) in λᵏ
         θᵏ -= πᵏ[key] * λᵏ[key].value
     end
-    #@infiltrate
+    @infiltrate algoParams.infiltrate_state in [:bellman]
 
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
     #TODO: Should we add λᵏ? Actually, this information is not required.
     cut = NonlinearCut(θᵏ, πᵏ, xᵏ, λᵏ, binaryPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
-    #@infiltrate
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
     ############################################################################
@@ -312,11 +310,10 @@ function _add_cut(
         #SDDP._cut_selection_update(V, cut, xᵏ)
         #SDDP._cut_selection_update(V_lin, cut, xᵏ)
     else
-        #@infiltrate
         push!(V.cut_oracle.cuts, cut)
         push!(V_lin.cut_oracle.cuts, cut)
     end
-    #@infiltrate
+
     return
 end
 
@@ -453,7 +450,8 @@ function add_cut_constraints_to_models(
     #     end
     # end
 
-    #@infiltrate
+    @infiltrate algoParams.infiltrate_state in [:bellman]
+
     @assert (size(gamma, 1) == size(collect(values(cut.coefficients)), 1)
                            == duals_so_far
                            == duals_lin_so_far
@@ -493,7 +491,6 @@ function add_cut_constraints_to_models(
         @constraint(model_lin, expr_lin <= cut.intercept)
     end
     push!(cut.cutConstraints_lin, constraint_ref_lin)
-    #@infiltrate
 
     return
 
@@ -577,7 +574,7 @@ function add_cut_projection_to_model!(
         end
     end
 
-    #@infiltrate
+    @infiltrate algoParams.infiltrate_state in [:bellman]
 
     bigM_11_constraints = JuMP.@constraint(
         model,

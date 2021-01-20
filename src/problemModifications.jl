@@ -81,7 +81,7 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
     # DELETE ALL REGULARIZATION-BASED VARIABLES AND CONSTRAINTS
     ############################################################################
     delete(linearizedSubproblem, reg_data[:reg_variables])
-    #@infiltrate
+
     for constraint in reg_data[:reg_constraints]
         delete(linearizedSubproblem, constraint)
     end
@@ -336,7 +336,7 @@ function changeToOriginalSpace!(
     ############################################################################
     for (state_name, value) in state
         state_comp = node.ext[:lin_states][state_name]
-        #@infiltrate
+
         JuMP.delete_lower_bound(state_comp.in)
         JuMP.delete_upper_bound(state_comp.in)
 
@@ -490,7 +490,7 @@ function deregularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
     # DELETE ALL REGULARIZATION-BASED VARIABLES AND CONSTRAINTS
     ############################################################################
     delete(linearizedSubproblem, reg_data[:reg_variables])
-    #@infiltrate
+
     for constraint in reg_data[:reg_constraints]
         delete(linearizedSubproblem, constraint)
     end
@@ -506,7 +506,6 @@ function binary_refinement_check(
     sampled_states::Vector{Dict{Symbol,Float64}},
     ) where {T}
 
-    #@infiltrate
     solutionCheck = true
 
     # Check if solution has changed since last iteration
@@ -530,8 +529,6 @@ function binary_refinement!(
     model::SDDP.PolicyGraph{T},
     algoParams::NCNBD.AlgoParams,
     ) where {T}
-
-    #@infiltrate
 
     # Consider stage 2 here (should be the same for all following stages)
     # Precision is only used (and increased) for continuous variables

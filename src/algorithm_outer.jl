@@ -11,8 +11,6 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
         model.ext[:outer_iteration] = 1
     end
 
-    #@infiltrate
-
     # CALL THE INNER LOOP AND GET BACK RESULTS IF CONVERGED
     ############################################################################
     TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
@@ -35,7 +33,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     # LOGGING RESULTS?
     ############################################################################
 
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :outer]
     push!(
         options.log_outer,
         Log(
@@ -61,7 +59,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     ############################################################################
     has_converged, status = convergence_test(model, options.log_outer, options.stopping_rules, :outer)
 
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :outer]
 
     # RETURN RESULTS
     ############################################################################
@@ -227,21 +225,17 @@ function solve_subproblem_forward_outer(
     #     nothing
     # end
 
-    ##@infiltrate
-
     JuMP.optimize!(node.subproblem)
 
     #if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
     #    SDDP.attempt_numerical_recovery(node)
     #end
 
-    ##@infiltrate
-
     state = SDDP.get_outgoing_state(node)
     stage_objective = SDDP.stage_objective_value(node.stage_objective)
     objective = JuMP.objective_value(node.subproblem)
 
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :outer]
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state

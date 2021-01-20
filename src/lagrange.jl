@@ -53,7 +53,6 @@ function _kelley(
         x[1:length(dual_vars)]
     end
     JuMP.@objective(approx_model, dualsense, θ)
-    ##@infiltrate
 
     if dualsense == MOI.MIN_SENSE
         JuMP.set_lower_bound(θ, obj)
@@ -64,7 +63,6 @@ function _kelley(
         JuMP.set_upper_bound(θ, obj)
         (best_actual, f_actual, f_approx) = (-Inf, -Inf, Inf)
     end
-    ##@infiltrate
 
     # BOUND DUAL VARIABLES IF INTENDED
     ############################################################################
@@ -74,7 +72,6 @@ function _kelley(
             JuMP.set_upper_bound(x[i], dual_bound)
         end
     end
-    ##@infiltrate
 
     # CUTTING-PLANE METHOD
     ############################################################################
@@ -86,8 +83,6 @@ function _kelley(
         ########################################################################
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
-
-        ##@infiltrate
 
         # ADD CUTTING PLANE
         ########################################################################
@@ -119,7 +114,7 @@ function _kelley(
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        @infiltrate
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
@@ -158,8 +153,6 @@ function _solve_Lagrangian_relaxation!(
     JuMP.set_objective_function(model, new_obj)
     JuMP.optimize!(model)
     lagrangian_obj = JuMP.objective_value(model)
-
-    ##@infiltrate
 
     # Reset old objective, update subgradients using slack values
     JuMP.set_objective_function(model, old_obj)

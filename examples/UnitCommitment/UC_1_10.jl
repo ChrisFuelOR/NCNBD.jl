@@ -243,13 +243,15 @@ function unitCommitment_1_10()
     sigma = [0.0]
     sigma_counter = 5
 
-    @infiltrate
+    infiltate_state = :none
+    # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision,
                             sigma, sigma_counter)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, sigma, sigma_counter)
+                                      binaryPrecision, sigma, sigma_counter,
+                                      infiltrate_state)
 
     # SET-UP NONLINEARITIES
     ############################################################################
@@ -257,8 +259,6 @@ function unitCommitment_1_10()
                 iteration_limit = 15, print_level = 1,
                 time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
                 log_file = "UC_1_10.log")
-
-    #@infiltrate
 
     # WRITE LOGS TO FILE
     ############################################################################

@@ -37,7 +37,7 @@ function inner_loop_iteration(
         end
     end
 
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # BACKWARD PASS
     ############################################################################
@@ -88,7 +88,7 @@ function inner_loop_iteration(
     ############################################################################
     has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules, :inner)
 
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
@@ -278,9 +278,8 @@ function solve_subproblem_forward_inner(
 
     # SOLUTION
     ############################################################################
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
     JuMP.optimize!(linearizedSubproblem)
-    #@infiltrate
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -295,7 +294,7 @@ function solve_subproblem_forward_inner(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -332,7 +331,6 @@ function solve_subproblem_forward_inner(
     if node_index > 1
         deregularize_subproblem!(node, linearizedSubproblem)
     end
-    #@infiltrate
 
     return (
         state = state,
@@ -354,8 +352,6 @@ function inner_loop_backward_pass(
     belief_states::Vector{Tuple{Int,Dict{T,Float64}}}) where {T,NoiseType,N}
 
     cuts = Dict{T,Vector{Any}}(index => Any[] for index in keys(model.nodes))
-
-    #@infiltrate
 
     for index = length(scenario_path):-1:1
         outgoing_state = sampled_states[index]
@@ -442,7 +438,7 @@ function inner_loop_backward_pass(
                 used_trial_points[name] = approx_state_value
             end
 
-            @infiltrate
+            @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
             # REFINE BELLMAN FUNCTION BY ADDING CUTS
             ####################################################################
@@ -625,13 +621,13 @@ function solve_subproblem_backward(
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
+
     node.ext[:regularization_data] = Dict{Symbol,Any}()
     regularize_backward!(node, linearizedSubproblem, algoParams.sigma[node_index])
 
     # PRIMAL SOLUTION
     ############################################################################
-    #@infiltrate
     TimerOutputs.@timeit NCNBD_TIMER "solve_primal" begin
         JuMP.optimize!(linearizedSubproblem)
     end
@@ -648,29 +644,11 @@ function solve_subproblem_backward(
 
     solver_obj = JuMP.objective_value(linearizedSubproblem)
     @assert JuMP.termination_status(linearizedSubproblem) == MOI.OPTIMAL
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # PREPARE ACTUAL BACKWARD PASS METHOD BY DEREGULARIZATION
     ############################################################################
     deregularize_backward!(node, linearizedSubproblem)
-    #@infiltrate
-
-    # # PRIMAL SOLUTION
-    # ############################################################################
-    # JuMP.optimize!(linearizedSubproblem)
-    # #@infiltrate
-    #
-    # if haskey(model.ext, :total_solves)
-    #     model.ext[:total_solves] += 1
-    # else
-    #     model.ext[:total_solves] = 1
-    # end
-    #
-    # # if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
-    # #     attempt_numerical_recovery(node)
-    # # end
-    #
-    # objective = JuMP.objective_value(linearizedSubproblem)
 
     # DUAL SOLUTION
     ############################################################################
@@ -690,7 +668,6 @@ function solve_subproblem_backward(
         bin_state = Dict{Symbol,BinaryState}()
         objective = solver_obj
     end
-    #@infiltrate
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
@@ -748,7 +725,7 @@ function get_dual_variables_backward(
     end
     dual_bound = algoParams.sigma[node_index] * B_norm_bound
 
-    @infiltrate
+    @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
     try
         # KELLEY WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################
@@ -771,12 +748,11 @@ function get_dual_variables_backward(
             @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         end
 
-        @infiltrate
+        @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
         rethrow(e)
     end
-    #@infiltrate
 
     for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
         # TODO (maybe) change dual signs inside kelley to match LP duals
@@ -787,7 +763,6 @@ function get_dual_variables_backward(
         k = node.ext[:backward_data][:bin_k][name]
         bin_state[name] = BinaryState(value, x_name, k)
     end
-    #@infiltrate
 
     return (
         dual_values=dual_values,
@@ -901,7 +876,6 @@ function solve_first_stage_problem(
 
     # SOLUTION
     ############################################################################
-    #@infiltrate
     #set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer))
     JuMP.optimize!(linearizedSubproblem)
 
@@ -1066,8 +1040,6 @@ function inner_loop_forward_sigma_test(
     #     end
     # end
 
-    #@infiltrate
-
     # ===== End: drop off starting state if terminated due to cycle =====
     return (
         scenario_path = scenario_path,
@@ -1108,9 +1080,7 @@ function solve_subproblem_sigma_test(
 
     # SOLUTION
     ############################################################################
-    #@infiltrate
     JuMP.optimize!(linearizedSubproblem)
-    #@infiltrate
 
     if haskey(model.ext, :total_solves)
         model.ext[:total_solves] += 1
@@ -1125,7 +1095,6 @@ function solve_subproblem_sigma_test(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
-    #@infiltrate
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state

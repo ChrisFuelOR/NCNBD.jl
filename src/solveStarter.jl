@@ -261,8 +261,6 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams,
     initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
-    ##@infiltrate
-
     # SET UP LINEARIZED SUBPROBLEM DATA
     ############################################################################
     for (node_index, children) in model.nodes
@@ -341,7 +339,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
     end
 
-    ##@infiltrate
+    @infiltrate algoParams.infiltrate_state == :all
 
     # INITIALIZE PIECEWISE LINEAR RELAXATION
     ############################################################################
@@ -358,7 +356,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
     end
 
-    #@infiltrate
+    @infiltrate algoParams.infiltrate_state == :all
 
     # CALL ACTUAL SOLUTION PROCEDURE
     ############################################################################
@@ -419,7 +417,8 @@ function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
             result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
         end
 
-        #@infiltrate
+        @infiltrate algoParams.infiltrate_state in [:all, :outer]
+
         log_iteration(options, options.log_outer)
         if result_outer.has_converged
             return result_outer.status
@@ -447,18 +446,17 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
 
     while true
         # start an inner loop
-        #@infiltrate
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution)
         # logging
         log_iteration(options, options.log_inner)
-        @infiltrate
+        @infiltrate algoParams.infiltrate_state in [:all, :sigma]
         if result_inner.has_converged
             sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
 
             upper_bound_non_reg = sigma_test_results.cumulative_value
             upper_bound_reg = result_inner.upper_bound
 
-            @infiltrate
+            @infiltrate algoParams.infiltrate_state in [:all, :sigma]
 
             if isapprox(upper_bound_non_reg, upper_bound_reg)
                 # by solving the regularized problem, approximately the real MILP has been solved
@@ -468,7 +466,6 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
                 result_inner.current_sol = sigma_test_results.sampled_states
 
                 # return all results here to keep them accessible in outer pass
-                #@infiltrate
                 return result_inner
 
             else
@@ -487,7 +484,6 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
         end
 
         previousSolution = result_inner.current_sol
-        @infiltrate
     end
 end
 
@@ -509,7 +505,9 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, sigma_increased)
         # logging
         log_iteration(options, options.log_inner)
-        @infiltrate
+
+        @infiltrate algoParams.infiltrate_state in [:all, :sigma]
+
         if result_inner.has_converged
 
             TimerOutputs.@timeit NCNBD_TIMER "sigma_test" begin
@@ -519,7 +517,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             upper_bound_non_reg = sigma_test_results.cumulative_value
             upper_bound_reg = result_inner.upper_bound
 
-            @infiltrate
+            @infiltrate algoParams.infiltrate_state in [:all, :sigma]
 
             if isapprox(upper_bound_non_reg, upper_bound_reg)
                 # by solving the regularized problem, approximately the real MILP has been solved
@@ -532,7 +530,6 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 sigma_increased = false
 
                 # return all results here to keep them accessible in outer pass
-                #@infiltrate
                 return result_inner
 
             else
@@ -555,6 +552,5 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
 
         previousSolution = result_inner.current_sol
-        @infiltrate
     end
 end

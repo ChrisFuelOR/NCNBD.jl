@@ -238,13 +238,15 @@ function unitCommitment_2_5()
     sigma = [0.0, 10.0]
     sigma_factor = 5
 
-    @infiltrate
+    infiltate_state = :none
+    # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision,
-                            sigma, sigma_factor)
+                            sigma, sigma_counter)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, sigma, sigma_factor)
+                                      binaryPrecision, sigma, sigma_counter,
+                                      infiltrate_state)
 
     # SET-UP NONLINEARITIES
     ############################################################################

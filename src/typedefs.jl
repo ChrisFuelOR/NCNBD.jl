@@ -36,6 +36,7 @@ mutable struct AlgoParams
     binaryPrecision :: Dict{Symbol, Float64}
     sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)
     sigma_factor :: Float64
+    infiltrate_state :: Symbol
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run

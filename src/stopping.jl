@@ -44,7 +44,6 @@ function convergence_test(
     loop::Symbol
 )
     for stopping_rule in stopping_rules
-        #@infiltrate
         if convergence_test(graph, log, stopping_rule, loop)
             return true, stopping_rule_status(stopping_rule)
         end
