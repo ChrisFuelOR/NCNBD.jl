@@ -115,8 +115,8 @@ end
 
 function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
 
-    println(io, Printf.@sprintf("outer loop optimality tolerance: $1.4e", initialAlgoParams.epsilon_outerLoop)
-    println(io, Printf.@sprintf("inner loop optimality tolerance: $1.4e", initialAlgoParams.epsilon_innerLoop)
+    println(io, Printf.@sprintf("outer loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_outerLoop))
+    println(io, Printf.@sprintf("inner loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_innerLoop))
     println(io, "Initial binary precision:")
     println(io, initialAlgoParams.binaryPrecision)
     println(io, "Initial PLA precision:")

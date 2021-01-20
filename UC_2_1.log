@@ -357,3 +357,7 @@ Terminating NCNBD with status: DeterministicStopping
  initialize_PLR             2    1.88s  3.99%   940ms    191MiB  5.98%  95.6MiB
  ──────────────────────────────────────────────────────────────────────────────
 
+--------------------------------------------------------------------------------
+                      NCNBD.jl (c) Christian Füllner, 2020
+re-uses code from     SDDP.jl (c) Oscar Dowson, 2017-20
+
