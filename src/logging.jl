@@ -113,6 +113,21 @@ function print_banner(io)
     println(io)
 end
 
+function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
+
+    println(io, Printf.@sprintf("outer loop optimality tolerance: $1.4e", initialAlgoParams.epsilon_outerLoop)
+    println(io, Printf.@sprintf("inner loop optimality tolerance: $1.4e", initialAlgoParams.epsilon_innerLoop)
+    println(io, "Initial binary precision:")
+    println(io, initialAlgoParams.binaryPrecision)
+    println(io, "Initial PLA precision:")
+    println(io, initialAlgoParams.plaPrecision)
+    println(io, "Initial sigma:")
+    println(io, initialAlgoParams.sigma)
+    # println(io, "Sigma factor:")
+    # println(io, initialAlgoParams.sigma_factor)
+end
+
+
 function print_iteration_header(io)
     println(
         io,

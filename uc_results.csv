@@ -3,7 +3,7 @@ OUTER LOOP ITERATION 1
 solving inner loop problem
 
 inner_iteration, inner_lower_bound, inner_upper_bound, time
-1.000000, 3826.599710, 3826.599710, 48.667000
+1.000000, 3826.599710, 3826.599710, 39.537000
 
 current solution: 
 Stage 1 :
@@ -18,7 +18,7 @@ state: gen[1] 0.000000
 solving outer loop problem
 
 outer_iteration, lower_bound, upper_bound, time
-1.000000, 0.000000, 0.000000, 62.891000
+1.000000, 0.000000, 0.000000, 47.918000
 
 current solution: 
 Stage 1 :

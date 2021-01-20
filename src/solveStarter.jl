@@ -104,7 +104,11 @@ function solve(
     log_outer = Log[]
 
     if print_level > 0
-        print_helper(print_banner, log_file_handle)
+        print_helper(print_banner, log_file_handle, algoParams)
+    end
+
+    if print_level > 1
+        print_helper(print_parameters, log_file_handle)
     end
 
     # if run_numerical_stability_report
