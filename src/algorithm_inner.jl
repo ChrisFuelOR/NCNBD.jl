@@ -732,7 +732,7 @@ function get_dual_variables_backward(
         # KELLEY WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################
         kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
-        @infiltrate
+        @infiltrate !isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
 
         # if one of the dual variables exceeds the bounds (e.g. in case of an
