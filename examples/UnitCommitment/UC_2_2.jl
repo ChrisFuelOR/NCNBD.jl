@@ -227,7 +227,7 @@ function unitCommitment_2_2()
         end
     end
 
-    plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
+    plaPrecision = [40, 64] # apart from one generator always 1/5 of pmax
     sigma = [0.0, 10.0]
     sigma_factor = 5
 
@@ -236,9 +236,9 @@ function unitCommitment_2_2()
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision,
-                            sigma, sigma_counter)
+                            sigma, sigma_factor)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, sigma, sigma_counter,
+                                      binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state)
 
     # SET-UP NONLINEARITIES
@@ -247,8 +247,6 @@ function unitCommitment_2_2()
                 iteration_limit = 15, print_level = 2,
                 time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
                 log_file = "UC_2_2.log")
-
-    #@infiltrate
 
     # WRITE LOGS TO FILE
     ############################################################################
