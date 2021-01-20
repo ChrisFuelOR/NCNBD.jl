@@ -130,7 +130,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         end
 
-        @assert xcoord == upper_bound
+        @assert isapprox(xcoord, upper_bound, atol=1e-9)
 
         # set up triangulation
         triangulation = Triangulation(simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())
