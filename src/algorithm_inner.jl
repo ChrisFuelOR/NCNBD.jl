@@ -616,6 +616,8 @@ function solve_subproblem_backward(
 
     # BACKWARD PASS PREPARATION
     ############################################################################
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] || node_index == 2
+
     # Also adapt solver here
     TimerOutputs.@timeit NCNBD_TIMER "space_change" begin
         changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
@@ -623,7 +625,7 @@ function solve_subproblem_backward(
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
-    @infiltrate algoParams.infiltrate_state in [:all, :inner]
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] || node_index == 2
 
     node.ext[:regularization_data] = Dict{Symbol,Any}()
     regularize_backward!(node, linearizedSubproblem, algoParams.sigma[node_index])
@@ -646,7 +648,8 @@ function solve_subproblem_backward(
 
     solver_obj = JuMP.objective_value(linearizedSubproblem)
     @assert JuMP.termination_status(linearizedSubproblem) == MOI.OPTIMAL
-    @infiltrate algoParams.infiltrate_state in [:all, :inner]
+    
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] || node_index == 2
 
     # PREPARE ACTUAL BACKWARD PASS METHOD BY DEREGULARIZATION
     ############################################################################
