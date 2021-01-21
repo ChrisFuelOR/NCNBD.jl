@@ -155,8 +155,11 @@ function _solve_Lagrangian_relaxation!(
     JuMP.optimize!(model)
     lagrangian_obj = JuMP.objective_value(model)
 
+    subgradients .= fact .* JuMP.value.(slacks)
+    @infiltrate subgradients .== 0
+
     # Reset old objective, update subgradients using slack values
     JuMP.set_objective_function(model, old_obj)
-    subgradients .= fact .* JuMP.value.(slacks)
+
     return lagrangian_obj
 end
