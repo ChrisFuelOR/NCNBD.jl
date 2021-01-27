@@ -136,6 +136,7 @@ function _kelley(
             return best_actual
         end
         # Next iterate
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
         dual_vars .= value.(x)
     end
     error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
