@@ -28,15 +28,15 @@ end
 function unitCommitment_2_2()
 
     generators = [
-        Generator(0, 0.0, 200.0, 40.0, 18.0, 2.0, 42.6, 42.6, 40.0, 40.0, -2.375, 1025.0, 0.0),
-        Generator(0, 0.0, 320.0, 64.0, 15.0, 4.0, 50.6, 50.6, 64.0, 64.0, -2.75, 1800.0, 0.0),
+        Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
+        Generator(0, 0.0, 3.2, 0.64, 15.0, 4.0, 50.6, 50.6, 0.64, 0.64, -0.21, 1.0, 0.0),
     ]
     num_of_generators = size(generators,1)
 
-    demand_penalty = 5e4
-    emission_price = 0.02 #0.02 €/kg = 20 €/t
+    demand_penalty = 5e2
+    emission_price = 2.5
 
-    demand = [104 180]
+    demand = [1.04 1.80]
 
     model = SDDP.LinearPolicyGraph(
         stages = 2,
@@ -212,7 +212,7 @@ function unitCommitment_2_2()
     appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron")
 
     epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-4
+    epsilon_innerLoop = 1e-3
 
     binaryPrecision = Dict{Symbol, Float64}()
 
@@ -227,11 +227,11 @@ function unitCommitment_2_2()
         end
     end
 
-    plaPrecision = [40, 64] # apart from one generator always 1/5 of pmax
-    sigma = [0.0, 10.0]
+    plaPrecision = [0.4, 0.64] # apart from one generator always 1/5 of pmax
+    sigma = [0.0, 1.0]
     sigma_factor = 5
 
-    infiltrate_state = :none
+    infiltrate_state = :all
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
