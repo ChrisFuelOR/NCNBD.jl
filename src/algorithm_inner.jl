@@ -639,6 +639,7 @@ function solve_subproblem_backward(
         variable_name = node.ext[:backward_data][:bin_states][name]
         reference_to_constr = FixRef(variable_name)
         dual_vars_initial[i] = JuMP.getdual(reference_to_constr)
+        value = JuMP.value(variable_name)
         @infiltrate algoParams.infiltrate_state in [:all, :inner]
     end
 
