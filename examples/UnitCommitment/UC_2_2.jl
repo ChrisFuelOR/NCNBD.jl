@@ -211,9 +211,23 @@ function unitCommitment_2_2()
     # appliedSolvers = NCNBD.AppliedSolvers(GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer)
     appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron")
 
+    # define required tolerances
     epsilon_outerLoop = 1e-3
     epsilon_innerLoop = 1e-3
+    lagrangian_atol = 1e-8
+    lagrangian_rtol = 1e-8
 
+    # define time and iteration limits
+    lagrangian_iteration_limit = 1000
+    iteration_limit = 1000
+    time_limit = 10800
+
+    # define sigma
+    sigma = [0.0, 1000.0]
+    sigma_factor = 2
+
+    # define initial approximations
+    plaPrecision = [0.4, 0.64] # apart from one generator always 1/5 of pmax
     binaryPrecision = Dict{Symbol, Float64}()
 
     for (name, state_comp) in model.nodes[1].ext[:lin_states]
@@ -227,25 +241,26 @@ function unitCommitment_2_2()
         end
     end
 
-    plaPrecision = [0.4, 0.64] # apart from one generator always 1/5 of pmax
-    sigma = [0.0, 1000.0]
-    sigma_factor = 2
-
+    # define infiltration level
     infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
+    # SET-UP PARAMETER STRUCTS
+    ############################################################################
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision,
-                            sigma, sigma_factor)
+                            sigma, sigma_factor, lagrangian_atol,
+                            lagrangian_rtol, lagrangian_iteration_limit)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
-                                      infiltrate_state)
+                                      infiltrate_state, lagrangian_atol,
+                                      lagrangian_rtol, lagrangian_iteration_limit)
 
     # SET-UP NONLINEARITIES
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 15, print_level = 2,
-                time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
+                iteration_limit = iteration_limit, print_level = 2,
+                time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
                 log_file = "C:/Users/cg4102/Documents/julia_logs/UC_2_2.log")
 
     # WRITE LOGS TO FILE
