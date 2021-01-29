@@ -625,6 +625,8 @@ function solve_subproblem_backward(
 
     # SOLVE PROBLEM IN BINARY SPACE
     ############################################################################
+    set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer))
+
     TimerOutputs.@timeit NCNBD_TIMER "solve_primal" begin
         JuMP.optimize!(linearizedSubproblem)
     end
@@ -642,6 +644,8 @@ function solve_subproblem_backward(
         value = JuMP.value(variable_name)
         @infiltrate algoParams.infiltrate_state in [:all, :inner]
     end
+
+    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
