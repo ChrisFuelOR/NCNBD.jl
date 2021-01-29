@@ -228,10 +228,10 @@ function unitCommitment_2_2()
     end
 
     plaPrecision = [0.4, 0.64] # apart from one generator always 1/5 of pmax
-    sigma = [0.0, 1.0]
-    sigma_factor = 5
+    sigma = [0.0, 1000.0]
+    sigma_factor = 2
 
-    infiltrate_state = :all
+    infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
