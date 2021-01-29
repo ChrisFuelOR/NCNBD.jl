@@ -137,6 +137,8 @@ function _kelley(
         end
         # Next iterate
         dual_vars .= value.(x)
+        # can be deleted with the next update of GAMS.jl
+        replace!(dual_vars, NaN => 0)
     end
     error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
 end
