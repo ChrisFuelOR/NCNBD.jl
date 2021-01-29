@@ -636,7 +636,9 @@ function solve_subproblem_backward(
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner]
     for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
-        dual_vars_initial[i] = JuMP.getdual(name)
+        variable_name = node.ext[:backward_data][:bin_states][name]
+        reference_to_constr = FixRef(variable_name)
+        dual_vars_initial[i] = JuMP.getdual(reference_to_constr)
     end
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
@@ -689,6 +691,8 @@ function solve_subproblem_backward(
         bin_state = Dict{Symbol,BinaryState}()
         objective = solver_obj
     end
+
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
