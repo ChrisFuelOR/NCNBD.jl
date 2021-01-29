@@ -623,6 +623,20 @@ function solve_subproblem_backward(
         changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
     end
 
+    # SOLVE PROBLEM IN BINARY SPACE
+    ############################################################################
+    TimerOutputs.@timeit NCNBD_TIMER "solve_primal" begin
+        JuMP.optimize!(linearizedSubproblem)
+    end
+
+    # Get dual values (reduced costs) for binary states as initial solution
+    # for Lagrangian dual
+    number_of_states = length(node.ext[:backward_data][:bin_states])
+    dual_vars_initial = zeros(number_of_states)
+    for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
+        dual_vars_initial[i] = JuMP.getdual(name)
+    end
+
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
     @infiltrate algoParams.infiltrate_state in [:all, :inner]
@@ -632,7 +646,7 @@ function solve_subproblem_backward(
 
     # PRIMAL SOLUTION
     ############################################################################
-    TimerOutputs.@timeit NCNBD_TIMER "solve_primal" begin
+    TimerOutputs.@timeit NCNBD_TIMER "solve_primal_reg" begin
         JuMP.optimize!(linearizedSubproblem)
     end
 
