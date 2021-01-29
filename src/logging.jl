@@ -116,6 +116,16 @@ end
 
 function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
 
+    # Printing the time
+    println(Dates.now())
+
+    # Printint the file name
+    print("calling ")
+    print(@__FILE__)
+    println()
+    println()
+
+    # Printing the parameters used
     println(io, Printf.@sprintf("outer loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_outerLoop))
     println(io, Printf.@sprintf("inner loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_innerLoop))
     println(io, "Initial binary precision:")
