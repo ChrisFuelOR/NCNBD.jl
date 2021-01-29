@@ -214,8 +214,8 @@ function unitCommitment_2_2()
     # define required tolerances
     epsilon_outerLoop = 1e-3
     epsilon_innerLoop = 1e-3
-    lagrangian_atol = 1e-4
-    lagrangian_rtol = 1e-4
+    lagrangian_atol = 1e-1
+    lagrangian_rtol = 1e-1
 
     # define time and iteration limits
     lagrangian_iteration_limit = 1000
