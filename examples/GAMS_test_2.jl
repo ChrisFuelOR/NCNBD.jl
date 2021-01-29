@@ -37,3 +37,5 @@ println(dual_vars)
 @btime replace!(dual_vars, NaN => 0)
 
 println(dual_vars)
+
+println(@__FILE__)
