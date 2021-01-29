@@ -117,13 +117,13 @@ end
 function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
 
     # Printing the time
-    println(Dates.now())
+    println(io, Dates.now())
 
     # Printint the file name
-    print("calling ")
-    print(@__FILE__)
-    println()
-    println()
+    print(io, "calling ")
+    print(io, @__FILE__)
+    println(io)
+    println(io)
 
     # Printing the parameters used
     println(io, Printf.@sprintf("outer loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_outerLoop))
