@@ -633,6 +633,8 @@ function solve_subproblem_backward(
     # for Lagrangian dual
     number_of_states = length(node.ext[:backward_data][:bin_states])
     dual_vars_initial = zeros(number_of_states)
+
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
     for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
         dual_vars_initial[i] = JuMP.getdual(name)
     end
