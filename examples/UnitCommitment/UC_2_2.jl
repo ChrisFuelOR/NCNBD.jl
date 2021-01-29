@@ -242,7 +242,7 @@ function unitCommitment_2_2()
     end
 
     # define infiltration level
-    infiltrate_state = :none
+    infiltrate_state = :all
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # SET-UP PARAMETER STRUCTS
