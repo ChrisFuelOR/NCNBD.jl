@@ -623,28 +623,13 @@ function solve_subproblem_backward(
         changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
     end
 
-    # SOLVE PROBLEM IN BINARY SPACE
+    # INITIALIZE DUALS
     ############################################################################
-    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
-
-    TimerOutputs.@timeit NCNBD_TIMER "solve_primal" begin
-        JuMP.optimize!(linearizedSubproblem)
+    TimerOutputs.@timeit NCNBD_TIMER "dual_initialization" begin
+        dual_vars_initial = initialize_duals(node, linearizedSubproblem, algoParams.dual_initialization_regime)
     end
 
-    # Get dual values (reduced costs) for binary states as initial solution
-    # for Lagrangian dual
-    number_of_states = length(node.ext[:backward_data][:bin_states])
-    dual_vars_initial = zeros(number_of_states)
-
-    @infiltrate algoParams.infiltrate_state in [:all, :inner]
-    for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
-        variable_name = node.ext[:backward_data][:bin_states][name]
-        reference_to_constr = FixRef(variable_name)
-        dual_vars_initial[i] = JuMP.getdual(reference_to_constr)
-        value = JuMP.value(variable_name)
-        @infiltrate algoParams.infiltrate_state in [:all, :inner]
-    end
-
+    # reset solver as it may have been changed
     set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)

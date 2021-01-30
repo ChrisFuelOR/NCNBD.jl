@@ -166,3 +166,107 @@ function _solve_Lagrangian_relaxation!(
 
     return lagrangian_obj
 end
+
+
+function initialize_duals(
+    node::SDDP.Node,
+    linearizedSubproblem::JuMP.Model,
+    dual_regime::Symbol,
+)
+
+    # Get number of states and create zero vector for duals
+    number_of_states = length(node.ext[:backward_data][:bin_states])
+    dual_vars_initial = zeros(number_of_states)
+
+    # DUAL REGIME I: USE ZEROS
+    ############################################################################
+    if dual_regime == :zeros
+        # Do nothing, since zeros are already defined
+
+    # DUAL REGIME II: USE LP RELAXATION
+    ############################################################################
+    elseif dual_regime == :gurobi_relax || dual_regime == :cplex_relax
+        # Create LP Relaxation
+        undo_relax = JuMP.relax_integrality(linearizedSubproblem);
+
+        # Define appropriate solver
+        if dual_regime == :gurobi_relax
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"Gurobi", "optcr"=>0.0))
+        elseif dual_regime == :cplex_relax
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
+        end
+
+        # Solve LP Relaxation
+        JuMP.optimize!(linearizedSubproblem)
+
+        # Get dual values (reduced costs) for binary states as initial solution
+        for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
+           variable_name = node.ext[:backward_data][:bin_states][name]
+           reference_to_constr = FixRef(variable_name)
+           dual_vars_initial[i] = JuMP.getdual(reference_to_constr)
+        end
+
+        # Undo relaxation
+        undo_relax()
+
+    # DUAL REGIME III: USE FIXED MIP MODEL (DUALS ONLY PROVIDED BY CPLEX)
+    ############################################################################
+    elseif dual_regime == :cplex_fixed
+        # Define cplex solver
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
+
+        # Solve original primal model in binary space
+        JuMP.optimize!(linearizedSubproblem)
+
+        # Get dual values (reduced costs) for binary states as initial solution
+        for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
+           variable_name = node.ext[:backward_data][:bin_states][name]
+           reference_to_constr = FixRef(variable_name)
+           dual_vars_initial[i] = JuMP.getdual(reference_to_constr)
+        end
+
+    # DUAL REGIME IV: USE COMBINATION FOR CPLEX
+    # use fixed MIP model values for continuous original states
+    # use LP relaxation values for binary or integer original states
+    ############################################################################
+    elseif dual_regime == :cplex_combi
+        # Define cplex solver
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
+
+        # Solve original primal model in binary space
+        JuMP.optimize!(linearizedSubproblem)
+
+        # Get dual values (reduced costs) for binary states as initial solution
+        for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
+           variable_name = node.ext[:backward_data][:bin_states][name]
+           reference_to_constr = FixRef(variable_name)
+           dual_vars_initial[i] = JuMP.getdual(reference_to_constr)
+        end
+
+        # Create LP Relaxation
+        undo_relax = JuMP.relax_integrality(linearizedSubproblem);
+
+        # Solve LP Relaxation
+        JuMP.optimize!(linearizedSubproblem)
+
+        # Replace dual values for binary and integer original variables
+        for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
+           variable_name = node.ext[:backward_data][:bin_states][name]
+           reference_to_constr = FixRef(variable_name)
+
+           # associated original state
+           # TODO: Why is this stored in backward_data, but also in BinaryState struct itself?
+           original_state = node.ext[:backward_data][:bin_x_names][name]
+
+           # if original state is integer or binary, replace dual_vars_initial
+           if original_state.info.in.binary || original_state.info.in.integer
+               dual_vars_initial[i] = JuMP.getdual(reference_to_constr)
+           end
+        end
+
+        # Undo relaxation
+        undo_relax()
+    end
+
+    return dual_vars_initial
+end
