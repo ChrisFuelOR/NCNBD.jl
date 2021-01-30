@@ -717,7 +717,7 @@ function get_dual_variables_backward(
     bin_state = Dict{Symbol, BinaryState}()
 
     # TODO implement smart choice for initial duals
-    # number_of_states = length(node.ext[:backward_data][:bin_states])
+    number_of_states = length(node.ext[:backward_data][:bin_states])
     # dual_vars = zeros(number_of_states)
     #solver_obj = JuMP.objective_value(node.ext[:linSubproblem])
     dual_vars = dual_vars_initial
