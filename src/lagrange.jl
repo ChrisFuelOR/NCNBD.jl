@@ -256,7 +256,8 @@ function initialize_duals(
 
            # associated original state
            # TODO: Why is this stored in backward_data, but also in BinaryState struct itself?
-           original_state = node.ext[:backward_data][:bin_x_names][name]
+           original_state_sym = node.ext[:backward_data][:bin_x_names][name]
+           original_state = node.ext[:lin_states][original_state_sym]
 
            # if original state is integer or binary, replace dual_vars_initial
            if original_state.info.in.binary || original_state.info.in.integer
