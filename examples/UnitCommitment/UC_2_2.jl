@@ -247,7 +247,7 @@ function unitCommitment_2_2()
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
-    dual_initialization_regime = :cplex_relax
+    dual_initialization_regime = :cplex_fixed
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # SET-UP PARAMETER STRUCTS
