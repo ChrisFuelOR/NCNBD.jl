@@ -672,7 +672,7 @@ function solve_subproblem_backward(
     # type-stability.
     if require_duals
         TimerOutputs.@timeit NCNBD_TIMER "solve_lagrange" begin
-            lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers)
+            lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers, dual_vars_initial)
         end
         dual_values = lagrangian_results.dual_values
         bin_state = lagrangian_results.bin_state
@@ -708,16 +708,20 @@ function get_dual_variables_backward(
     node_index::Int64,
     solver_obj::Float64,
     algoParams::NCNBD.AlgoParams,
-    appliedSolvers::NCNBD.AppliedSolvers)
+    appliedSolvers::NCNBD.AppliedSolvers,
+    dual_vars_initial::Vector{Float64}
+    )
 
     # storages for return of dual values and binary state values (trial point)
     dual_values = Dict{Symbol,Float64}()
     bin_state = Dict{Symbol, BinaryState}()
 
     # TODO implement smart choice for initial duals
-    number_of_states = length(node.ext[:backward_data][:bin_states])
-    dual_vars = zeros(number_of_states)
+    # number_of_states = length(node.ext[:backward_data][:bin_states])
+    # dual_vars = zeros(number_of_states)
     #solver_obj = JuMP.objective_value(node.ext[:linSubproblem])
+    dual_vars = dual_vars_initial
+
     kelley_obj = 0
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
