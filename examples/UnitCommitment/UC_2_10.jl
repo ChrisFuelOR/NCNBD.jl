@@ -224,11 +224,11 @@ function unitCommitment_2_10()
     # define required tolerances
     epsilon_outerLoop = 1e-3
     epsilon_innerLoop = 1e-3
-    lagrangian_atol = 1e-4
-    lagrangian_rtol = 1e-4
+    lagrangian_atol = 1e-8
+    lagrangian_rtol = 1e-8
 
     # define time and iteration limits
-    lagrangian_iteration_limit = 1000
+    lagrangian_iteration_limit = 10000
     iteration_limit = 1000
     time_limit = 10800
 
@@ -257,7 +257,7 @@ function unitCommitment_2_10()
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
-    dual_initialization_regime = :cplex_combi
+    dual_initialization_regime = :zeros
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # SET-UP PARAMETER STRUCTS
