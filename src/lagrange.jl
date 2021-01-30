@@ -118,6 +118,8 @@ function _kelley(
 
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
+        print("UB: ", f_approx, ", LB: ", f_actual)
+
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
         # More reliable than checking whether subgradient is zero
