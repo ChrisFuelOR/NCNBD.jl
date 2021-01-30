@@ -28,23 +28,23 @@ end
 function unitCommitment_1_10()
 
     generators = [
-        Generator(0, 0.0, 200.0, 40.0, 18.0, 2.0, 42.6, 42.6, 40.0, 40.0, -2.375, 1025.0, 0.0),
-        Generator(0, 0.0, 320.0, 64.0, 15.0, 4.0, 50.6, 50.6, 64.0, 64.0, -2.75, 1800.0, 0.0),
-        Generator(0, 0.0, 150.0, 30.0, 17.0, 2.0, 57.1, 57.1, 30.0, 30.0, -3.2, 1025.0, 0.0),
-        Generator(1, 400.0, 520.0, 104.0, 13.2, 4.0, 47.1, 47.1, 104.0, 104.0, -1.5, 1800.0, 0.0),
-        Generator(1, 280.0, 280.0, 56.0, 14.3, 4.0, 56.9, 56.9, 56.0, 56.0, -3, 1800.0, 0.0),
-        Generator(0, 0.0, 80.0, 16.0, 40.2, 4.0, 141.5, 141.5, 30.0, 30.0, -6.8, 1200.0, 0.0),
-        Generator(1, 120.0, 120.0, 24.0, 17.1, 2.0, 113.5, 113.5, 24.0, 24.0, -4, 1025.0, 0.0),
-        Generator(1, 110.0, 110.0, 22.0, 17.3, 2.0, 42.6, 42.6, 22.0, 22.0, -4.75, 1025.0, 0.0),
-        Generator(0, 0.0, 80.0, 16.0, 59.4, 4.0, 50.6, 50.6, 16.0, 16.0, -6.0, 1200.0, 0.0),
-        Generator(0, 0.0, 60.0, 12.0, 19.5, 2.0, 57.1, 57.1, 12.0, 12.0, -8.5, 1025.0, 0.0),
+        Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
+        Generator(0, 0.0, 3.2, 0.64, 15.0, 4.0, 50.6, 50.6, 0.64, 0.64, -0.21, 1.0, 0.0),
+        Generator(0, 0.0, 1.5, 0.3, 17.0, 2.0, 57.1, 57.1, 0.3, 0.3, -0.39, 0.95, 0.0),
+        Generator(1, 4.0, 5.0, 1.04, 13.2, 4.0, 47.1, 47.1, 1.04, 1.04, -0.14, 1.09, 0.0),
+        Generator(1, 2.8, 2.8, 0.56, 14.3, 4.0, 56.9, 56.9, 0.56, 0.56, -0.24, 1.0, 0.0),
+        Generator(0, 0.0, 0.8, 0.16, 40.2, 4.0, 141.5, 141.5, 0.3, 0.3, -0.85, 1.0, 0.0),
+        Generator(1, 1.2, 1.2, 0.24, 17.1, 2.0, 113.5, 113.5, 0.24, 0.24, -0.53, 0.91, 0.0),
+        Generator(1, 1.1, 1.1, 0.22, 17.3, 2.0, 42.6, 42.6, 0.22, 0.22, -0.62, 0.95, 0.0),
+        Generator(0, 0.0, 0.8, 0.16, 59.4, 4.0, 50.6, 50.6, 0.16, 0.16, -0.79, 0.95, 0.0),
+        Generator(0, 0.0, 0.6, 0.12, 19.5, 2.0, 57.1, 57.1, 0.12, 0.12, -1.13, 1.0, 0.0),
     ]
     num_of_generators = size(generators,1)
 
-    demand_penalty = 5e4
-    emission_price = 0.02 #0.02 €/kg = 20 €/t
+    demand_penalty = 5e2
+    emission_price = 2.5
 
-    demand = [883]
+    demand = [8.83]
 
     model = SDDP.LinearPolicyGraph(
         stages = 1,
@@ -219,9 +219,23 @@ function unitCommitment_1_10()
     # appliedSolvers = NCNBD.AppliedSolvers(GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer)
     appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron")
 
+    # define required tolerances
     epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-4
+    epsilon_innerLoop = 1e-3
+    lagrangian_atol = 1e-8
+    lagrangian_rtol = 1e-8
 
+    # define time and iteration limits
+    lagrangian_iteration_limit = 1000
+    iteration_limit = 1000
+    time_limit = 10800
+
+    # define sigma
+    sigma = [0.0]
+    sigma_factor = 2
+
+    # define initial approximations
+    plaPrecision = [0.4, 0.64, 0.3, 1.04, 0.56, 0.2, 0.24, 0.22, 0.16, 0.12] # apart from one generator always 1/5 of pmax
     binaryPrecision = Dict{Symbol, Float64}()
 
     for (name, state_comp) in model.nodes[1].ext[:lin_states]
@@ -235,30 +249,25 @@ function unitCommitment_1_10()
         end
     end
 
-    plaPrecision = [40, 64, 30, 104, 56, 20, 24, 22, 16, 12] # apart from one generator always 1/5 of pmax
-    sigma = [0.0]
-    sigma_factor = 5
-
+    # define infiltration level
+    # TODO: Abstract data type
     infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
-    initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
-                            epsilon_innerLoop, binaryPrecision, plaPrecision,
-                            sigma, sigma_factor)
-    algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, sigma, sigma_factor,
-                                      infiltrate_state)
+    # define regime for initializing duals for Lagrangian relaxation
+    dual_initialization_regime = :zeros
+    # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
-    # SET-UP NONLINEARITIES
+    # SOLVE MODEL
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 15, print_level = 2,
-                time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_1_10.log")
+              iteration_limit = iteration_limit, print_level = 2,
+              time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
+              log_file = "C:/Users/cg4102/Documents/julia_logs/UC_1_10.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
-    NCNBD.write_log_to_csv(model, "uc_results.csv", algoParameters)
+    #NCNBD.write_log_to_csv(model, "uc_results.csv", algoParameters)
 
 end
 

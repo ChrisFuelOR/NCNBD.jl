@@ -28,18 +28,18 @@ end
 function unitCommitment_5_5()
 
     generators = [
-        Generator(0, 0.0, 200.0, 40.0, 18.0, 2.0, 42.6, 42.6, 40.0, 40.0, -2.375, 1025.0, 0.0),
-        Generator(0, 0.0, 320.0, 64.0, 15.0, 4.0, 50.6, 50.6, 64.0, 64.0, -2.75, 1800.0, 0.0),
-        Generator(0, 0.0, 150.0, 30.0, 17.0, 2.0, 57.1, 57.1, 30.0, 30.0, -3.2, 1025.0, 0.0),
-        Generator(1, 400.0, 520.0, 104.0, 13.2, 4.0, 47.1, 47.1, 104.0, 104.0, -1.5, 1800.0, 0.0),
-        Generator(1, 280.0, 280.0, 56.0, 14.3, 4.0, 56.9, 56.9, 56.0, 56.0, -3, 1800.0, 0.0),
+        Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
+        Generator(0, 0.0, 3.2, 0.64, 15.0, 4.0, 50.6, 50.6, 0.64, 0.64, -0.21, 1.0, 0.0),
+        Generator(0, 0.0, 1.5, 0.3, 17.0, 2.0, 57.1, 57.1, 0.3, 0.3, -0.39, 0.95, 0.0),
+        Generator(1, 4.0, 5.0, 1.04, 13.2, 4.0, 47.1, 47.1, 1.04, 1.04, -0.14, 1.09, 0.0),
+        Generator(1, 2.8, 2.8, 0.56, 14.3, 4.0, 56.9, 56.9, 0.56, 0.56, -0.24, 1.0, 0.0),
     ]
     num_of_generators = size(generators,1)
 
-    demand_penalty = 5e4
-    emission_price = 0.02 #0.02 €/kg = 20 €/t
+    demand_penalty = 5e2
+    emission_price = 2.5
 
-    demand = [800 850 1010 1149 1236]
+    demand = [8.0 8.5 10.1 11.49 12.36]
 
     model = SDDP.LinearPolicyGraph(
         stages = 5,
@@ -214,9 +214,23 @@ function unitCommitment_5_5()
     # appliedSolvers = NCNBD.AppliedSolvers(GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer, GAMS.Optimizer)
     appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron")
 
-    epsilon_outerLoop = 1e-1
-    epsilon_innerLoop = 1e-2
+    # define required tolerances
+    epsilon_outerLoop = 1e-3
+    epsilon_innerLoop = 1e-3
+    lagrangian_atol = 1e-8
+    lagrangian_rtol = 1e-8
 
+    # define time and iteration limits
+    lagrangian_iteration_limit = 1000
+    iteration_limit = 1000
+    time_limit = 10800
+
+    # define sigma
+    sigma = [0.0, 1000.0, 1000.0, 1000.0, 1000.0]
+    sigma_factor = 2
+
+    # define initial approximations
+    plaPrecision = [0.4, 0.64, 0.3, 1.04, 0.56] # apart from one generator always 1/5 of pmax
     binaryPrecision = Dict{Symbol, Float64}()
 
     for (name, state_comp) in model.nodes[1].ext[:lin_states]
@@ -230,30 +244,26 @@ function unitCommitment_5_5()
         end
     end
 
-    plaPrecision = [40, 64, 30, 104, 56] # apart from one generator always 1/5 of pmax
-    sigma = [0.0, 10.0, 10.0, 10.0, 10.0]
-    sigma_factor = 5
-
+    # define infiltration level
+    # TODO: Abstract data type
     infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
-    initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
-                            epsilon_innerLoop, binaryPrecision, plaPrecision,
-                            sigma, sigma_factor)
-    algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
-                                      binaryPrecision, sigma, sigma_factor,
-                                      infiltrate_state)
+    # define regime for initializing duals for Lagrangian relaxation
+    dual_initialization_regime = :zeros
+    # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
-    # SET-UP NONLINEARITIES
+
+    # SOLVE MODEL
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
-                iteration_limit = 100, print_level = 2,
-                time_limit = 7200, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_5_5.log")
+              iteration_limit = iteration_limit, print_level = 2,
+              time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
+              log_file = "C:/Users/cg4102/Documents/julia_logs/UC_5_5.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
-    NCNBD.write_log_to_csv(model, "uc_results_5_5.csv", algoParameters)
+    #NCNBD.write_log_to_csv(model, "uc_results_5_5.csv", algoParameters)
 
 end
 

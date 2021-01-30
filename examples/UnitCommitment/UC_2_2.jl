@@ -214,8 +214,8 @@ function unitCommitment_2_2()
     # define required tolerances
     epsilon_outerLoop = 1e-3
     epsilon_innerLoop = 1e-3
-    lagrangian_atol = 1e-4
-    lagrangian_rtol = 1e-4
+    lagrangian_atol = 1e-8
+    lagrangian_rtol = 1e-8
 
     # define time and iteration limits
     lagrangian_iteration_limit = 1000
@@ -247,7 +247,7 @@ function unitCommitment_2_2()
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
-    dual_initialization_regime = :cplex_combi
+    dual_initialization_regime = :zeros
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # SET-UP PARAMETER STRUCTS
@@ -263,7 +263,7 @@ function unitCommitment_2_2()
                                       lagrangian_rtol, lagrangian_iteration_limit,
                                       dual_initialization_regime)
 
-    # SET-UP NONLINEARITIES
+    # SOLVE MODEL
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = iteration_limit, print_level = 2,
@@ -272,7 +272,7 @@ function unitCommitment_2_2()
 
     # WRITE LOGS TO FILE
     ############################################################################
-    NCNBD.write_log_to_csv(model, "uc_results.csv", algoParameters)
+    #NCNBD.write_log_to_csv(model, "uc_results.csv", algoParameters)
 
 end
 
