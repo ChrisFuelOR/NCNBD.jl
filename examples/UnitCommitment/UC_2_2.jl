@@ -243,11 +243,11 @@ function unitCommitment_2_2()
 
     # define infiltration level
     # TODO: Abstract data type
-    infiltrate_state = :inner
+    infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
-    dual_initialization_regime = :cplex_combi
+    dual_initialization_regime = :gurobi_relax
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # SET-UP PARAMETER STRUCTS
