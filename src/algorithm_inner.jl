@@ -625,7 +625,7 @@ function solve_subproblem_backward(
 
     # SOLVE PROBLEM IN BINARY SPACE
     ############################################################################
-    set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer))
+    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
 
     TimerOutputs.@timeit NCNBD_TIMER "solve_primal" begin
         JuMP.optimize!(linearizedSubproblem)
