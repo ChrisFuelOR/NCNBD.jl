@@ -251,7 +251,7 @@ function unitCommitment_2_2()
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :bundle
+    lagrangian_method = :kelley
     # alternatives: :kelley, :bundle
 
     bundle_alpha = 0.5
