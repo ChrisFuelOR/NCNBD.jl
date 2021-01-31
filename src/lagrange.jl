@@ -381,13 +381,14 @@ function _bundle(
         ########################################################################
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks, :yes)
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # ADAPT STABILITY CENTER
         ########################################################################
         if iter == 1
             f_stability = f_actual
         end
+
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # stability center update
         if f_actual - f_stability >= alpha * delta
@@ -433,10 +434,10 @@ function _bundle(
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
-
         print("UB: ", f_approx, ", LB: ", f_stability)
         println()
+
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # DETERMINE DELTA (not directly used for termination, though)
         ########################################################################
@@ -463,13 +464,14 @@ function _bundle(
             return best_actual
         end
         # Next iterate
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
         dual_vars .= value.(x)
         # can be deleted with the next update of GAMS.jl
         replace!(dual_vars, NaN => 0)
 
         # Objective function of approx model has to be adapted to new center
         JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 * bundle_factor * LinearAlgebra.dot(x-center, x-center))
+
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]        
 
     end
     error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
