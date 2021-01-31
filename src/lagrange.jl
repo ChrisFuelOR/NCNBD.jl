@@ -85,6 +85,7 @@ function _kelley(
         ########################################################################
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # ADD CUTTING PLANE
         ########################################################################
@@ -162,7 +163,6 @@ function _solve_Lagrangian_relaxation!(
     lagrangian_obj = JuMP.objective_value(model)
 
     subgradients .= fact .* JuMP.value.(slacks)
-    @infiltrate all(subgradients.==0)
 
     # Reset old objective, update subgradients using slack values
     JuMP.set_objective_function(model, old_obj)
@@ -376,9 +376,11 @@ function _bundle(
         # Evaluate Lagrangian at stability center
         # Has to be done before second call to not overwrite obtained subgradients
         f_stability = _solve_Lagrangian_relaxation!(subgradients, node, center, integrality_handler.slacks)
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # ADD CUTTING PLANE TO APPROX_MODEL
         ########################################################################
