@@ -369,6 +369,7 @@ function _bundle(
     end
 
     f_stability = 0
+    delta = 0
 
     # CUTTING-PLANE METHOD
     ############################################################################
@@ -384,17 +385,8 @@ function _bundle(
 
         # ADAPT STABILITY CENTER
         ########################################################################
-        # determine delta (although this is not used for stopping criterion directly)
-        delta = 0
-
         if iter == 1
             f_stability = f_actual
-        end
-
-        if dualsense == JuMP.MOI.MIN_SENSE
-            delta = f_stability - f_approx
-        elseif dualsense == JuMP.MOI.MAX_SENSE
-            delta = f_approx - f_stability
         end
 
         # stability center update
@@ -445,6 +437,14 @@ function _bundle(
 
         print("UB: ", f_approx, ", LB: ", f_stability)
         println()
+
+        # DETERMINE DELTA (not directly used for termination, though)
+        ########################################################################
+        if dualsense == JuMP.MOI.MIN_SENSE
+            delta = f_stability - f_approx
+        elseif dualsense == JuMP.MOI.MAX_SENSE
+            delta = f_approx - f_stability
+        end
 
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
