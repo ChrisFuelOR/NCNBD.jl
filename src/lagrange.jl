@@ -390,19 +390,19 @@ function _bundle(
                 approx_model,
                 θ >= f_actual + LinearAlgebra.dot(subgradients, x - dual_vars)
             )
-            if f_actual <= best_actual
-                best_actual = f_actual
-                best_mult .= dual_vars
-            end
+            #if f_actual <= best_actual
+            #    best_actual = f_actual
+            #    best_mult .= dual_vars
+            #end
         else
             JuMP.@constraint(
                 approx_model,
                 θ <= f_actual + LinearAlgebra.dot(subgradients, x - dual_vars)
             )
-            if f_actual >= best_actual
-                best_actual = f_actual
-                best_mult .= dual_vars
-            end
+            #if f_stability >= best_stability
+            #    best_stability = f_stability
+            #    best_mult .= dual_vars
+            #end
         end
 
         # SOLVE APPROXIMATION MODEL
@@ -421,13 +421,13 @@ function _bundle(
         ########################################################################
         # determine delta (although this is not used for stopping criterion directly)
         if dualsense == JuMP.MOI.MIN_SENSE
-            delta = f_actual - f_approx
+            delta = f_stability - f_approx
         elseif dualsense == JuMP.MOI.MAX_SENSE
-            delta = f_approx - f_actual
+            delta = f_approx - f_stability
         end
 
         # stability center update
-        if f_stability - f_actual >= alpha * delta
+        if f_actual - f_stability >= alpha * delta
             # serious step
             center .= value.(x)
         else
@@ -438,8 +438,9 @@ function _bundle(
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
         # More reliable than checking whether subgradient is zero
-        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
-            dual_vars .= best_mult
+        if isapprox(f_stability, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
+            #TODO: Check if this is correct
+            dual_vars .= center
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
             end
