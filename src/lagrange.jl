@@ -344,7 +344,7 @@ function _bundle(
         x[1:length(dual_vars)]
     end
     # Define objective for bundle method
-    JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 * bundle_factor * dot(x-center, x-center))
+    JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 * bundle_factor * LinearAlgebra.dot(x-center, x-center))
 
     if dualsense == MOI.MIN_SENSE
         JuMP.set_lower_bound(θ, obj)
