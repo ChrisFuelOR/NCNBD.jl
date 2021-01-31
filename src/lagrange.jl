@@ -443,7 +443,7 @@ function _bundle(
 
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
-        print("UB: ", f_approx, ", LB: ", f_actual)
+        print("UB: ", f_approx, ", LB: ", f_stability)
         println()
 
         # CONVERGENCE CHECK AND UPDATE
