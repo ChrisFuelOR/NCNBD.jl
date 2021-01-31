@@ -152,6 +152,7 @@ function _solve_Lagrangian_relaxation!(
     node::SDDP.Node,
     dual_vars::Vector{Float64},
     slacks,
+    update_subgradients::Symbol, #TODO: Why not boolean?
 )
     model = node.ext[:linSubproblem]
     old_obj = JuMP.objective_function(model)
@@ -162,7 +163,9 @@ function _solve_Lagrangian_relaxation!(
     JuMP.optimize!(model)
     lagrangian_obj = JuMP.objective_value(model)
 
-    subgradients .= fact .* JuMP.value.(slacks)
+    if update_subgradients == :yes
+        subgradients .= fact .* JuMP.value.(slacks)
+    end
 
     # Reset old objective, update subgradients using slack values
     JuMP.set_objective_function(model, old_obj)
@@ -385,7 +388,7 @@ function _bundle(
         delta = 0
 
         if iter == 1
-            f_stability == f_actual
+            f_stability = f_actual
         end
 
         if dualsense == JuMP.MOI.MIN_SENSE
@@ -411,19 +414,19 @@ function _bundle(
                 approx_model,
                 θ >= f_actual + LinearAlgebra.dot(subgradients, x - dual_vars)
             )
-            #if f_actual <= best_actual
-            #    best_actual = f_actual
-            #    best_mult .= dual_vars
-            #end
+            if f_stability <= best_actual
+                best_actual = f_stability
+                best_mult .= center
+            end
         else
             JuMP.@constraint(
                 approx_model,
                 θ <= f_actual + LinearAlgebra.dot(subgradients, x - dual_vars)
             )
-            #if f_stability >= best_stability
-            #    best_stability = f_stability
-            #    best_mult .= dual_vars
-            #end
+            if f_stability >= best_actual
+                best_actual = f_stability
+                best_mult .= center
+            end
         end
 
         # SOLVE LAGRANGIAN RELAXATION FOR GIVEN STABILITY CENTER
@@ -448,7 +451,7 @@ function _bundle(
         # More reliable than checking whether subgradient is zero
         if isapprox(f_stability, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
             #TODO: Check if this is correct
-            dual_vars .= center
+            dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
             end
