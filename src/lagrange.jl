@@ -274,3 +274,184 @@ function initialize_duals(
 
     return dual_vars_initial
 end
+
+
+function _bundle(
+    node::SDDP.Node,
+    node_index::Int64,
+    obj::Float64,
+    dual_vars::Vector{Float64},
+    integrality_handler::SDDP.SDDiP,
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers,
+    dual_bound::Union{Float64,Nothing}
+    )
+
+    # INITIALIZATION
+    ############################################################################
+    atol = integrality_handler.atol # corresponds to deltabar
+    rtol = integrality_handler.rtol # corresponds to deltabar
+    model = node.ext[:linSubproblem]
+    # Assume the model has been solved. Solving the MIP is usually very quick
+    # relative to solving for the Lagrangian duals, so we cheat and use the
+    # solved model's objective as our bound while searching for the optimal duals
+
+    # initialize bundle parameters
+    alpha = algoParams.bundle_alpha
+    bundle_factor = algoParams.bundle_factor
+
+    # initialize stability center
+    center = dual_vars
+
+    # This does not work since the problem has been changed since then
+    #assert JuMP.termination_status(model) == MOI.OPTIMAL
+    #obj = JuMP.objective_value(model)
+
+    for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
+        integrality_handler.old_rhs[i] = JuMP.fix_value(bin_state)
+        integrality_handler.slacks[i] = bin_state - integrality_handler.old_rhs[i]
+        JuMP.unfix(bin_state)
+        #JuMP.unset_binary(state_comp.in) # TODO: maybe not required
+        JuMP.set_lower_bound(bin_state, 0)
+        JuMP.set_upper_bound(bin_state, 1)
+    end
+
+    # SET-UP APPROXIMATION MODEL
+    ############################################################################
+    # Subgradient at current solution
+    subgradients = integrality_handler.subgradients
+    # Best multipliers found so far
+    best_mult = integrality_handler.best_mult
+    # Dual problem has the opposite sense to the primal
+    dualsense = (
+        JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? JuMP.MOI.MAX_SENSE :
+            JuMP.MOI.MIN_SENSE
+    )
+
+    # Approximation of Lagrangian dual as a function of the multipliers
+    approx_model = JuMP.Model(Gurobi.Optimizer)
+    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+
+    #JuMP.set_silent(approx_model)
+
+    # Determine sign for bundle regularization term
+    fact = (dualsense == JuMP.MOI.MIN_SENSE ? 1 : -1)
+
+    # Define Lagrangian dual multipliers
+    @variables approx_model begin
+        θ
+        x[1:length(dual_vars)]
+    end
+    # Define objective for bundle method
+    JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 * bundle_factor * dot(x-center, x-center))
+
+    if dualsense == MOI.MIN_SENSE
+        JuMP.set_lower_bound(θ, obj)
+        (best_actual, f_actual, f_approx) = (Inf, Inf, -Inf)
+    else
+        #JuMP.set_upper_bound(θ, 10000.0)
+
+        JuMP.set_upper_bound(θ, obj)
+        (best_actual, f_actual, f_approx) = (-Inf, -Inf, Inf)
+    end
+
+    # BOUND DUAL VARIABLES IF INTENDED
+    ############################################################################
+    if !isnothing(dual_bound)
+        for i in 1:length(dual_vars)
+            JuMP.set_lower_bound(x[i], -dual_bound)
+            JuMP.set_upper_bound(x[i], dual_bound)
+        end
+    end
+
+    # CUTTING-PLANE METHOD
+    ############################################################################
+    iter = 0
+    while iter < integrality_handler.iteration_limit
+        iter += 1
+
+        # SOLVE LAGRANGIAN RELAXATION FOR GIVEN DUAL_VARS
+        ########################################################################
+        # Evaluate Lagrangian at stability center
+        # Has to be done before second call to not overwrite obtained subgradients
+        f_stability = _solve_Lagrangian_relaxation!(subgradients, node, center, integrality_handler.slacks)
+
+        # Evaluate the real function and a subgradient
+        f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
+
+        # ADD CUTTING PLANE TO APPROX_MODEL
+        ########################################################################
+        # Update the model and update best function value so far
+        if dualsense == MOI.MIN_SENSE
+            JuMP.@constraint(
+                approx_model,
+                θ >= f_actual + LinearAlgebra.dot(subgradients, x - dual_vars)
+            )
+            if f_actual <= best_actual
+                best_actual = f_actual
+                best_mult .= dual_vars
+            end
+        else
+            JuMP.@constraint(
+                approx_model,
+                θ <= f_actual + LinearAlgebra.dot(subgradients, x - dual_vars)
+            )
+            if f_actual >= best_actual
+                best_actual = f_actual
+                best_mult .= dual_vars
+            end
+        end
+
+        # SOLVE APPROXIMATION MODEL
+        ########################################################################
+        # Get a bound from the approximate model
+        JuMP.optimize!(approx_model)
+        @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
+        f_approx = JuMP.objective_value(approx_model)
+
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
+
+        print("UB: ", f_approx, ", LB: ", f_actual)
+        println()
+
+        # ADAPT STABILITY CENTER
+        ########################################################################
+        # determine delta (although this is not used for stopping criterion directly)
+        if dualsense == JuMP.MOI.MIN_SENSE
+            delta = f_actual - f_approx
+        elseif dualsense == JuMP.MOI.MAX_SENSE
+            delta = f_approx - f_actual
+        end
+
+        # stability center update
+        if f_stability - f_actual >= alpha * delta
+            # serious step
+            center .= value.(x)
+        else
+            # null step (actually not required)
+            center = center
+        end
+
+        # CONVERGENCE CHECK AND UPDATE
+        ########################################################################
+        # More reliable than checking whether subgradient is zero
+        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
+            dual_vars .= best_mult
+            if dualsense == JuMP.MOI.MIN_SENSE
+                dual_vars .*= -1
+            end
+
+            for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
+                #prepare_state_fixing!(node, state_comp)
+                JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
+            end
+            return best_actual
+        end
+        # Next iterate
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
+        dual_vars .= value.(x)
+        # can be deleted with the next update of GAMS.jl
+        replace!(dual_vars, NaN => 0)
+    end
+    error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
+end
