@@ -254,19 +254,24 @@ function unitCommitment_2_2()
     lagrangian_method = :bundle
     # alternatives: :kelley, :bundle
 
+    bundle_alpha = 0.5
+    bundle_factor = 1
+
     # SET-UP PARAMETER STRUCTS
     ############################################################################
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision,
                             sigma, sigma_factor, lagrangian_atol,
                             lagrangian_rtol, lagrangian_iteration_limit,
-                            dual_initialization_regime, lagrangian_method)
+                            dual_initialization_regime, lagrangian_method,
+                            bundle_alpha, bundle_factor)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
                                       lagrangian_rtol, lagrangian_iteration_limit,
                                       dual_initialization_regime,
-                                      lagrangian_method)
+                                      lagrangian_method, bundle_alpha,
+                                      bundle_factor)
 
     # SOLVE MODEL
     ############################################################################

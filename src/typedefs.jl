@@ -42,6 +42,8 @@ mutable struct AlgoParams
     lagrangian_iteration_limit :: Int
     dual_initialization_regime :: Symbol
     lagrangian_method :: Symbol
+    bundle_alpha :: Float64
+    bundle_factor :: Float64
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run
@@ -57,6 +59,8 @@ struct InitialAlgoParams
     lagrangian_iteration_limit :: Int
     dual_initialization_regime :: Symbol
     lagrangian_method :: Symbol
+    bundle_alpha :: Float64
+    bundle_factor :: Float64
 end
 
 # struct for Simplex
