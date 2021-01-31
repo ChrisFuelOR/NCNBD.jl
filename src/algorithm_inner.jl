@@ -747,11 +747,16 @@ function get_dual_variables_backward(
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
     try
-        # KELLEY WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
+        # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################
-        kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
-        @infiltrate !isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
-        @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        if algoParams.lagrangian_method == :kelley
+            lag_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+        elseif algoParams.lagrangian_method == :bundle
+            lag_obj = _bundle(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+        end
+
+        @infiltrate !isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        @assert isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
 
         # if one of the dual variables exceeds the bounds (e.g. in case of an
         # discontinuous value function), use bounded version of Kelley's method
@@ -762,11 +767,16 @@ function get_dual_variables_backward(
             end
         end
 
-        # KELLEY WITH BOUNDED DUAL VARIABLES
+        # SOLUTION WITH BOUNDED DUAL VARIABLES
         ########################################################################
         if boundCheck == false
-            kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
-            @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+            if algoParams.lagrangian_method == :kelley
+                lag_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+            elseif algoParams.lagrangian_method == :bundle
+                lag_obj = _bundle(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+            end
+
+            @assert isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         end
 
         @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
@@ -788,7 +798,7 @@ function get_dual_variables_backward(
     return (
         dual_values=dual_values,
         bin_state=bin_state,
-        intercept=kelley_obj
+        intercept=lag_obj
     )
 end
 

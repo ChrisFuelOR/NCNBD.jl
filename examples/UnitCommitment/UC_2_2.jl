@@ -250,18 +250,23 @@ function unitCommitment_2_2()
     dual_initialization_regime = :zeros
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
+    # define solution method for lagrangian dual
+    lagrangian_method = :bundle
+    # alternatives: :kelley, :bundle
+
     # SET-UP PARAMETER STRUCTS
     ############################################################################
     initialAlgoParameters = NCNBD.InitialAlgoParams(epsilon_outerLoop,
                             epsilon_innerLoop, binaryPrecision, plaPrecision,
                             sigma, sigma_factor, lagrangian_atol,
                             lagrangian_rtol, lagrangian_iteration_limit,
-                            dual_initialization_regime)
+                            dual_initialization_regime, lagrangian_method)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
                                       lagrangian_rtol, lagrangian_iteration_limit,
-                                      dual_initialization_regime)
+                                      dual_initialization_regime,
+                                      lagrangian_method)
 
     # SOLVE MODEL
     ############################################################################

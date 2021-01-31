@@ -41,6 +41,7 @@ mutable struct AlgoParams
     lagrangian_rtol :: Float64
     lagrangian_iteration_limit :: Int
     dual_initialization_regime :: Symbol
+    lagrangian_method :: Symbol
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run
@@ -55,6 +56,7 @@ struct InitialAlgoParams
     lagrangian_rtol :: Float64
     lagrangian_iteration_limit :: Int
     dual_initialization_regime :: Symbol
+    lagrangian_method :: Symbol
 end
 
 # struct for Simplex
