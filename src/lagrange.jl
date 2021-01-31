@@ -384,12 +384,8 @@ function _bundle(
 
         # ADAPT STABILITY CENTER
         ########################################################################
-        if iter == 1
-            f_stability = f_actual
-        end
-
         # stability center update
-        if f_actual - f_stability >= alpha * delta || iter > 1
+        if f_actual - f_stability >= alpha * delta && iter > 1
             # serious step
             center .= value.(x)
         else
