@@ -722,7 +722,7 @@ function get_dual_variables_backward(
     #solver_obj = JuMP.objective_value(node.ext[:linSubproblem])
     dual_vars = dual_vars_initial
 
-    kelley_obj = 0
+    lag_obj = 0
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
