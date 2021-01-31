@@ -301,7 +301,7 @@ function _bundle(
     bundle_factor = algoParams.bundle_factor
 
     # initialize stability center
-    center = dual_vars
+    center = deepcopy(dual_vars)
 
     # This does not work since the problem has been changed since then
     #assert JuMP.termination_status(model) == MOI.OPTIMAL
@@ -420,6 +420,7 @@ function _bundle(
         # ADAPT STABILITY CENTER
         ########################################################################
         # determine delta (although this is not used for stopping criterion directly)
+        delta = 0
         if dualsense == JuMP.MOI.MIN_SENSE
             delta = f_stability - f_approx
         elseif dualsense == JuMP.MOI.MAX_SENSE
