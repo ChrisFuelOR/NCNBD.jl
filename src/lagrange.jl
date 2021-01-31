@@ -388,10 +388,8 @@ function _bundle(
             f_stability = f_actual
         end
 
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
-
         # stability center update
-        if f_actual - f_stability >= alpha * delta
+        if f_actual - f_stability >= alpha * delta || iter > 1
             # serious step
             center .= value.(x)
         else
@@ -471,7 +469,7 @@ function _bundle(
         # Objective function of approx model has to be adapted to new center
         JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 * bundle_factor * LinearAlgebra.dot(x-center, x-center))
 
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]        
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
     end
     error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
