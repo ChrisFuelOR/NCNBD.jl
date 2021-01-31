@@ -84,7 +84,7 @@ function _kelley(
         # SOLVE LAGRANGIAN RELAXATION FOR GIVEN DUAL_VARS
         ########################################################################
         # Evaluate the real function and a subgradient
-        f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
+        f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks, :yes)
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # ADD CUTTING PLANE
@@ -365,6 +365,8 @@ function _bundle(
         end
     end
 
+    f_stability = 0
+
     # CUTTING-PLANE METHOD
     ############################################################################
     iter = 0
@@ -373,14 +375,33 @@ function _bundle(
 
         # SOLVE LAGRANGIAN RELAXATION FOR GIVEN DUAL_VARS
         ########################################################################
-        # Evaluate Lagrangian at stability center
-        # Has to be done before second call to not overwrite obtained subgradients
-        f_stability = _solve_Lagrangian_relaxation!(subgradients, node, center, integrality_handler.slacks)
+        # Evaluate the real function and a subgradient
+        f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks, :yes)
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
-        # Evaluate the real function and a subgradient
-        f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks)
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
+        # ADAPT STABILITY CENTER
+        ########################################################################
+        # determine delta (although this is not used for stopping criterion directly)
+        delta = 0
+
+        if iter == 1
+            f_stability == f_actual
+        end
+
+        if dualsense == JuMP.MOI.MIN_SENSE
+            delta = f_stability - f_approx
+        elseif dualsense == JuMP.MOI.MAX_SENSE
+            delta = f_approx - f_stability
+        end
+
+        # stability center update
+        if f_actual - f_stability >= alpha * delta
+            # serious step
+            center .= value.(x)
+        else
+            # null step (actually not required)
+            center = center
+        end
 
         # ADD CUTTING PLANE TO APPROX_MODEL
         ########################################################################
@@ -405,6 +426,11 @@ function _bundle(
             #end
         end
 
+        # SOLVE LAGRANGIAN RELAXATION FOR GIVEN STABILITY CENTER
+        ########################################################################
+        # Make sure that subgradients are not overwritten
+        f_stability = _solve_Lagrangian_relaxation!(subgradients, node, center, integrality_handler.slacks, :no)
+
         # SOLVE APPROXIMATION MODEL
         ########################################################################
         # Get a bound from the approximate model
@@ -416,25 +442,6 @@ function _bundle(
 
         print("UB: ", f_approx, ", LB: ", f_actual)
         println()
-
-        # ADAPT STABILITY CENTER
-        ########################################################################
-        # determine delta (although this is not used for stopping criterion directly)
-        delta = 0
-        if dualsense == JuMP.MOI.MIN_SENSE
-            delta = f_stability - f_approx
-        elseif dualsense == JuMP.MOI.MAX_SENSE
-            delta = f_approx - f_stability
-        end
-
-        # stability center update
-        if f_actual - f_stability >= alpha * delta
-            # serious step
-            center .= value.(x)
-        else
-            # null step (actually not required)
-            center = center
-        end
 
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
