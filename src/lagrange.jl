@@ -615,7 +615,8 @@ function _bundle_level(
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
         # Construct the gap (not directly used for termination, though)
-        gap = abs(best_actual - f_approx)
+        #gap = abs(best_actual - f_approx)
+        gap = abs(best_actual - obj)
 
         print("UB: ", f_approx, ", LB: ", f_actual, best_actual)
         println()
