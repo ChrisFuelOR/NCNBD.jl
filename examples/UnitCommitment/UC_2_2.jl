@@ -40,7 +40,7 @@ function unitCommitment_2_2()
 
     # define sigma
     sigma = [0.0, 1000.0]
-    sigma_factor = 2
+    sigma_factor = 2.0
 
     # define initial approximations
     plaPrecision = [0.4, 0.64] # apart from one generator always 1/5 of pmax
