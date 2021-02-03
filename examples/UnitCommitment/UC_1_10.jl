@@ -76,7 +76,7 @@ function unitCommitment_1_10()
         sigma=sigma_factor,
         plaPrecision=plaPrecision,
         binaryPrecisionFactor=binaryPrecisionFactor,
-        infiltrate_state=infiltrate_state
+        infiltrate_state=infiltrate_state,
         dual_initialization_regime=dual_initialization_regime,
         lagrangian_method=lagrangian_method,
         bundle_alpha=bundle_alpha,
