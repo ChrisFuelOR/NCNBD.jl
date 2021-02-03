@@ -465,7 +465,7 @@ function _bundle_proximal(
         replace!(dual_vars, NaN => 0)
 
         # Objective function of approx model has to be adapted to new center
-        JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 * bundle_factor * LinearAlgebra.dot(x-center, x-center))
+        JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 / bundle_factor * LinearAlgebra.dot(x-center, x-center))
 
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
@@ -634,7 +634,7 @@ function _bundle_level(
         replace!(dual_vars, NaN => 0)
 
         # Objective function of approx model has to be adapted to new center
-        JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 * bundle_factor * LinearAlgebra.dot(x-center, x-center))
+        JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 / bundle_factor * LinearAlgebra.dot(x-center, x-center))
 
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
