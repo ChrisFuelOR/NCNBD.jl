@@ -73,7 +73,7 @@ function unitCommitment_2_10()
         lagrangian_iteration_limit=iteration_limit,
         lagrangian_time_limit=time_limit,
         sigma=sigma,
-        sigma=sigma_factor,
+        sigma_factor=sigma_factor,
         plaPrecision=plaPrecision,
         binaryPrecisionFactor=binaryPrecisionFactor,
         infiltrate_state=infiltrate_state,
