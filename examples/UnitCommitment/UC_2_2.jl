@@ -251,11 +251,12 @@ function unitCommitment_2_2()
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :bundle
-    # alternatives: :kelley, :bundle
+    lagrangian_method = :bundle_level
+    # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5
     bundle_factor = 1
+    level_factor = 0.25
 
     # SET-UP PARAMETER STRUCTS
     ############################################################################

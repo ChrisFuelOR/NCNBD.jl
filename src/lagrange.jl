@@ -498,7 +498,7 @@ function _bundle_level(
     # solved model's objective as our bound while searching for the optimal duals
 
     # initialize bundle parameters
-    level_factor = algoParams.level
+    level_factor = algoParams.level_factor
 
     # NOTE initialize stability center
     # center = deepcopy(dual_vars)
