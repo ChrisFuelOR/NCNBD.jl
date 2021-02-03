@@ -60,7 +60,7 @@ function unitCommitment_1_10()
     # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5
-    bundle_factor = 1
+    bundle_factor = 1.0
     level_factor = 0.8
 
     # CALL METHOD WITH PARAMETERS
@@ -101,7 +101,7 @@ function unitCommitment_1_10_with_parameters(;
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
     lagrangian_method::Symbol = :kelley, # alternatives: :kelley, :bundle_proximal, :bundle_level
     bundle_alpha::Float64 = 0.5,
-    bundle_factor::Float64 = 1,
+    bundle_factor::Float64 = 1.0,
     level_factor::Float64 = 0.4,
     )
 
