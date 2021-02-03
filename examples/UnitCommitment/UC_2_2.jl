@@ -243,7 +243,7 @@ function unitCommitment_2_2()
 
     # define infiltration level
     # TODO: Abstract data type
-    infiltrate_state = :lagrange
+    infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
