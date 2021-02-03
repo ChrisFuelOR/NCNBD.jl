@@ -652,7 +652,7 @@ function _bundle_level(
         # DETERMINE NEXT ITERATE USING PROXIMAL PROBLEM
         ########################################################################
         # Objective function of approx model has to be adapted to new center
-        JuMP.@objective(approx_model, Min, sum((dual_vars[i] - x[i])^2 for i=1:N))
+        JuMP.@objective(approx_model, Min, sum((dual_vars[i] - x[i])^2 for i=1:length(dual_vars)))
         JuMP.optimize!(approx_model)
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
 
