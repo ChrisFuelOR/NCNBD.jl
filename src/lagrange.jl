@@ -644,7 +644,7 @@ function _bundle_level(
             #TODO: + atol/10.0 for numerical issues?
             JuMP.setupperbound(θ, level)
         else
-            level = f_approxc - gap * level_factor
+            level = f_approx - gap * level_factor
             #TODO: - atol/10.0 for numerical issues?
             JuMP.setlowerbound(θ, level)
         end
