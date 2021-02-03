@@ -265,14 +265,14 @@ function unitCommitment_2_2()
                             sigma, sigma_factor, lagrangian_atol,
                             lagrangian_rtol, lagrangian_iteration_limit,
                             dual_initialization_regime, lagrangian_method,
-                            bundle_alpha, bundle_factor)
+                            bundle_alpha, bundle_factor, level_factor)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
                                       lagrangian_rtol, lagrangian_iteration_limit,
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
-                                      bundle_factor)
+                                      bundle_factor, level_factor)
 
     # SOLVE MODEL
     ############################################################################
