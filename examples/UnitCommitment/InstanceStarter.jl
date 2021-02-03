@@ -40,27 +40,27 @@ function start_instances()
 
         unitCommitment_1_10_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
-            dual_initialization_regime=dual_initialization_regime
+            dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
         unitCommitment_2_2_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
-            dual_initialization_regime=dual_initialization_regime
+            dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
         unitCommitment_2_5_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
-            dual_initialization_regime=dual_initialization_regime
+            dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
         unitCommitment_2_10_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
-            dual_initialization_regime=dual_initialization_regime
+            dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
         unitCommitment_5_5_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
-            dual_initialization_regime=dual_initialization_regime
+            dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
 
