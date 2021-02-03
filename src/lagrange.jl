@@ -389,7 +389,8 @@ function _bundle_proximal(
             # serious step
             center .= value.(x)
             # increase bundle_factor if there is a serious step
-            bundle_factor = bundle_factor * delta / (2 * (delta - (f_actual - f_stability)))
+            bundle_factor = bundle_factor * 2
+            # bundle_factor = bundle_factor * delta / (2 * (delta - (f_actual - f_stability)))
         else
             # null step (actually not required)
             center = center
@@ -438,9 +439,11 @@ function _bundle_proximal(
         # DETERMINE DELTA (not directly used for termination, though)
         ########################################################################
         if dualsense == JuMP.MOI.MIN_SENSE
-            delta = f_stability - f_approx
+            #delta = f_stability - f_approx
+            delta = f_stability - JuMP.value(θ)
         elseif dualsense == JuMP.MOI.MAX_SENSE
-            delta = f_approx - f_stability
+            #delta = f_approx - f_stability
+            delta = f_stability - JuMP.value(θ)
         end
 
         # CONVERGENCE CHECK AND UPDATE
