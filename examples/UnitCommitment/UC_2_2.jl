@@ -256,7 +256,7 @@ function unitCommitment_2_2()
 
     bundle_alpha = 0.5
     bundle_factor = 1
-    level_factor = 0.5
+    level_factor = 0.8
 
     # SET-UP PARAMETER STRUCTS
     ############################################################################
