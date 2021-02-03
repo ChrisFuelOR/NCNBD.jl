@@ -498,7 +498,7 @@ function _bundle_level(
     # solved model's objective as our bound while searching for the optimal duals
 
     # initialize bundle parameters
-    level = algoParams.level
+    level_factor = algoParams.level
 
     # NOTE initialize stability center
     # center = deepcopy(dual_vars)
@@ -594,6 +594,8 @@ function _bundle_level(
                 # TODO: Reset lower boumd to -inf?
             )
             if f_actual >= best_actual
+                # bestmult is not simply getvalue.(x), since approx_model may just haven gotten lucky
+                # same for best_actual
                 best_actual = f_actual
                 best_mult .= dual_vars
             end
@@ -604,20 +606,24 @@ function _bundle_level(
         # Define objective for approx_model
         JuMP.@objective(approx_model, dualsense, θ)
 
-        # Get a bound from the approximate model
+        # Get an upper bound from the approximate model
+        # (we could actually also use obj here)
         JuMP.optimize!(approx_model)
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        print("UB: ", f_approx, ", LB: ", f_stability)
-        println()
-
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
+
+        # Construct the gap (not directly used for termination, though)
+        gap = abs(best_actual - f_approx)
+
+        print("UB: ", f_approx, ", LB: ", f_actual, best_actual)
+        println()
 
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
         # More reliable than checking whether subgradient is zero
-        if isapprox(f_actual, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
+        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
             #TODO: Check if this is correct
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
@@ -631,13 +637,28 @@ function _bundle_level(
             return best_actual
         end
 
+        # FORM A NEW LEVEL
+        ########################################################################
+        if dualsense ==: Min
+            level = f_approx + gap * level_factor
+            #TODO: + atol/10.0 for numerical issues?
+            JuMP.setupperbound(θ, level)
+        else
+            level = f_approxc - gap * level_factor
+            #TODO: - atol/10.0 for numerical issues?
+            JuMP.setlowerbound(θ, level)
+
+        # DETERMINE NEXT ITERATE USING PROXIMAL PROBLEM
+        ########################################################################
+        # Objective function of approx model has to be adapted to new center
+        JuMP.@objective(approx_model, Min, sum((dual_vars[i] - x[i])^2 for i=1:N))
+        JuMP.optimize!(approx_model)
+        @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
+
         # Next iterate
         dual_vars .= value.(x)
         # can be deleted with the next update of GAMS.jl
         replace!(dual_vars, NaN => 0)
-
-        # Objective function of approx model has to be adapted to new center
-        JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 / bundle_factor * LinearAlgebra.dot(x-center, x-center))
 
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
 
