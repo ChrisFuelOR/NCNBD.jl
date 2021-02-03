@@ -238,6 +238,7 @@ function unitCommitment_2_2()
             binaryPrecision[name] = 1/7 * ub
         else
             binaryPrecision[name] = 1
+        end
     end
 
     # define infiltration level
