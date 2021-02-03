@@ -347,7 +347,7 @@ function _bundle_proximal(
         x[1:length(dual_vars)]
     end
     # Define objective for bundle method
-    JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 * bundle_factor * LinearAlgebra.dot(x-center, x-center))
+    JuMP.@objective(approx_model, dualsense, θ + fact * 0.5 / bundle_factor * LinearAlgebra.dot(x-center, x-center))
 
     if dualsense == MOI.MIN_SENSE
         JuMP.set_lower_bound(θ, obj)
@@ -388,6 +388,8 @@ function _bundle_proximal(
         if f_actual - f_stability >= alpha * delta && iter > 1
             # serious step
             center .= value.(x)
+            # increase bundle_factor if there is a serious step
+            bundle_factor = bundle_factor * delta / (2 * (delta - (f_actual - f_stability)))
         else
             # null step (actually not required)
             center = center

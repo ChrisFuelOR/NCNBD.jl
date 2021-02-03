@@ -255,7 +255,7 @@ function unitCommitment_2_2()
     # alternatives: :kelley, :bundle
 
     bundle_alpha = 0.5
-    bundle_factor = 0.1
+    bundle_factor = 1
 
     # SET-UP PARAMETER STRUCTS
     ############################################################################
