@@ -639,7 +639,7 @@ function _bundle_level(
 
         # FORM A NEW LEVEL
         ########################################################################
-        if dualsense ==: Min
+        if dualsense == :Min
             level = f_approx + gap * level_factor
             #TODO: + atol/10.0 for numerical issues?
             JuMP.setupperbound(θ, level)
