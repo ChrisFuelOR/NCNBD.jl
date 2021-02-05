@@ -1,8 +1,14 @@
+module UC_2_10
+
+export unitCommitment_2_10
+export unitCommitment_2_10_with_parameters
+
+
 using JuMP
 using SDDP
 using NCNBD
 using Revise
-using Gurobi
+#using Gurobi
 using GAMS
 #using SCIP
 using Infiltrator
@@ -95,7 +101,6 @@ function unitCommitment_2_10_with_parameters(;
     lagrangian_iteration_limit::Int = 1000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
-    time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 1000.0],
     sigma_factor::Float64 = 2.0,
     plaPrecision::Vector{Float64} = [0.4, 0.64, 0.3, 1.04, 0.56, 0.2, 0.24, 0.22, 0.16, 0.12], # apart from one generator always 1/5 of pmax
@@ -185,7 +190,7 @@ function define_2_10()
     model = SDDP.LinearPolicyGraph(
         stages = 2,
         lower_bound = 0.0,
-        optimizer = Gurobi.Optimizer,
+        optimizer = GAMS.Optimizer,
         sense = :Min
     ) do subproblem, t
 
@@ -353,5 +358,7 @@ function define_2_10()
     return model
 end
 
+end
 
-unitCommitment_2_10()
+
+#unitCommitment_2_10()

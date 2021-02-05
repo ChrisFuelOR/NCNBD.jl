@@ -1,8 +1,14 @@
+module UC_2_5
+
+export unitCommitment_2_5
+export unitCommitment_2_5_with_parameters
+
+
 using JuMP
 using SDDP
 using NCNBD
 using Revise
-using Gurobi
+#using Gurobi
 using GAMS
 #using SCIP
 using Infiltrator
@@ -179,7 +185,7 @@ function define_2_5()
     model = SDDP.LinearPolicyGraph(
         stages = 2,
         lower_bound = 0.0,
-        optimizer = Gurobi.Optimizer,
+        optimizer = GAMS.Optimizer,
         sense = :Min
     ) do subproblem, t
 
@@ -347,5 +353,6 @@ function define_2_5()
     return model
 end
 
+end
 
-unitCommitment_2_5()
+#unitCommitment_2_5()

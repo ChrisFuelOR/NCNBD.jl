@@ -2,11 +2,20 @@ using JuMP
 using SDDP
 using NCNBD
 using Revise
-using Gurobi
 using GAMS
 #using SCIP
 using Infiltrator
 
+include("UC_1_10.jl")
+#import .UC_1_10
+include("UC_2_2.jl")
+#import .UC_1_10
+include("UC_2_5.jl")
+#import .UC_1_10
+include("UC_2_10.jl")
+#import .UC_1_10
+include("UC_5_5.jl")
+#import .UC_1_10
 
 function start_instances()
 
@@ -38,27 +47,27 @@ function start_instances()
         lagrangian_method = parameter_set[4]
         level_factor = parameter_set[5]
 
-        NCNBD.unitCommitment_1_10_with_parameters(
+        UC_1_10.unitCommitment_1_10_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
-        NCNBD.unitCommitment_2_2_with_parameters(
+        UC_2_2.unitCommitment_2_2_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
-        NCNBD.unitCommitment_2_5_with_parameters(
+        UC_2_5.unitCommitment_2_5_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
-        NCNBD.unitCommitment_2_10_with_parameters(
+        UC_2_10.NCNBD.unitCommitment_2_10_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
-        NCNBD.unitCommitment_5_5_with_parameters(
+        UC_5_5.unitCommitment_5_5_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
