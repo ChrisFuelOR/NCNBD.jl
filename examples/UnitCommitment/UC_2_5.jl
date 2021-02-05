@@ -33,8 +33,8 @@ end
 function unitCommitment()
 
     # define required tolerances
-    epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-3
+    epsilon_outerLoop = 1e-1
+    epsilon_innerLoop = 1e-2
     lagrangian_atol = 1e-8
     lagrangian_rtol = 1e-8
 
@@ -44,11 +44,11 @@ function unitCommitment()
     time_limit = 10800
 
     # define sigma
-    sigma = [0.0, 1000.0]
-    sigma_factor = 2.0
+    sigma = [0.0, 10.0]
+    sigma_factor = 5.0
 
     # define initial approximations
-    plaPrecision = [0.4, 0.64, 0.3, 1.04, 0.56] # apart from one generator always 1/5 of pmax
+    plaPrecision = [40, 64, 30, 104, 56] # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor = 1/7
 
     # define infiltration level
@@ -93,16 +93,16 @@ end
 
 
 function unitCommitment_with_parameters(;
-    epsilon_outerLoop::Float64 = 1e-3,
-    epsilon_innerLoop::Float64 = 1e-3,
+    epsilon_outerLoop::Float64 = 1e-1,
+    epsilon_innerLoop::Float64 = 1e-2,
     lagrangian_atol::Float64 = 1e-8,
     lagrangian_rtol::Float64 = 1e-8,
     lagrangian_iteration_limit::Int = 1000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
-    sigma::Vector{Float64} = [0.0, 1000.0],
-    sigma_factor::Float64 = 2.0,
-    plaPrecision::Vector{Float64} = [0.4, 0.64, 0.3, 1.04, 0.56], # apart from one generator always 1/5 of pmax
+    sigma::Vector{Float64} = [0.0, 10.0],
+    sigma_factor::Float64 = 5.0,
+    plaPrecision::Vector{Float64} = [40, 64, 30, 104, 56], # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
@@ -168,18 +168,19 @@ end
 function define_2_5()
 
     generators = [
-        Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
-        Generator(0, 0.0, 3.2, 0.64, 15.0, 4.0, 50.6, 50.6, 0.64, 0.64, -0.21, 1.0, 0.0),
-        Generator(0, 0.0, 1.5, 0.3, 17.0, 2.0, 57.1, 57.1, 0.3, 0.3, -0.39, 0.95, 0.0),
-        Generator(1, 4.0, 5.0, 1.04, 13.2, 4.0, 47.1, 47.1, 1.04, 1.04, -0.14, 1.09, 0.0),
-        Generator(1, 2.8, 2.8, 0.56, 14.3, 4.0, 56.9, 56.9, 0.56, 0.56, -0.24, 1.0, 0.0),
+        Generator(0, 0.0, 200.0, 40.0, 18.0, 2.0, 42.6, 42.6, 40.0, 40.0, -2.375, 1025.0, 0.0),
+        Generator(0, 0.0, 320.0, 64.0, 15.0, 4.0, 50.6, 50.6, 64.0, 64.0, -2.75, 1800.0, 0.0),
+        Generator(0, 0.0, 150.0, 30.0, 17.0, 2.0, 57.1, 57.1, 30.0, 30.0, -3.2, 1025.0, 0.0),
+        Generator(1, 400.0, 520.0, 104.0, 13.2, 4.0, 47.1, 47.1, 104.0, 104.0, -1.5, 1800.0, 0.0),
+        Generator(1, 280.0, 280.0, 56.0, 14.3, 4.0, 56.9, 56.9, 56.0, 56.0, -3, 1800.0, 0.0),
+        Generator(0, 0.0, 80.0, 16.0, 40.2, 4.0, 141.5, 141.5, 30.0, 30.0, -6.8, 1200.0, 0.0),
     ]
     num_of_generators = size(generators,1)
 
-    demand_penalty = 5e2
-    emission_price = 2.5
+    demand_penalty = 5e4
+    emission_price = 0.02
 
-    demand = [8.0 8.5]
+    demand = [800 850]
 
     model = SDDP.LinearPolicyGraph(
         stages = 2,
