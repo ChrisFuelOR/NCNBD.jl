@@ -47,17 +47,17 @@ function start_instances()
         lagrangian_method = parameter_set[4]
         level_factor = parameter_set[5]
 
-        UC_1_10.unitCommitment_1_10_with_parameters(
+        UC_1_10.unitCommitment_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
-        UC_2_2.unitCommitment_2_2_with_parameters(
+        UC_2_2.unitCommitment_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
-        UC_2_5.unitCommitment_2_5_with_parameters(
+        UC_2_5.unitCommitment_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
