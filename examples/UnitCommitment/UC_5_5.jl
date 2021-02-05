@@ -1,8 +1,7 @@
 module UC_5_5
 
-export unitCommitment_5_5
-export unitCommitment_5_5_with_parameters
-
+export unitCommitment
+export unitCommitment_with_parameters
 
 using JuMP
 using SDDP

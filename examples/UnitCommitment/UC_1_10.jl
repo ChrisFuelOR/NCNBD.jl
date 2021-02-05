@@ -1,7 +1,7 @@
 module UC_1_10
 
-export unitCommitment_1_10
-export unitCommitment_1_10_with_parameters
+export unitCommitment
+export unitCommitment_with_parameters
 
 using JuMP
 using SDDP
@@ -92,7 +92,7 @@ function unitCommitment()
 end
 
 
-function unitCommitmen_with_parameters(;
+function unitCommitment_with_parameters(;
     epsilon_outerLoop::Float64 = 1e-3,
     epsilon_innerLoop::Float64 = 1e-3,
     lagrangian_atol::Float64 = 1e-8,
