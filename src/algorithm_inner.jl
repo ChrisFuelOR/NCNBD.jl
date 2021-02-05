@@ -616,23 +616,32 @@ function solve_subproblem_backward(
 
     # BACKWARD PASS PREPARATION
     ############################################################################
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || node_index == 2
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # Also adapt solver here
     TimerOutputs.@timeit NCNBD_TIMER "space_change" begin
         changeToBinarySpace!(node, linearizedSubproblem, state, algoParams.binaryPrecision)
     end
 
+    # INITIALIZE DUALS
+    ############################################################################
+    TimerOutputs.@timeit NCNBD_TIMER "dual_initialization" begin
+        dual_vars_initial = initialize_duals(node, linearizedSubproblem, algoParams.dual_initialization_regime)
+    end
+
+    # reset solver as it may have been changed
+    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || node_index == 2
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     node.ext[:regularization_data] = Dict{Symbol,Any}()
     regularize_backward!(node, linearizedSubproblem, algoParams.sigma[node_index])
 
     # PRIMAL SOLUTION
     ############################################################################
-    TimerOutputs.@timeit NCNBD_TIMER "solve_primal" begin
+    TimerOutputs.@timeit NCNBD_TIMER "solve_primal_reg" begin
         JuMP.optimize!(linearizedSubproblem)
     end
 
@@ -648,8 +657,8 @@ function solve_subproblem_backward(
 
     solver_obj = JuMP.objective_value(linearizedSubproblem)
     @assert JuMP.termination_status(linearizedSubproblem) == MOI.OPTIMAL
-    
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || node_index == 2
+
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # PREPARE ACTUAL BACKWARD PASS METHOD BY DEREGULARIZATION
     ############################################################################
@@ -663,7 +672,7 @@ function solve_subproblem_backward(
     # type-stability.
     if require_duals
         TimerOutputs.@timeit NCNBD_TIMER "solve_lagrange" begin
-            lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers)
+            lagrangian_results = get_dual_variables_backward(node, node_index, solver_obj, algoParams, appliedSolvers, dual_vars_initial)
         end
         dual_values = lagrangian_results.dual_values
         bin_state = lagrangian_results.bin_state
@@ -673,6 +682,8 @@ function solve_subproblem_backward(
         bin_state = Dict{Symbol,BinaryState}()
         objective = solver_obj
     end
+
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
@@ -697,7 +708,9 @@ function get_dual_variables_backward(
     node_index::Int64,
     solver_obj::Float64,
     algoParams::NCNBD.AlgoParams,
-    appliedSolvers::NCNBD.AppliedSolvers)
+    appliedSolvers::NCNBD.AppliedSolvers,
+    dual_vars_initial::Vector{Float64}
+    )
 
     # storages for return of dual values and binary state values (trial point)
     dual_values = Dict{Symbol,Float64}()
@@ -705,13 +718,15 @@ function get_dual_variables_backward(
 
     # TODO implement smart choice for initial duals
     number_of_states = length(node.ext[:backward_data][:bin_states])
-    dual_vars = zeros(number_of_states)
+    # dual_vars = zeros(number_of_states)
     #solver_obj = JuMP.objective_value(node.ext[:linSubproblem])
-    kelley_obj = 0
+    dual_vars = dual_vars_initial
+
+    lag_obj = 0
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
-    integrality_handler = SDDP.SDDiP(iteration_limit = 1000, atol = 1e-8, rtol = 1e-8)
+    integrality_handler = SDDP.SDDiP(iteration_limit = algoParams.lagrangian_iteration_limit, atol = algoParams.lagrangian_atol, rtol = algoParams.lagrangian_rtol)
     integrality_handler = SDDP.update_integrality_handler!(integrality_handler, appliedSolvers.MILP, number_of_states)
     node.ext[:lagrange] = integrality_handler
 
@@ -732,11 +747,18 @@ function get_dual_variables_backward(
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
     try
-        # KELLEY WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
+        # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################
-        kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
-        @infiltrate !isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
-        @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        if algoParams.lagrangian_method == :kelley
+            lag_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+        elseif algoParams.lagrangian_method == :bundle_proximal
+            lag_obj = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+        elseif algoParams.lagrangian_method == :bundle_level
+            lag_obj = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+        end
+
+        @infiltrate !isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        @assert isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
 
         # if one of the dual variables exceeds the bounds (e.g. in case of an
         # discontinuous value function), use bounded version of Kelley's method
@@ -747,11 +769,18 @@ function get_dual_variables_backward(
             end
         end
 
-        # KELLEY WITH BOUNDED DUAL VARIABLES
+        # SOLUTION WITH BOUNDED DUAL VARIABLES
         ########################################################################
         if boundCheck == false
-            kelley_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
-            @assert isapprox(solver_obj, kelley_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+            if algoParams.lagrangian_method == :kelley
+                lag_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+            elseif algoParams.lagrangian_method == :bundle_proximal
+                lag_obj = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+            elseif algoParams.lagrangian_method == :bundle_level
+                lag_obj = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+            end
+
+            @assert isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         end
 
         @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
@@ -773,7 +802,7 @@ function get_dual_variables_backward(
     return (
         dual_values=dual_values,
         bin_state=bin_state,
-        intercept=kelley_obj
+        intercept=lag_obj
     )
 end
 

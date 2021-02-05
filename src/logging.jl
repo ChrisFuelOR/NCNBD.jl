@@ -116,6 +116,16 @@ end
 
 function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
 
+    # Printing the time
+    println(io, Dates.now())
+
+    # Printint the file name
+    print(io, "calling ")
+    print(io, @__FILE__)
+    println(io)
+    println(io)
+
+    # Printing the parameters used
     println(io, Printf.@sprintf("outer loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_outerLoop))
     println(io, Printf.@sprintf("inner loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_innerLoop))
     println(io, "Initial binary precision:")
@@ -124,6 +134,19 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
     println(io, initialAlgoParams.plaPrecision)
     println(io, "Initial sigma:")
     println(io, initialAlgoParams.sigma)
+    println(io, "Lagrangian atol:")
+    println(io, initialAlgoParams.lagrangian_atol)
+    println(io, "Lagrangian rtol:")
+    println(io, initialAlgoParams.lagrangian_rtol)
+    println(io, "Dual initialziation:")
+    println(io, initialAlgoParams.dual_initialization_regime)
+    println(io, "Lagrangian method:")
+    println(io, initialAlgoParams.lagrangian_method)
+    if initialAlgoParams.lagrangian_method == :bundle_level
+        println(io, "Level parameter:")
+        println(io, initialAlgoParams.level_factor)
+    end
+    
     # println(io, "Sigma factor:")
     # println(io, initialAlgoParams.sigma_factor)
     flush(io)

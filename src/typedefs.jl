@@ -37,6 +37,14 @@ mutable struct AlgoParams
     sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)
     sigma_factor :: Float64
     infiltrate_state :: Symbol
+    lagrangian_atol :: Float64
+    lagrangian_rtol :: Float64
+    lagrangian_iteration_limit :: Int
+    dual_initialization_regime :: Symbol
+    lagrangian_method :: Symbol
+    bundle_alpha :: Float64
+    bundle_factor :: Float64
+    level_factor :: Float64
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run
@@ -47,6 +55,14 @@ struct InitialAlgoParams
     plaPrecision :: Vector{Float64}
     sigma :: Vector{Float64}
     sigma_factor :: Float64
+    lagrangian_atol :: Float64
+    lagrangian_rtol :: Float64
+    lagrangian_iteration_limit :: Int
+    dual_initialization_regime :: Symbol
+    lagrangian_method :: Symbol
+    bundle_alpha :: Float64
+    bundle_factor :: Float64
+    level_factor :: Float64
 end
 
 # struct for Simplex
