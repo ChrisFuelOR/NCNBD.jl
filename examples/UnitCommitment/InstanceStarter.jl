@@ -62,16 +62,16 @@ function start_instances()
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor
         )
-        UC_2_10.unitCommitment_2_10_with_parameters(
-            lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
-            dual_initialization_regime=dual_initialization_regime,
-            lagrangian_method=lagrangian_method, level_factor=level_factor
-        )
-        UC_5_5.unitCommitment_5_5_with_parameters(
-            lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
-            dual_initialization_regime=dual_initialization_regime,
-            lagrangian_method=lagrangian_method, level_factor=level_factor
-        )
+        # UC_2_10.unitCommitment_2_10_with_parameters(
+        #     lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
+        #     dual_initialization_regime=dual_initialization_regime,
+        #     lagrangian_method=lagrangian_method, level_factor=level_factor
+        # )
+        # UC_5_5.unitCommitment_5_5_with_parameters(
+        #     lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
+        #     dual_initialization_regime=dual_initialization_regime,
+        #     lagrangian_method=lagrangian_method, level_factor=level_factor
+        # )
 
     end
 end

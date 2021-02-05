@@ -31,7 +31,7 @@ struct Generator
 end
 
 
-function unitCommitment_5_5()
+function unitCommitment()
 
     # define required tolerances
     epsilon_outerLoop = 1e-3
@@ -71,7 +71,7 @@ function unitCommitment_5_5()
 
     # CALL METHOD WITH PARAMETERS
     ############################################################################
-    unitCommitment_5_5_with_parameters(
+    unitCommitment_with_parameters(
         epsilon_outerLoop=epsilon_outerLoop,
         epsilon_innerLoop=epsilon_innerLoop,
         lagrangian_atol=lagrangian_atol,
@@ -93,7 +93,7 @@ function unitCommitment_5_5()
 end
 
 
-function unitCommitment_5_5_with_parameters(;
+function unitCommitment_with_parameters(;
     epsilon_outerLoop::Float64 = 1e-3,
     epsilon_innerLoop::Float64 = 1e-3,
     lagrangian_atol::Float64 = 1e-8,
