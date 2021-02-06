@@ -48,7 +48,7 @@ function unitCommitment()
     sigma_factor = 5.0
 
     # define initial approximations
-    plaPrecision = [40, 64, 30, 104, 56] # apart from one generator always 1/5 of pmax
+    plaPrecision = [40.0, 64.0, 30.0, 104.0, 56.0] # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor = 1/7
 
     # define infiltration level
@@ -102,7 +102,7 @@ function unitCommitment_with_parameters(;
     time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 10.0, 10.0, 10.0, 10.0],
     sigma_factor::Float64 = 5.0,
-    plaPrecision::Vector{Float64} = [40, 64, 30, 104, 56], # apart from one generator always 1/5 of pmax
+    plaPrecision::Vector{Float64} = [40.0, 64.0, 30.0, 104.0, 56.0], # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
@@ -180,7 +180,7 @@ function define_5_5()
     emission_price = 0.02
 
     demand = [800 850 1010 1149 1236]
-    
+
     model = SDDP.LinearPolicyGraph(
         stages = 5,
         lower_bound = 0.0,
