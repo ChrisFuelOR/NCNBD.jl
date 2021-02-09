@@ -39,7 +39,7 @@ function unitCommitment()
     lagrangian_rtol = 1e-8
 
     # define time and iteration limits
-    lagrangian_iteration_limit = 1000
+    lagrangian_iteration_limit = 10000
     iteration_limit = 1000
     time_limit = 10800
 
@@ -53,15 +53,15 @@ function unitCommitment()
 
     # define infiltration level
     # TODO: Abstract data type
-    infiltrate_state = :none
+    infiltrate_state = :lagrange
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
-    dual_initialization_regime = :cplex_combi
+    dual_initialization_regime = :zeros
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :bundle_level
+    lagrangian_method = :kelley
     # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5
