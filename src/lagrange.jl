@@ -85,7 +85,7 @@ function _kelley(
         ########################################################################
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks, :yes)
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] >= 5
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] #|| model.ext[:sddp_policy_graph].ext[:iteration] >= 5
 
         # ADD CUTTING PLANE
         ########################################################################
@@ -117,7 +117,7 @@ function _kelley(
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] >= 5
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] #|| model.ext[:sddp_policy_graph].ext[:iteration] >= 5
 
         print("UB: ", f_approx, ", LB: ", f_actual)
         println()
@@ -138,7 +138,7 @@ function _kelley(
             return best_actual
         end
         # Next iterate
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] >= 5
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] #|| model.ext[:sddp_policy_graph].ext[:iteration] >= 5
         dual_vars .= value.(x)
         # can be deleted with the next update of GAMS.jl
         replace!(dual_vars, NaN => 0)
