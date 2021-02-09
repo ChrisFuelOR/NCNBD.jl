@@ -138,7 +138,7 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
     println(io, initialAlgoParams.lagrangian_atol)
     println(io, "Lagrangian rtol:")
     println(io, initialAlgoParams.lagrangian_rtol)
-    println(io, "Dual initialziation:")
+    println(io, "Dual initialization:")
     println(io, initialAlgoParams.dual_initialization_regime)
     println(io, "Lagrangian method:")
     println(io, initialAlgoParams.lagrangian_method)
@@ -146,7 +146,7 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
         println(io, "Level parameter:")
         println(io, initialAlgoParams.level_factor)
     end
-    
+
     # println(io, "Sigma factor:")
     # println(io, initialAlgoParams.sigma_factor)
     flush(io)
