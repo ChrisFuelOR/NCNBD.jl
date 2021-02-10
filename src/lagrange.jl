@@ -33,7 +33,7 @@ function _kelley(
 
     # LOGGING OF LAGRANGIAN DUAL
     ############################################################################
-    lag_log_file_handle = open("Lagrange.log", "a")
+    lag_log_file_handle = open("C:/Users/cg4102/Documents/julia_logs/Lagrange.log", "a")
     print_helper(print_lagrange_header, lag_log_file_handle)
 
     # SET-UP APPROXIMATION MODEL
