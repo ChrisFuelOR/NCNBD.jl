@@ -34,7 +34,7 @@ function _kelley(
     # LOGGING OF LAGRANGIAN DUAL
     ############################################################################
     lag_log_file_handle = open("Lagrange.log", "a")
-    print_helper(print_lagrange_header, log_file_handle)
+    print_helper(print_lagrange_header, lag_log_file_handle)
 
     # SET-UP APPROXIMATION MODEL
     ############################################################################
