@@ -313,3 +313,25 @@ function write_log_to_csv(model::SDDP.PolicyGraph, filename::String, algoParams:
 
     end
 end
+
+
+function print_lagrange_header(io)
+    println(
+        io,
+        " Iteration     f_approx    best_actual     f_actual  ",
+    )
+    flush(io)
+end
+
+function print_iteration(io, iter::Int, f_approx::Float64, best_actual::Float64, f_actual::Float64)
+    print(io, lpad(Printf.@sprintf("%5d", iter), 15))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.10e", f_approx), 13))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.10e", best_actual), 13))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.10e", f_actual), 13))
+
+    println(io)
+    flush(io)
+end
