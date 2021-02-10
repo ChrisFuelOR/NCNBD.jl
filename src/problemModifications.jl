@@ -514,7 +514,7 @@ function binary_refinement_check(
         for (name, state_comp) in model.nodes[i].ext[:lin_states]
             current_sol = sampled_states[i][name]
             previous_sol = previousSolution[i][name]
-            if current_sol != previous_sol
+            if ! isapprox(current_sol, previous_sol)
                 solutionCheck = false
             end
         end
