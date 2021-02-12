@@ -51,8 +51,8 @@ function _kelley(
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(Gurobi.Optimizer)
     #set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
-    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "CPLEX"=>appliedSolvers.MILP, "optcr"=>0.0))
-    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "CPLEX"=>appliedSolvers.MILP, "optcr"=>0.0))
+    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
+    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
 
     #JuMP.set_silent(approx_model)
 
