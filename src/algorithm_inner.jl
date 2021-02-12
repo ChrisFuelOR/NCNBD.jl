@@ -22,7 +22,7 @@ function inner_loop_iteration(
         forward_trajectory = NCNBD.inner_loop_forward_pass(model, options, algoParams, appliedSolvers, options.forward_pass)
     end
 
-    @infiltrate model.ext[:sddp_policy_graph].ext[:iteration] == 13
+    @infiltrate model.ext[:iteration] == 13
 
     # BINARY REFINEMENT
     ############################################################################
@@ -39,7 +39,7 @@ function inner_loop_iteration(
         end
     end
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:sddp_policy_graph].ext[:iteration] == 13
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:iteration] == 13
 
     # BACKWARD PASS
     ############################################################################
