@@ -757,14 +757,13 @@ function get_dual_variables_backward(
         # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################
         if algoParams.lagrangian_method == :kelley
-            results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+            results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
         elseif algoParams.lagrangian_method == :bundle_proximal
-            results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+            results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
         elseif algoParams.lagrangian_method == :bundle_level
-            results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+            results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
         end
 
-        @infiltrate
         @infiltrate !isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
 
@@ -781,11 +780,11 @@ function get_dual_variables_backward(
         ########################################################################
         if boundCheck == false
             if algoParams.lagrangian_method == :kelley
-                results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+                results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
             elseif algoParams.lagrangian_method == :bundle_proximal
-                results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+                results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
             elseif algoParams.lagrangian_method == :bundle_level
-                results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+                results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
             end
 
             @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
