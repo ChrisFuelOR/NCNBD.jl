@@ -116,7 +116,7 @@ function print_banner(io)
     flush(io)
 end
 
-function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.appliedSolvers)
+function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers)
 
     # Printing the time
     println(io, Dates.now())
