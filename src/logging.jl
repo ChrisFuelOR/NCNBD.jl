@@ -209,8 +209,8 @@ function print_iteration(io, log::Log)
        	print(io, Printf.@sprintf("%9d", log.subproblem_size[:total_con]))
     end
     print(io, "   ")
-    if !isnothing(log.subproblem_size)
-        print(io, lpad(Printf.@sprintf("%5d", log.lag_iterations), 15))
+    if !isnothing(log.lag_iterations)
+        print(io, log.lag_iterations)
     end
 
     println(io)
