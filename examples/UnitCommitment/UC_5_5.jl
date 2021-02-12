@@ -69,7 +69,7 @@ function unitCommitment()
     level_factor = 0.2
 
     # used solvers
-    solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
+    solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
 
     # CALL METHOD WITH PARAMETERS
     ############################################################################
