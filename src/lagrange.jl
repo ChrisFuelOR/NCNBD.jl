@@ -145,7 +145,7 @@ function _kelley(
 
             set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
-            return (lag_obj = est_actual, iterations = iter)
+            return (lag_obj = best_actual, iterations = iter)
         end
         # Next iterate
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] == 8
