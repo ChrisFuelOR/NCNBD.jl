@@ -356,6 +356,8 @@ function inner_loop_backward_pass(
 
     cuts = Dict{T,Vector{Any}}(index => Any[] for index in keys(model.nodes))
 
+    model.ext[:lag_iterations] = Int[]
+
     for index = length(scenario_path):-1:1
         outgoing_state = sampled_states[index]
         objective_state = get(objective_states, index, nothing)
@@ -462,6 +464,7 @@ function inner_loop_backward_pass(
                 )
             end
             push!(cuts[node_index], new_cuts)
+            push!(model.ext[:lag_iterations], sum(items.lag_iterations))
             # if options.refine_at_similar_nodes
             #     # Refine the bellman function at other nodes with the same
             #     # children, e.g., in the same stage of a Markovian policy graph.
@@ -489,7 +492,7 @@ function inner_loop_backward_pass(
             # end
         end
     end
-    return (cuts=cuts, lag_iterations=items.lag_iterations)
+    return cuts=cuts
 end
 
 
