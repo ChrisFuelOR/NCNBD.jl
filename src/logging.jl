@@ -181,7 +181,7 @@ function print_iteration(io, log::Log)
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.upper_bound), 13))
     print(io, "   ")
-    print(io, lpad(Printf.@sprintf("%1.6e", log.best_upper_bound), 18))
+    print(io, lpad(Printf.@sprintf("%1.6e", log.best_upper_bound), 16))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.lower_bound), 13))
     print(io, "   ")
@@ -210,7 +210,7 @@ function print_iteration(io, log::Log)
     end
     print(io, "   ")
     if !isnothing(log.subproblem_size)
-        print(io, log.lag_iterations)
+        print(io, lpad(Printf.@sprintf("%5d", log.lag_iterations), 15))
     end
 
     println(io)
