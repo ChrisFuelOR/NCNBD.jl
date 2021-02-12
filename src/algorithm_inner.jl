@@ -764,6 +764,7 @@ function get_dual_variables_backward(
             results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
         end
 
+        @infiltrate
         @infiltrate !isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
 
