@@ -50,7 +50,9 @@ function _kelley(
 
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(Gurobi.Optimizer)
-    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+    #set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "CPLEX"=>appliedSolvers.MILP, "optcr"=>0.0))
+    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "CPLEX"=>appliedSolvers.MILP, "optcr"=>0.0))
 
     #JuMP.set_silent(approx_model)
 
@@ -150,6 +152,9 @@ function _kelley(
 
         # Logging
         print_helper(print_lag_iteration, lag_log_file_handle, iter, f_approx, best_actual, f_actual)
+
+        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+
     end
     error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
 end
