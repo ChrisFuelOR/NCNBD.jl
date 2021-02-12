@@ -132,7 +132,8 @@ function _kelley(
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
         # More reliable than checking whether subgradient is zero
-        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
+        # NOTE: Checking if subgradients are 0 is removed since this would lead to an assertion error in the calling function
+        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) #|| all(subgradients.==0)
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
@@ -463,7 +464,8 @@ function _bundle_proximal(
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
         # More reliable than checking whether subgradient is zero
-        if isapprox(f_stability, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
+        # NOTE: Checking if subgradients are 0 is removed since this would lead to an assertion error in the calling function
+        if isapprox(f_stability, f_approx, atol = atol, rtol = rtol) #|| all(subgradients.==0)
             #TODO: Check if this is correct
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
@@ -638,7 +640,8 @@ function _bundle_level(
         # CONVERGENCE CHECK AND UPDATE
         ########################################################################
         # More reliable than checking whether subgradient is zero
-        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) || all(subgradients.==0)
+        # NOTE: Checking if subgradients are 0 is removed since this would lead to an assertion error in the calling function
+        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) #|| all(subgradients.==0)
             #TODO: Check if this is correct
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
