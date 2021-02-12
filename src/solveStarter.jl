@@ -108,7 +108,7 @@ function solve(
     end
 
     if print_level > 1
-        print_helper(print_parameters, log_file_handle, initialAlgoParams)
+        print_helper(print_parameters, log_file_handle, initialAlgoParams, appliedSolvers)
     end
 
     # if run_numerical_stability_report

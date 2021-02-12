@@ -115,7 +115,7 @@ function print_banner(io)
     flush(io)
 end
 
-function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
+function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.appliedSolves)
 
     # Printing the time
     println(io, Dates.now())
@@ -147,6 +147,13 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
         println(io, "Level parameter:")
         println(io, initialAlgoParams.level_factor)
     end
+
+    println(io, "Used solvers:")
+    println(io, "LP:", appliedSolvers.LP)
+    println(io, "MILP:", appliedSolvers.MILP)
+    println(io, "MINLP:", appliedSolvers.MINLP)
+    println(io, "NLP:", appliedSolvers.NLP)
+    println(io, "Lagrange:", appliedSolvers.Lagrange)
 
     # println(io, "Sigma factor:")
     # println(io, initialAlgoParams.sigma_factor)
