@@ -412,6 +412,11 @@ function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
 
     #previousSolution = nothing
 
+    # INITIALIZE BEST KNOWN POINT AND OBJECTIVE VALUE FOR INNER LOOP
+    ############################################################################
+    model.ext[:best_outer_loop_objective] = model.objective_sense == JuMP.MOI.MIN_SENSE ? Inf : -Inf
+    model.ext[:best_outer_loop_point] = Vector{Dict{Symbol,Float64}}()
+
     while true
         TimerOutputs.@timeit NCNBD_TIMER "outer_loop" begin
             result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
@@ -443,6 +448,8 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     previousSolution = nothing
+
+    #TODO: Store best solution so far
 
     while true
         # start an inner loop
@@ -500,6 +507,13 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     previousSolution = nothing
     sigma_increased = false
 
+    # INITIALIZE BEST KNOWN POINT AND OBJECTIVE VALUE FOR INNER LOOP
+    ############################################################################
+    model.ext[:best_inner_loop_objective] = model.objective_sense == JuMP.MOI.MIN_SENSE ? Inf : -Inf
+    model.ext[:best_inner_loop_point] = Vector{Dict{Symbol,Float64}}()
+
+    # ACTUAL LOOP
+    ############################################################################
     while true
         # start an inner loop
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, sigma_increased)

@@ -3,6 +3,7 @@ struct Log
     iteration::Union{Int,Nothing}
     lower_bound::Float64
     #best_upper_bound::Float64
+    best_upper_bound::Float64
     upper_bound::Float64
     current_state::Vector{Dict{Symbol,Float64}}
     #simulation_value::Float64
@@ -164,7 +165,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con      Lag iterations ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound   Best Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con      Lag iterations ",
     )
     flush(io)
 end
@@ -179,6 +180,8 @@ function print_iteration(io, log::Log)
     end
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.upper_bound), 13))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.6e", log.best_upper_bound), 13))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.lower_bound), 13))
     print(io, "   ")

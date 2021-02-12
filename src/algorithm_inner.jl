@@ -62,6 +62,24 @@ function inner_loop_iteration(
     bound = first_stage_results.bound
     subproblem_size = first_stage_results.problem_size[1]
 
+    # CHECK IF BEST KNOWN SOLUTION HAS BEEN IMPROVED
+    ############################################################################
+    if model.objective_sense == JuMP.MOI.MIN_SENSE
+        if forward_trajectory.cumulative_value < model.ext[:best_inner_loop_objective]
+            # udpate best upper bound
+            model.ext[:best_inner_loop_objective] = forward_trajectory.cumulative_value
+            # update best point so far
+            model.ext[:best_inner_loop_point] = forward_trajectory.sampled_states
+        end
+    else
+        if forward_trajectory.cumulative_value > model.ext[:best_inner_loop_objective]
+            # udpate best lower bound
+            model.ext[:best_inner_loop_objective] = forward_trajectory.cumulative_value
+            # update best point so far
+            model.ext[:best_inner_loop_point] = forward_trajectory.sampled_states
+        end
+    end
+
     # PREPARE LOGGING
     ############################################################################
     push!(
@@ -70,6 +88,7 @@ function inner_loop_iteration(
              model.ext[:outer_iteration],
              model.ext[:iteration], #length(options.log) + 1,
              bound,
+             model.ext[:best_inner_loop_objective],
              forward_trajectory.cumulative_value,
              forward_trajectory.sampled_states,
              time() - options.start_time,
@@ -94,8 +113,8 @@ function inner_loop_iteration(
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
         bound,
-        forward_trajectory.cumulative_value,
-        forward_trajectory.sampled_states,
+        model.ext[:best_inner_loop_objective],
+        model.ext[:best_inner_loop_point],
         forward_trajectory.scenario_path,
         has_converged,
         status,

@@ -30,6 +30,24 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     # TODO: TO BE IMPLEMENTED
     # This can just be determined as the solution of the first stage from forward_results
 
+    # CHECK IF BEST KNOWN SOLUTION HAS BEEN IMPROVED
+    ############################################################################
+    if model.objective_sense == JuMP.MOI.MIN_SENSE
+        if forward_results.cumulative_value < model.ext[:best_outer_loop_objective]
+            # udpate best upper bound
+            model.ext[:best_outer_loop_objective] = forward_results.cumulative_value
+            # update best point so far
+            model.ext[:best_outer_loop_point] = forward_results.sampled_states
+        end
+    else
+        if forward_trajectory.cumulative_value > model.ext[:best_outer_loop_objective]
+            # udpate best lower bound
+            model.ext[:best_outer_loop_objective] = forward_results.cumulative_value
+            # update best point so far
+            model.ext[:best_outer_loop_point] = forward_results.sampled_states
+        end
+    end
+
     # LOGGING RESULTS?
     ############################################################################
 
@@ -41,6 +59,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
             nothing,
             #inner_loop_results.lower_bound,
             forward_results.first_stage_objective,
+            model.ext[:best_outer_loop_objective],
             forward_results.cumulative_value,
             forward_results.sampled_states,
             time() - options.start_time,
