@@ -85,10 +85,14 @@ function start_instances()
         lagrangian_method = parameter_set[5]
         level_factor = parameter_set[6]
 
+        # used solvers
+        solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
+
         module_name.unitCommitment_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
-            lagrangian_method=lagrangian_method, level_factor=level_factor
+            lagrangian_method=lagrangian_method, level_factor=level_factor,
+            solvers=solvers,
         )
 
     end
