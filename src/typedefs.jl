@@ -126,6 +126,7 @@ struct AppliedSolvers
     MILP :: Any
     MINLP :: Any
     NLP :: Any
+    Lagrange :: Any
 end
 
 # Struct to store information on a nonlinear cut

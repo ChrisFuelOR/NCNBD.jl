@@ -50,9 +50,8 @@ function _kelley(
 
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(Gurobi.Optimizer)
-    #set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
-    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
-    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>"CPLEX", "optcr"=>0.0))
+    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
+    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
 
     #JuMP.set_silent(approx_model)
 
@@ -144,7 +143,7 @@ function _kelley(
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
 
-            set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+            set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
             return (lag_obj = best_actual, iterations = iter)
         end
@@ -349,7 +348,8 @@ function _bundle_proximal(
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(Gurobi.Optimizer)
     # even if objective is quadratic, it should be possible to use Gurobi
-    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
+    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
 
     #JuMP.set_silent(approx_model)
 
@@ -476,6 +476,9 @@ function _bundle_proximal(
                 #prepare_state_fixing!(node, state_comp)
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
+
+            set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+
             return (lag_obj = est_actual, iterations = iter)
         end
         # Next iterate
@@ -547,7 +550,8 @@ function _bundle_level(
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(Gurobi.Optimizer)
     # even if objective is quadratic, it should be possible to use Gurobi
-    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
+    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
 
     #JuMP.set_silent(approx_model)
 
@@ -652,6 +656,9 @@ function _bundle_level(
                 #prepare_state_fixing!(node, state_comp)
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
+
+            set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+
             return (lag_obj = est_actual, iterations = iter)
         end
 
