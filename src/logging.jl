@@ -15,7 +15,7 @@ struct Log
     bin_refinement::Union{Bool,Nothing}
     subproblem_size::Union{Dict{Symbol,Int64},Nothing}
     opt_tolerance::Float64
-    lag_iterations::Vector{Int}
+    lag_iterations::Union{Vector{Int}}
 end
 
 
@@ -206,7 +206,9 @@ function print_iteration(io, log::Log)
        	print(io, Printf.@sprintf("%9d", log.subproblem_size[:total_con]))
     end
     print(io, "   ")
-    print(io, log.lag_iterations)
+    if !isnothing(log.subproblem_size)
+        print(io, log.lag_iterations)
+    end
 
     println(io)
     flush(io)
