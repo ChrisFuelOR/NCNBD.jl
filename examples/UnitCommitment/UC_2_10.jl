@@ -118,7 +118,7 @@ function unitCommitment_with_parameters(;
 
     # DEFINE SOLVERS
     ############################################################################
-    appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron")
+    appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron", "Gurobi")
 
     # DEFINE INITIAL APPROXIMATIONS
     ############################################################################
