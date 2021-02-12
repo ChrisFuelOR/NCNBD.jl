@@ -81,7 +81,7 @@ function inner_loop_iteration(
              solutionCheck, #binary_refinment
              subproblem_size,
              algoParams.epsilon_innerLoop,
-             lag_iterations,
+             model.ext[:lag_iterations],
          ),
      )
 
@@ -492,7 +492,7 @@ function inner_loop_backward_pass(
             # end
         end
     end
-    return cuts=cuts
+    return cuts
 end
 
 
