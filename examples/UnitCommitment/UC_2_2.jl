@@ -57,11 +57,11 @@ function unitCommitment()
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
-    dual_initialization_regime = :cplex_combi
+    dual_initialization_regime = :zeros
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :bundle_level
+    lagrangian_method = :kelley
     # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5

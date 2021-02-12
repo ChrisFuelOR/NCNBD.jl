@@ -479,7 +479,7 @@ function _bundle_proximal(
 
             set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
-            return (lag_obj = est_actual, iterations = iter)
+            return (lag_obj = best_actual, iterations = iter)
         end
         # Next iterate
         dual_vars .= value.(x)
@@ -659,7 +659,7 @@ function _bundle_level(
 
             set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
-            return (lag_obj = est_actual, iterations = iter)
+            return (lag_obj = best_actual, iterations = iter)
         end
 
         # FORM A NEW LEVEL
