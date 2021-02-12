@@ -186,6 +186,7 @@ struct BackwardPassItems{T,U}
     objectives::Vector{Float64}
     belief::Vector{Float64}
     bin_state::Vector{Dict{Symbol,BinaryState}}
+    lag_iterations::Vector{Int}
     #TODO: We could also store sigma and binary precision here possibly
     function BackwardPassItems(T, U)
         return new{T,U}(
@@ -197,6 +198,7 @@ struct BackwardPassItems{T,U}
             Float64[],
             Float64[],
             Dict{Symbol,Float64}[],
+            Int[],
         )
     end
 end

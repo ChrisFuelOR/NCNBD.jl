@@ -15,6 +15,7 @@ struct Log
     bin_refinement::Union{Bool,Nothing}
     subproblem_size::Union{Dict{Symbol,Int64},Nothing}
     opt_tolerance::Float64
+    lag_iterations::Vector{Int}
 end
 
 
@@ -156,7 +157,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con      Lag iterations ",
     )
     flush(io)
 end
@@ -197,6 +198,9 @@ function print_iteration(io, log::Log)
         print(io, "   ")
        	print(io, Printf.@sprintf("%9d", log.subproblem_size[:total_con]))
     end
+    print(io, "   ")
+    print(io, log.lag_iterations)
+
     println(io)
     flush(io)
 end

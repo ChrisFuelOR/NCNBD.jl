@@ -80,7 +80,8 @@ function inner_loop_iteration(
              sigma_increased,
              solutionCheck, #binary_refinment
              subproblem_size,
-             algoParams.epsilon_innerLoop
+             algoParams.epsilon_innerLoop,
+             lag_iterations,
          ),
      )
 
@@ -488,7 +489,7 @@ function inner_loop_backward_pass(
             # end
         end
     end
-    return cuts
+    return (cuts=cuts, lag_iterations=items.lag_iterations)
 end
 
 
@@ -527,6 +528,7 @@ function solve_all_children(
                 push!(items.objectives, items.objectives[sol_index])
                 push!(items.belief, belief)
                 push!(items.bin_state, items.bin_state[sol_index])
+                push!(items.lag_iterations, items.lag_iterations[sol_index])
             else
                 # Update belief state, etc.
                 if belief_state !== nothing
@@ -565,6 +567,7 @@ function solve_all_children(
                 push!(items.objectives, subproblem_results.objective)
                 push!(items.belief, belief)
                 push!(items.bin_state, subproblem_results.bin_state)
+                push!(items.lag_iterations, subproblem_results.iterations)
                 items.cached_solutions[(child.term, noise.term)] = length(items.duals)
                 #TODO: Maybe add binary precision
             end
@@ -677,10 +680,13 @@ function solve_subproblem_backward(
         dual_values = lagrangian_results.dual_values
         bin_state = lagrangian_results.bin_state
         objective = lagrangian_results.intercept
+        iterations = lagrangian_results.iterations
     else
+        #NOTE: not required in my implementation
         dual_values = Dict{Symbol,Float64}()
         bin_state = Dict{Symbol,BinaryState}()
         objective = solver_obj
+        iterations = 0
     end
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:iteration] == 8
@@ -698,7 +704,8 @@ function solve_subproblem_backward(
     return (
         duals = dual_values,
         bin_state = bin_state,
-        objective = objective
+        objective = objective,
+        iterations = iterations,
     )
 end
 
@@ -750,15 +757,15 @@ function get_dual_variables_backward(
         # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################
         if algoParams.lagrangian_method == :kelley
-            lag_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+            results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
         elseif algoParams.lagrangian_method == :bundle_proximal
-            lag_obj = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+            results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
         elseif algoParams.lagrangian_method == :bundle_level
-            lag_obj = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
+            results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)::Float64
         end
 
-        @infiltrate !isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
-        @assert isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        @infiltrate !isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
 
         # if one of the dual variables exceeds the bounds (e.g. in case of an
         # discontinuous value function), use bounded version of Kelley's method
@@ -773,14 +780,14 @@ function get_dual_variables_backward(
         ########################################################################
         if boundCheck == false
             if algoParams.lagrangian_method == :kelley
-                lag_obj = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+                results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
             elseif algoParams.lagrangian_method == :bundle_proximal
-                lag_obj = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+                results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
             elseif algoParams.lagrangian_method == :bundle_level
-                lag_obj = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
+                results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)::Float64
             end
 
-            @assert isapprox(solver_obj, lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+            @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
         end
 
         @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
@@ -802,7 +809,8 @@ function get_dual_variables_backward(
     return (
         dual_values=dual_values,
         bin_state=bin_state,
-        intercept=lag_obj
+        intercept=results.lag_obj,
+        iterations=iterations
     )
 end
 

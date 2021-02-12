@@ -142,7 +142,7 @@ function _kelley(
                 #prepare_state_fixing!(node, state_comp)
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
-            return best_actual
+            return (lag_obj = est_actual, iterations = iter)
         end
         # Next iterate
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] == 8
@@ -473,7 +473,7 @@ function _bundle_proximal(
                 #prepare_state_fixing!(node, state_comp)
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
-            return best_actual
+            return (lag_obj = est_actual, iterations = iter)
         end
         # Next iterate
         dual_vars .= value.(x)
@@ -648,7 +648,7 @@ function _bundle_level(
                 #prepare_state_fixing!(node, state_comp)
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
-            return best_actual
+            return (lag_obj = est_actual, iterations = iter)
         end
 
         # FORM A NEW LEVEL
