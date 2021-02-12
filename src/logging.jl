@@ -16,7 +16,7 @@ struct Log
     bin_refinement::Union{Bool,Nothing}
     subproblem_size::Union{Dict{Symbol,Int64},Nothing}
     opt_tolerance::Float64
-    lag_iterations::Union{Vector{Int}}
+    lag_iterations::Union{Vector{Int},Nothing}
 end
 
 
