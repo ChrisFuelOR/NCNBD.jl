@@ -730,6 +730,7 @@ function get_dual_variables_backward(
     dual_vars = dual_vars_initial
 
     lag_obj = 0
+    lag_iterations = 0
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
@@ -758,10 +759,16 @@ function get_dual_variables_backward(
         ########################################################################
         if algoParams.lagrangian_method == :kelley
             results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
+            lag_obj = results.lag_obj
+            lag_iterations = results.iterations
         elseif algoParams.lagrangian_method == :bundle_proximal
             results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
+            lag_obj = results.lag_obj
+            lag_iterations = results.iterations
         elseif algoParams.lagrangian_method == :bundle_level
             results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
+            lag_obj = results.lag_obj
+            lag_iterations = results.iterations
         end
 
         @infiltrate !isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
@@ -781,10 +788,16 @@ function get_dual_variables_backward(
         if boundCheck == false
             if algoParams.lagrangian_method == :kelley
                 results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
+                lag_obj = results.lag_obj
+                lag_iterations = results.iterations
             elseif algoParams.lagrangian_method == :bundle_proximal
                 results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
+                lag_obj = results.lag_obj
+                lag_iterations = results.iterations
             elseif algoParams.lagrangian_method == :bundle_level
                 results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
+                lag_obj = results.lag_obj
+                lag_iterations = results.iterations
             end
 
             @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
@@ -809,8 +822,8 @@ function get_dual_variables_backward(
     return (
         dual_values=dual_values,
         bin_state=bin_state,
-        intercept=results.lag_obj,
-        iterations=iterations
+        intercept=lag_obj,
+        iterations=lag_iterations,
     )
 end
 
