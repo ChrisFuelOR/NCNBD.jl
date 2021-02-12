@@ -165,7 +165,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound   Best Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con      Lag iterations ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con   Lag iterations ",
     )
     flush(io)
 end
