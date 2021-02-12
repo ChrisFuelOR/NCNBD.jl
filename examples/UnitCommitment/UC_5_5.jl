@@ -68,6 +68,9 @@ function unitCommitment()
     bundle_factor = 1.0
     level_factor = 0.2
 
+    # used solvers
+    solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
+
     # CALL METHOD WITH PARAMETERS
     ############################################################################
     unitCommitment_with_parameters(
@@ -87,7 +90,8 @@ function unitCommitment()
         lagrangian_method=lagrangian_method,
         bundle_alpha=bundle_alpha,
         bundle_factor=bundle_factor,
-        level_factor=level_factor
+        level_factor=level_factor,
+        solvers=solvers,
     )
 end
 
@@ -110,6 +114,7 @@ function unitCommitment_with_parameters(;
     bundle_alpha::Float64 = 0.5,
     bundle_factor::Float64 = 1.0,
     level_factor::Float64 = 0.4,
+    solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
     )
 
     # DEFINE MODEL
@@ -118,7 +123,7 @@ function unitCommitment_with_parameters(;
 
     # DEFINE SOLVERS
     ############################################################################
-    appliedSolvers = NCNBD.AppliedSolvers("Gurobi", "Gurobi", "Baron", "Baron", "Gurobi")
+    appliedSolvers = NCNBD.AppliedSolvers(solvers[1], solvers[2], solvers[3], solvers[4], solvers[5])
 
     # DEFINE INITIAL APPROXIMATIONS
     ############################################################################
