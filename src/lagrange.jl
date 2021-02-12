@@ -142,6 +142,9 @@ function _kelley(
                 #prepare_state_fixing!(node, state_comp)
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
+
+            set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+
             return (lag_obj = est_actual, iterations = iter)
         end
         # Next iterate
@@ -152,8 +155,6 @@ function _kelley(
 
         # Logging
         print_helper(print_lag_iteration, lag_log_file_handle, iter, f_approx, best_actual, f_actual)
-
-        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
     end
     error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
