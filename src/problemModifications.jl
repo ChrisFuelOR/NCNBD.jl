@@ -538,7 +538,7 @@ function binary_refinement!(
 
     # Consider stage 2 here (should be the same for all following stages)
     # Precision is only used (and increased) for continuous variables
-    for (i, (name, state_comp)) in enumerate(model.nodes[2].ext[:lin_states])
+    for (name, state_comp) in model.nodes[2].ext[:lin_states]
         if !state_comp.info.in.binary && !state_comp.info.in.integer
             current_prec = algoParams.binaryPrecision[name]
             ub = state_comp.info.in.upper_bound
@@ -547,14 +547,14 @@ function binary_refinement!(
 
             # Only apply refinement if int64 is appropriate to represent this number
             if ub / new_prec > 2^63 - 1
-                allRefined[i] = 0
+                push!(allRefined, 0)
             else
-                allRefined[i] = 1
+                push!(allRefined, 1)
                 algoParams.binaryPrecision[name] = new_prec
             end
 
         else
-            allRefined[i] = 2
+            push!(allRefined, 2)
         end
     end
 
