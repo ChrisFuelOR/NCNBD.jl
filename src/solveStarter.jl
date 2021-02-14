@@ -111,11 +111,11 @@ function solve(
         print_helper(print_parameters, log_file_handle, initialAlgoParams, appliedSolvers)
     end
 
-    # if run_numerical_stability_report
-    #     report =
-    #         sprint(io -> numerical_stability_report(io, model, print = print_level > 0))
-    #     print_helper(print, log_file_handle, report)
-    # end
+    if run_numerical_stability_report
+        report =
+            sprint(io -> numerical_stability_report(io, model, print = print_level > 0))
+        print_helper(print, log_file_handle, report)
+    end
 
     if print_level > 0
         print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), log_file_handle)
