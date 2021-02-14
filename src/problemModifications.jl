@@ -509,7 +509,6 @@ function binary_refinement_check(
     ) where {T}
 
     solutionCheck = true
-    boundCheck = true
 
     # Check if feasible solution has changed since last iteration
     # If not, then the cut was not tight enough, so binary approximation should be refined
@@ -529,23 +528,7 @@ function binary_refinement_check(
         end
     end
 
-    # Check if lower bound has changed
-    # If not, then the cut was (probably) not tight enough, so binary approximation should be refined
-    # NOTE: This could also happen in other situations, e.g., if different trial solutions give
-    # the same lower bound. However, this is hard to rule out.
-    if ! isapprox(previousBound, bound)
-        boundCheck = false
-    end
-
-    # If one of solutionCheck and boundCheck is true, set refinementCheck to true
-    refinementCheck = true
-    if boundCheck || solutionCheck
-        refinementCheck = true
-    else
-        refinementCheck = false
-    end
-
-    return refinementCheck
+    return solutionCheck
 
 end
 
