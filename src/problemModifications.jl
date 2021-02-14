@@ -504,11 +504,20 @@ function binary_refinement_check(
     model::SDDP.PolicyGraph{T},
     previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
     sampled_states::Vector{Dict{Symbol,Float64}},
+    previousBound::Float64,
+    bound::Float64,
     ) where {T}
 
     solutionCheck = true
+    boundCheck = true
 
-    # Check if solution has changed since last iteration
+    # Check if feasible solution has changed since last iteration
+    # If not, then the cut was not tight enough, so binary approximation should be refined
+    # NOTE: This may also happen in the iteration where convergence is reached such that
+    # the refinement is not required. However, this is hard to rule out.
+    # NOTE: This criterion alone is not sufficient, since the solution may change
+    # slightly although the lower bound does not change and similar (or even the same)
+    # cuts are constructed over and over again.
     for i in 1:size(previousSolution,1)
         # Consider stage 2 here (should be the same for all following stages)
         for (name, state_comp) in model.nodes[i].ext[:lin_states]
@@ -520,7 +529,23 @@ function binary_refinement_check(
         end
     end
 
-    return solutionCheck
+    # Check if lower bound has changed
+    # If not, then the cut was (probably) not tight enough, so binary approximation should be refined
+    # NOTE: This could also happen in other situations, e.g., if different trial solutions give
+    # the same lower bound. However, this is hard to rule out.
+    if ! isapprox(previousBound, bound)
+        boundCheck = false
+    end
+
+    # If one of solutionCheck and boundCheck is true, set refinementCheck to true
+    refinementCheck = true
+    if boundCheck || solutionCheck
+        refinementCheck = true
+    else
+        refinementCheck = false
+    end
+
+    return refinementCheck
 
 end
 

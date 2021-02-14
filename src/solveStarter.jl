@@ -505,6 +505,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     previousSolution = nothing
+    previousBound = nothing
     sigma_increased = false
 
     # INITIALIZE BEST KNOWN POINT AND OBJECTIVE VALUE FOR INNER LOOP
@@ -516,7 +517,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     ############################################################################
     while true
         # start an inner loop
-        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, sigma_increased)
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, previousBound, sigma_increased)
         # logging
         log_iteration(options, options.log_inner)
 
@@ -551,6 +552,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
                 sigma_increased = true
                 previousSolution = nothing
+                previousBound = nothing
 
             end
             # return all results here to keep them accessible in outer pass
@@ -561,6 +563,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
                 sigma_increased = true
                 previousSolution = nothing
+                previousBound = nothing
             else
                 sigma_increased = false
             end
@@ -568,5 +571,6 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
 
         previousSolution = result_inner.current_sol
+        previousBound = result_inner.lower_bound
     end
 end
