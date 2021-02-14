@@ -32,13 +32,14 @@ function inner_loop_iteration(
     refinementCheck = true
     if !isnothing(previousSolution) && !isnothing(previousBound)
         TimerOutputs.@timeit NCNBD_TIMER "bin_refinement" begin
-            refinementCheck = NCNBD.binary_refinement_check(model, previousSolution, forward_trajectory.sampled_states)
+            refinementCheck = NCNBD.binary_refinement_check(model, previousSolution, forward_trajectory.sampled_states, previousBound, bound)
             if refinementCheck == true
                 # Increase binary precision such that K = K + 1
                 NCNBD.binary_refinement!(model, algoParams)
             end
         end
     end
+    boundCheck = true
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 13
 

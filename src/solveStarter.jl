@@ -506,6 +506,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
     previousSolution = nothing
     previousBound = nothing
+    boundCheck = true
     sigma_increased = false
 
     # INITIALIZE BEST KNOWN POINT AND OBJECTIVE VALUE FOR INNER LOOP
@@ -522,6 +523,16 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         log_iteration(options, options.log_inner)
 
         @infiltrate algoParams.infiltrate_state in [:all, :sigma]
+
+        # CHECK IF LOWER BOUND HAS IMPROVED
+        ############################################################################
+        # If not, then the cut was (probably) not tight enough,
+        # so binary approximation should be refined in the next iteration
+        # NOTE: This could also happen in other situations, e.g., if different trial solutions give
+        # the same lower bound. However, this is hard to rule out.
+        if ! isapprox(previousBound, bound)
+            boundCheck = false
+        end
 
         if result_inner.has_converged
 
@@ -558,6 +569,8 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             # return all results here to keep them accessible in outer pass
             # return result_inner
         else
+            # CHECK IF SIGMA SHOULD BE INCREASED (DUE TO LB > UB)
+            ############################################################################
             if result_inner.upper_bound - result_inner.lower_bound < - algoParams.epsilon_innerLoop * 0.1
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
@@ -567,6 +580,10 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             else
                 sigma_increased = false
             end
+
+
+
+
 
         end
 
