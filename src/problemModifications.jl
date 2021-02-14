@@ -564,6 +564,7 @@ function binary_refinement!(
             binaryRefinement = :partial
         else
             binaryRefinement = :impossible
+        end
     else
         binaryRefinement = :all
     end
