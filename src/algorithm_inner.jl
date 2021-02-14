@@ -110,7 +110,7 @@ function inner_loop_iteration(
     ############################################################################
     has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules, :inner)
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner]
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:iteration] >= 8
 
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
