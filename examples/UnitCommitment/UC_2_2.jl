@@ -156,6 +156,7 @@ function unitCommitment_with_parameters(;
                                       bundle_factor, level_factor)
 
     print("blubb")
+    print("blabb")
 
     # SOLVE MODEL
     ############################################################################
