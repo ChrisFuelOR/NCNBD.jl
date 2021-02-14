@@ -500,7 +500,7 @@ function deregularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
 end
 
 
-function binary_refinement_check(
+function binary_refinement_check!(
     model::SDDP.PolicyGraph{T},
     previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
     sampled_states::Vector{Dict{Symbol,Float64}},
