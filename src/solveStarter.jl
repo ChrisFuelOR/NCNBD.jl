@@ -507,6 +507,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     previousSolution = nothing
     previousBound = nothing
     sigma_increased = false
+    boundCheck = false
 
     # INITIALIZE BEST KNOWN POINT AND OBJECTIVE VALUE FOR INNER LOOP
     ############################################################################
