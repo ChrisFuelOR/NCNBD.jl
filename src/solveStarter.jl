@@ -550,6 +550,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
                 sigma_increased = true
+                previousSolution = nothing
 
             end
             # return all results here to keep them accessible in outer pass
@@ -559,6 +560,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
                 sigma_increased = true
+                previousSolution = nothing
             else
                 sigma_increased = false
             end
