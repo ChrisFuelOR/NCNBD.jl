@@ -155,6 +155,8 @@ function unitCommitment_with_parameters(;
                                       lagrangian_method, bundle_alpha,
                                       bundle_factor, level_factor)
 
+    print("blubb")
+
     # SOLVE MODEL
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
