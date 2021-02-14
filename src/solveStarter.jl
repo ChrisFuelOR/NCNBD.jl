@@ -113,7 +113,7 @@ function solve(
 
     if run_numerical_stability_report
         report =
-            sprint(io -> numerical_stability_report(io, model, print = print_level > 0))
+            sprint(io -> SDDP.numerical_stability_report(io, model, print = print_level > 0))
         print_helper(print, log_file_handle, report)
     end
 
