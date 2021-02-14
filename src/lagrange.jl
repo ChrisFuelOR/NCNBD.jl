@@ -123,7 +123,7 @@ function _kelley(
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] == 8
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] #|| model.ext[:sddp_policy_graph].ext[:iteration] == 8
 
         print("UB: ", f_approx, ", LB: ", f_actual)
         println()
@@ -148,7 +148,7 @@ function _kelley(
             return (lag_obj = best_actual, iterations = iter)
         end
         # Next iterate
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] == 8
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] #|| model.ext[:sddp_policy_graph].ext[:iteration] == 8
         dual_vars .= value.(x)
         # can be deleted with the next update of GAMS.jl
         replace!(dual_vars, NaN => 0)

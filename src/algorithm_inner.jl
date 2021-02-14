@@ -22,7 +22,7 @@ function inner_loop_iteration(
         forward_trajectory = NCNBD.inner_loop_forward_pass(model, options, algoParams, appliedSolvers, options.forward_pass)
     end
 
-    @infiltrate model.ext[:iteration] == 13
+    #@infiltrate model.ext[:iteration] == 13
 
     # BINARY REFINEMENT
     ############################################################################
@@ -39,7 +39,7 @@ function inner_loop_iteration(
         end
     end
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:iteration] == 13
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 13
 
     # BACKWARD PASS
     ############################################################################
@@ -110,7 +110,7 @@ function inner_loop_iteration(
     ############################################################################
     has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules, :inner)
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner, :test]
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
@@ -643,7 +643,7 @@ function solve_subproblem_backward(
 
     # BACKWARD PASS PREPARATION
     ############################################################################
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:iteration] == 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
 
     # Also adapt solver here
     TimerOutputs.@timeit NCNBD_TIMER "space_change" begin
@@ -661,7 +661,7 @@ function solve_subproblem_backward(
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:iteration] == 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
 
     node.ext[:regularization_data] = Dict{Symbol,Any}()
     regularize_backward!(node, linearizedSubproblem, algoParams.sigma[node_index])
@@ -685,7 +685,7 @@ function solve_subproblem_backward(
     solver_obj = JuMP.objective_value(linearizedSubproblem)
     @assert JuMP.termination_status(linearizedSubproblem) == MOI.OPTIMAL
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:iteration] == 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
 
     # PREPARE ACTUAL BACKWARD PASS METHOD BY DEREGULARIZATION
     ############################################################################
@@ -713,7 +713,7 @@ function solve_subproblem_backward(
         iterations = 0
     end
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] || model.ext[:iteration] == 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
