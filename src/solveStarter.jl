@@ -569,7 +569,11 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             # so binary approximation should be refined in the next iteration
             # NOTE: This could also happen in other situations, e.g., if different trial solutions give
             # the same lower bound. However, this is hard to rule out.
-            if ! isapprox(previousBound, result_inner.lower_bound)
+            if !isnothing(previousBound)
+                if ! isapprox(previousBound, result_inner.lower_bound)
+                    boundCheck = false
+                end
+            else
                 boundCheck = false
             end
 
