@@ -21,15 +21,15 @@ function start_instances()
 
     # INSTANCE DEFINITIONS
     parameter_sets = [
-                      # [UC_1_10, 1e-8, 1e-8, :none, :kelley, 0.0],
-                      #
-                      # [UC_2_2, 1e-8, 1e-8, :none, :kelley, 0.0],
+                      [UC_1_10, 1e-8, 1e-8, :none, :kelley, 0.0],
+
+                      [UC_2_2, 1e-8, 1e-8, :none, :kelley, 0.0],
                       # [UC_2_2, 1e-8, 1e-8, :none, :bundle_level, 0.4],
-                      # [UC_2_2, 1e-8, 1e-8, :none, :bundle_level, 0.2],
+                      [UC_2_2, 1e-8, 1e-8, :none, :bundle_level, 0.2],
                       # [UC_2_2, 1e-8, 1e-8, :none, :bundle_level, 0.6],
-                      # [UC_2_2, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0],
+                      [UC_2_2, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0],
                       # [UC_2_2, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.4],
-                      # [UC_2_2, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2],
+                      [UC_2_2, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2],
                       # [UC_2_2, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.6],
                       # [UC_2_2, 1e-4, 1e-4, :none, :kelley, 0.0],
                       # [UC_2_2, 1e-4, 1e-4, :none, :bundle_level, 0.4],
@@ -40,9 +40,9 @@ function start_instances()
                       # [UC_2_2, 1e-4, 1e-4, :cplex_combi, :bundle_level, 0.2],
                       # [UC_2_2, 1e-4, 1e-4, :cplex_combi, :bundle_level, 0.6],
 
-                      # [UC_2_5, 1e-8, 1e-8, :none, :kelley, 0.0],
+                      [UC_2_5, 1e-8, 1e-8, :none, :kelley, 0.0],
                       # [UC_2_5, 1e-8, 1e-8, :none, :bundle_level, 0.4],
-                      # [UC_2_5, 1e-8, 1e-8, :none, :bundle_level, 0.2],
+                      [UC_2_5, 1e-8, 1e-8, :none, :bundle_level, 0.2],
                       # [UC_2_5, 1e-8, 1e-8, :none, :bundle_level, 0.6],
                       # [UC_2_5, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0],
                       # [UC_2_5, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.4],
@@ -57,8 +57,8 @@ function start_instances()
                       # [UC_2_5, 1e-4, 1e-4, :cplex_combi, :bundle_level, 0.2],
                       # [UC_2_5, 1e-4, 1e-4, :cplex_combi, :bundle_level, 0.6],
 
-                      # [UC_2_10, 1e-8, 1e-8, :none, :kelley, 0.0],
-                      # [UC_2_10, 1e-8, 1e-8, :none, :bundle_level, 0.2],
+                      [UC_2_10, 1e-8, 1e-8, :none, :kelley, 0.0],
+                      [UC_2_10, 1e-8, 1e-8, :none, :bundle_level, 0.2],
                       # [UC_2_10, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0],
                       #[UC_2_10, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2],
                       #[UC_2_10, 1e-4, 1e-4, :none, :kelley, 0.0],
@@ -66,14 +66,14 @@ function start_instances()
                       #[UC_2_10, 1e-4, 1e-4, :cplex_combi, :kelley, 0.0],
                       #[UC_2_10, 1e-4, 1e-4, :cplex_combi, :bundle_level, 0.2],
 
-                      #[UC_5_5, 1e-8, 1e-8, :none, :kelley, 0.0],
+                      [UC_5_5, 1e-8, 1e-8, :none, :kelley, 0.0],
                       [UC_5_5, 1e-8, 1e-8, :none, :bundle_level, 0.2],
-                      [UC_5_5, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0],
-                      [UC_5_5, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2],
-                      [UC_5_5, 1e-4, 1e-4, :none, :kelley, 0.0],
-                      [UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2],
-                      [UC_5_5, 1e-4, 1e-4, :cplex_combi, :kelley, 0.0],
-                      [UC_5_5, 1e-4, 1e-4, :cplex_combi, :bundle_level, 0.2],
+                      # [UC_5_5, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0],
+                      # [UC_5_5, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2],
+                      # [UC_5_5, 1e-4, 1e-4, :none, :kelley, 0.0],
+                      # [UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2],
+                      # [UC_5_5, 1e-4, 1e-4, :cplex_combi, :kelley, 0.0],
+                      # [UC_5_5, 1e-4, 1e-4, :cplex_combi, :bundle_level, 0.2],
                       ]
 
     for parameter_set in parameter_sets
@@ -86,7 +86,7 @@ function start_instances()
         level_factor = parameter_set[6]
 
         # used solvers
-        solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
+        solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
 
         module_name.unitCommitment_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
