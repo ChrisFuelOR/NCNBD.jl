@@ -38,7 +38,7 @@ function inner_loop_iteration(
             NCNBD.binary_refinement_check!(model, previousSolution, forward_trajectory.sampled_states, solutionCheck)
             if solutionCheck || boundCheck
                 # Increase binary precision such that K = K + 1
-                binaryRefinement = NCNBD.binary_refinement!(model, algoParams, binaryRefinement)
+                 NCNBD.binary_refinement!(model, algoParams, binaryRefinement)
             end
         end
     end
