@@ -500,7 +500,7 @@ function deregularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
 end
 
 
-function binary_refinement_check!(
+function binary_refinement_check(
     model::SDDP.PolicyGraph{T},
     previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
     sampled_states::Vector{Dict{Symbol,Float64}},
@@ -519,12 +519,12 @@ function binary_refinement_check!(
         end
     end
 
-    @infiltrate
+    return solutionCheck
 
 end
 
 
-function binary_refinement!(
+function binary_refinement(
     model::SDDP.PolicyGraph{T},
     algoParams::NCNBD.AlgoParams,
     binaryRefinement::Symbol,
@@ -564,5 +564,7 @@ function binary_refinement!(
     else
         binaryRefinement = :all
     end
+
+    return binaryRefinement
 
 end

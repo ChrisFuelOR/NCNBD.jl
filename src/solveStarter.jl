@@ -592,7 +592,6 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
         end
 
-        @infiltrate
         previousSolution = result_inner.current_sol
         previousBound = result_inner.lower_bound
     end
