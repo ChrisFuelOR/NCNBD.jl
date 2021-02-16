@@ -509,11 +509,6 @@ function binary_refinement_check!(
 
     # Check if feasible solution has changed since last iteration
     # If not, then the cut was not tight enough, so binary approximation should be refined
-    # NOTE: This may also happen in the iteration where convergence is reached such that
-    # the refinement is not required. However, this is hard to rule out.
-    # NOTE: This criterion alone is not sufficient, since the solution may change
-    # slightly although the lower bound does not change and similar (or even the same)
-    # cuts are constructed over and over again.
     for i in 1:size(previousSolution,1)
         # Consider stage 2 here (should be the same for all following stages)
         for (name, state_comp) in model.nodes[i].ext[:lin_states]
