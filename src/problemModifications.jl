@@ -510,7 +510,6 @@ function binary_refinement_check!(
     # Check if feasible solution has changed since last iteration
     # If not, then the cut was not tight enough, so binary approximation should be refined
     for i in 1:size(previousSolution,1)
-        # Consider stage 2 here (should be the same for all following stages)
         for (name, state_comp) in model.nodes[i].ext[:lin_states]
             current_sol = sampled_states[i][name]
             previous_sol = previousSolution[i][name]
@@ -519,6 +518,8 @@ function binary_refinement_check!(
             end
         end
     end
+
+    @infiltrate
 
 end
 
