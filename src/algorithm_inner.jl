@@ -41,7 +41,6 @@ function inner_loop_iteration(
             end
         end
     end
-    @infiltrate
     boundCheck = true
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 13
@@ -87,9 +86,6 @@ function inner_loop_iteration(
         end
     end
 
-
-
-
     # PREPARE LOGGING
     ############################################################################
     push!(
@@ -107,7 +103,7 @@ function inner_loop_iteration(
              #algoParams.sigma,
              #algoParams.binaryPrecision,
              sigma_increased,
-             solutionCheck, #binary_refinement
+             binaryRefinement,
              subproblem_size,
              algoParams.epsilon_innerLoop,
              model.ext[:lag_iterations],
