@@ -49,9 +49,7 @@ function _kelley(
     )
 
     # Approximation of Lagrangian dual as a function of the multipliers
-    approx_model = JuMP.Model()
-    set_optimizer(approx_model, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>1))
-    set_optimizer(model, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>1))
+    approx_model = JuMP.direct_model(with_optimizer(Gurobi.Optimizer, "MIPGap"=>0.0))
 
     #JuMP.set_silent(approx_model)
 
@@ -142,8 +140,6 @@ function _kelley(
                 #prepare_state_fixing!(node, state_comp)
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
-
-            set_optimizer(model, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>1))
 
             return (lag_obj = best_actual, iterations = iter)
         end

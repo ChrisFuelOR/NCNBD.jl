@@ -203,8 +203,6 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
 
-        set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>3))
-
         # SUBPROBLEM SOLUTION
         ############################################################################
         # Solve the subproblem, note that `require_duals = false`.
@@ -657,9 +655,6 @@ function solve_subproblem_backward(
         dual_vars_initial = initialize_duals(node, linearizedSubproblem, algoParams.dual_initialization_regime)
     end
 
-    # reset solver as it may have been changed
-    set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>3))
-
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
     @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
@@ -1074,7 +1069,6 @@ function inner_loop_forward_sigma_test(
 
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
-        set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>3))
 
         # SUBPROBLEM SOLUTION
         ############################################################################

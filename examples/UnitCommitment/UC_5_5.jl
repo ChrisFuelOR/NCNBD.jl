@@ -190,12 +190,13 @@ function define_5_5()
         stages = 5,
         lower_bound = 0.0,
         optimizer = GAMS.Optimizer,
-        sense = :Min
+        sense = :Min,
+        direct_mode = true,
     ) do subproblem, t
 
         # DEFINE LINEARIZED PROBLEM (MILP)
         # ------------------------------------------------------------------
-        linearizedSubproblem = JuMP.Model()
+        linearizedSubproblem = JuMP.direct_model(with_optimizer(Gurobi.Optimizer, "MIPGap"=>0.0))
         node = subproblem.ext[:sddp_node]
         model = subproblem.ext[:sddp_policy_graph]
         linearizedSubproblem.ext[:sddp_node] = node
