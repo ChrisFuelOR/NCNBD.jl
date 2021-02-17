@@ -187,7 +187,7 @@ function define_2_2()
     model = SDDP.LinearPolicyGraph(
         stages = 2,
         lower_bound = 0.0,
-        optimizer = GAMS.Optimizer,
+        optimizer = Gurobi.Optimizer,
         sense = :Min,
         direct_mode = true,
     ) do subproblem, t
