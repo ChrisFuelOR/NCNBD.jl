@@ -49,7 +49,7 @@ function _kelley(
     )
 
     # Approximation of Lagrangian dual as a function of the multipliers
-    approx_model = JuMP.direct_model(with_optimizer(Gurobi.Optimizer, "MIPGap"=>0.0))
+    approx_model = JuMP.direct_model(with_optimizer(Gurobi.Optimizer(), "MIPGap"=>0.0))
 
     #JuMP.set_silent(approx_model)
 
