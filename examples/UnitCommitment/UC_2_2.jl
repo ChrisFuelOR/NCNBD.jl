@@ -7,7 +7,7 @@ using JuMP
 using SDDP
 using NCNBD
 using Revise
-#using Gurobi
+using Gurobi
 using GAMS
 #using SCIP
 using Infiltrator
