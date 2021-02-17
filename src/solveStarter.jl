@@ -299,7 +299,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
         # Set objective sense
         JuMP.set_objective_sense(node.ext[:linSubproblem], model.objective_sense)
-        JuMP.set_optimizer_attribute(node[:subproblem], "MIPGap", 0.0)
+        JuMP.set_optimizer_attribute(node.subproblem, "MIPGap", 0.0)
 
         # Initialize Bellman function
         node.ext[:lin_bellman_function] = nothing
