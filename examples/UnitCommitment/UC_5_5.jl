@@ -189,7 +189,7 @@ function define_5_5()
     model = SDDP.LinearPolicyGraph(
         stages = 5,
         lower_bound = 0.0,
-        optimizer = Gurobi.Optimizer,
+        optimizer = GAMS.Optimizer,
         sense = :Min,
         direct_mode = true,
     ) do subproblem, t
