@@ -154,8 +154,6 @@ function unitCommitment_with_parameters(;
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
                                       bundle_factor, level_factor)
-
-    @infiltrate
     
     # SOLVE MODEL
     ############################################################################
