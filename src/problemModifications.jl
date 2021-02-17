@@ -504,13 +504,12 @@ function binary_refinement_check(
     model::SDDP.PolicyGraph{T},
     previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
     sampled_states::Vector{Dict{Symbol,Float64}},
+    solutionCheck::Bool,
     ) where {T}
 
-    solutionCheck = true
-
-    # Check if solution has changed since last iteration
+    # Check if feasible solution has changed since last iteration
+    # If not, then the cut was not tight enough, so binary approximation should be refined
     for i in 1:size(previousSolution,1)
-        # Consider stage 2 here (should be the same for all following stages)
         for (name, state_comp) in model.nodes[i].ext[:lin_states]
             current_sol = sampled_states[i][name]
             previous_sol = previousSolution[i][name]
@@ -525,10 +524,13 @@ function binary_refinement_check(
 end
 
 
-function binary_refinement!(
+function binary_refinement(
     model::SDDP.PolicyGraph{T},
     algoParams::NCNBD.AlgoParams,
+    binaryRefinement::Symbol,
     ) where {T}
+
+    allRefined = Int[]
 
     # Consider stage 2 here (should be the same for all following stages)
     # Precision is only used (and increased) for continuous variables
@@ -538,8 +540,31 @@ function binary_refinement!(
             ub = state_comp.info.in.upper_bound
             K = SDDP._bitsrequired(round(Int, ub / current_prec))
             new_prec = ub / sum(2^(k-1) for k in 1:K+1)
-            algoParams.binaryPrecision[name] = new_prec
+
+            # Only apply refinement if int64 is appropriate to represent this number
+            if ub / new_prec > 2^63 - 1
+                push!(allRefined, 0)
+            else
+                push!(allRefined, 1)
+                algoParams.binaryPrecision[name] = new_prec
+            end
+
+        else
+            push!(allRefined, 2)
         end
     end
+
+    # Check refinement status
+    if 0 in allRefined
+        if 1 in allRefined
+            binaryRefinement = :partial
+        else
+            binaryRefinement = :impossible
+        end
+    else
+        binaryRefinement = :all
+    end
+
+    return binaryRefinement
 
 end

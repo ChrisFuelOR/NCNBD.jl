@@ -13,7 +13,7 @@ struct Log
     #sigma::Vector{Float64}
     #binaryPrecision::Dict{Symbol,Float64}
     sigma_increased::Union{Bool,Nothing}
-    bin_refinement::Union{Bool,Nothing}
+    bin_refinement::Union{Symbol,Nothing}
     subproblem_size::Union{Dict{Symbol,Int64},Nothing}
     opt_tolerance::Float64
     lag_iterations::Union{Vector{Int},Nothing}
@@ -194,7 +194,8 @@ function print_iteration(io, log::Log)
     end
     print(io, "   ")
     if !isnothing(log.bin_refinement)
-    	print(io, Printf.@sprintf("%9s", log.bin_refinement ? "true" : "false"))
+    	#print(io, Printf.@sprintf("%9s", log.bin_refinement ? "true" : "false"))
+        print(io, Printf.@sprintf("%9s", log.bin_refinement))
     else
    	    print(io, lpad(Printf.@sprintf(""), 9))
     end

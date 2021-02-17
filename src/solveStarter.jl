@@ -505,7 +505,9 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     previousSolution = nothing
+    previousBound = nothing
     sigma_increased = false
+    boundCheck = false
 
     # INITIALIZE BEST KNOWN POINT AND OBJECTIVE VALUE FOR INNER LOOP
     ############################################################################
@@ -516,9 +518,12 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     ############################################################################
     while true
         # start an inner loop
-        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, sigma_increased)
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, boundCheck, sigma_increased)
         # logging
         log_iteration(options, options.log_inner)
+
+        # initialize boundCheck
+        boundCheck = true
 
         @infiltrate algoParams.infiltrate_state in [:all, :sigma]
 
@@ -550,15 +555,37 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
                 sigma_increased = true
+                previousSolution = nothing
+                previousBound = nothing
+                boundCheck = false # only refine bin. approx if sigma is not refined
 
             end
             # return all results here to keep them accessible in outer pass
             # return result_inner
         else
+            # CHECK IF LOWER BOUND HAS IMPROVED
+            ############################################################################
+            # If not, then the cut was (probably) not tight enough,
+            # so binary approximation should be refined in the next iteration
+            # NOTE: This could also happen in other situations, e.g., if different trial solutions give
+            # the same lower bound. However, this is hard to rule out.
+            if !isnothing(previousBound)
+                if ! isapprox(previousBound, result_inner.lower_bound)
+                    boundCheck = false
+                end
+            else
+                boundCheck = false
+            end
+
+            # CHECK IF SIGMA SHOULD BE INCREASED (DUE TO LB > UB)
+            ############################################################################
             if result_inner.upper_bound - result_inner.lower_bound < - algoParams.epsilon_innerLoop * 0.1
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
                 sigma_increased = true
+                previousSolution = nothing
+                previousBound = nothing
+                boundCheck = false # only refine bin. approx if sigma is not refined
             else
                 sigma_increased = false
             end
@@ -566,5 +593,6 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
 
         previousSolution = result_inner.current_sol
+        previousBound = result_inner.lower_bound
     end
 end

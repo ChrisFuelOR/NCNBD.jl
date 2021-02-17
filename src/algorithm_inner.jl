@@ -4,6 +4,7 @@ function inner_loop_iteration(
     algoParams::NCNBD.AlgoParams,
     appliedSolvers::NCNBD.AppliedSolvers,
     previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
+    boundCheck::Bool,
     sigma_increased::Bool
     ) where {T}
 
@@ -29,15 +30,18 @@ function inner_loop_iteration(
     # If the forward pass solution did not change during the last iteration, then
     # increase the binary precision (for all stages)
     solutionCheck = true
+    binaryRefinement = :none
+
     if !isnothing(previousSolution)
         TimerOutputs.@timeit NCNBD_TIMER "bin_refinement" begin
-            solutionCheck = NCNBD.binary_refinement_check(model, previousSolution, forward_trajectory.sampled_states)
-            if solutionCheck == true
+            solutionCheck = NCNBD.binary_refinement_check(model, previousSolution, forward_trajectory.sampled_states, solutionCheck)
+            if solutionCheck || boundCheck
                 # Increase binary precision such that K = K + 1
-                NCNBD.binary_refinement!(model, algoParams)
+                binaryRefinement = NCNBD.binary_refinement(model, algoParams, binaryRefinement)
             end
         end
     end
+    boundCheck = true
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 13
 
@@ -99,7 +103,7 @@ function inner_loop_iteration(
              #algoParams.sigma,
              #algoParams.binaryPrecision,
              sigma_increased,
-             solutionCheck, #binary_refinment
+             binaryRefinement,
              subproblem_size,
              algoParams.epsilon_innerLoop,
              model.ext[:lag_iterations],
