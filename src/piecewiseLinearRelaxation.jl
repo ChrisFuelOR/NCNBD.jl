@@ -38,7 +38,8 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)
 
         # Define overestimation/underestimation problem
-        estimationProblem = JuMP.direct_model(with_optimizer(Gurobi.Optimizer(), "MIPGap"=>0.0))
+        estimationProblem = JuMP.direct_model(with_optimizer(Gurobi.Optimizer()))
+        JuMP.set_optimizer_attribute(estimationProblem, "MIPGap", 0.0)
 
         # Determine Piecewise Linear Approximation
         piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)

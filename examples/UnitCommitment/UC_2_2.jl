@@ -195,7 +195,9 @@ function define_2_2()
 
         # DEFINE LINEARIZED PROBLEM (MILP)
         # ------------------------------------------------------------------
-        linearizedSubproblem = JuMP.direct_model(with_optimizer(Gurobi.Optimizer(), "MIPGap"=>0.0))
+        linearizedSubproblem = JuMP.direct_model(with_optimizer(Gurobi.Optimizer()))
+        JuMP.set_optimizer_attribute(linearizedSubproblem, "MIPGap", 0.0)
+
         node = subproblem.ext[:sddp_node]
         model = subproblem.ext[:sddp_policy_graph]
         linearizedSubproblem.ext[:sddp_node] = node
