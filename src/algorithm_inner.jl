@@ -203,7 +203,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
 
-        set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0))
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>1))
 
         # SUBPROBLEM SOLUTION
         ############################################################################
@@ -658,7 +658,7 @@ function solve_subproblem_backward(
     end
 
     # reset solver as it may have been changed
-    set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0))
+    set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>1))
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
@@ -1074,7 +1074,7 @@ function inner_loop_forward_sigma_test(
 
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
-        set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0))
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(Gurobi.Optimizer, "MIPGap"=>0.0, "NumericFocus"=>1))
 
         # SUBPROBLEM SOLUTION
         ############################################################################
