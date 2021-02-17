@@ -570,13 +570,14 @@ function add_cut_projection_to_model!(
     #bigM = 2 * sigma * Umax
 
     # new method for Big-M, since earlier method was probably not correct
-    bigM = 0
-    for k in 1:K
-        candidate = Umax * (sigma + abs(relatedCoefficients[k]) / (2^(k-1) * epsilon))
-        if bigM < candidate
-            bigM = candidate
-        end
-    end
+    # bigM = 0
+    # for k in 1:K
+    #     candidate = Umax * (sigma + abs(relatedCoefficients[k]) / (2^(k-1) * epsilon))
+    #     if bigM < candidate
+    #         bigM = candidate
+    #     end
+    # end
+    bigM = sigma
 
     @infiltrate infiltrate_state in [:bellman]
 
