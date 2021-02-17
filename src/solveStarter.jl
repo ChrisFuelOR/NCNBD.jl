@@ -308,7 +308,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         if node_index != model.root_node
 
             if model.objective_sense == MOI.MIN_SENSE
-                lower_bound = JuMP.lower_bound(node.bellman_function.global_theta.theta)
+                lower_bound = 0.0 #JuMP.lower_bound(node.bellman_function.global_theta.theta)
                 upper_bound = Inf
             elseif model.objective_sense == MOI.MAX_SENSE
                 upper_bound = JuMP.upper_bound(node.bellman_function.global_theta.theta)
