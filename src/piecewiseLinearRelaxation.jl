@@ -558,7 +558,8 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # CREATE A NEW PIECEWISE LINEAR APPROXIMATION
             ####################################################################
             # Define overestimation/underestimation problem
-            estimationProblem = JuMP.direct_model(with_optimizer(Gurobi.Optimizer(), "MIPGap"=>0.0))
+            estimationProblem = JuMP.direct_model(with_optimizer(Gurobi.Optimizer()))
+            JuMP.set_optimizer_attribute(node.subproblem, "MIPGap", 0.0)
 
             piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
 
