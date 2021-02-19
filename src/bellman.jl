@@ -779,7 +779,7 @@ function _cut_selection_update(
     node.ext[:total_cuts] = size(V_lin.cut_oracle.cuts, 1)
     counter = 0
     for cut in V_lin.cut_oracle.cuts
-        if cut.constraint_ref !== nothing
+        if cut.cutConstraints_lin !== nothing
             counter += 1
         end
     end
