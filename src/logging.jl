@@ -214,14 +214,15 @@ function print_iteration(io, log::Log)
         print(io, lpad(Printf.@sprintf(""), 36))
     end
     print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%5d", log.total_cuts), 8))
+    print(io, lpad(Printf.@sprintf("%5d", log.active_cuts), 8))
+
     if !isnothing(log.lag_iterations)
         print(io, log.lag_iterations)
     else
-        print(io, lpad(Printf.@sprintf(""), 20))
+        print(io, lpad(Printf.@sprintf(""), 19))
     end
     print(io, "   ")
-    print(io, lpad(Printf.@sprintf("%5d", log.total_cuts), 8))
-    print(io, lpad(Printf.@sprintf("%5d", log.active_cuts), 8))
 
     println(io)
     flush(io)
