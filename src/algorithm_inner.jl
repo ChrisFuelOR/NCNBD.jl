@@ -94,7 +94,7 @@ function inner_loop_iteration(
     for (node_index, children) in model.nodes
         node = model.nodes[node_index]
         model.ext[:total_cuts] += node.ext[:total_cuts]
-        model.ext[:active_cuts] + = node.ext[:active_cuts]
+        model.ext[:active_cuts] += node.ext[:active_cuts]
     end
 
     push!(
