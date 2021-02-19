@@ -745,10 +745,10 @@ function _cut_selection_update(
     if length(oracle.cuts_to_be_deleted) >= oracle.deletion_minimum
         for cut in oracle.cuts_to_be_deleted
             for variable_ref in cut.cutVariables
-                JuMP.delete(model, cut.variable_ref)
+                JuMP.delete(model, variable_ref)
             end
             for constraint_ref in cut.cutConstraints
-                JuMP.delete(model, cut.constraint_ref)
+                JuMP.delete(model, constraint_ref)
             end
             cut.cutVariables = nothing
             cut.cutConstraints = nothing
@@ -761,10 +761,10 @@ function _cut_selection_update(
     if length(oracle_lin.cuts_to_be_deleted) >= oracle_lin.deletion_minimum
         for cut in oracle_lin.cuts_to_be_deleted
             for variable_ref in cut.cutVariables_lin
-                JuMP.delete(model, cut.variable_ref)
+                JuMP.delete(model, variable_ref)
             end
             for constraint_ref in cut.cutConstraints_lin
-                JuMP.delete(model, cut.constraint_ref)
+                JuMP.delete(model, constraint_ref)
             end
             cut.cutVariables_lin = nothing
             cut.cutConstraints_lin = nothing
