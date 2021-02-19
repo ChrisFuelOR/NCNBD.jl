@@ -72,6 +72,8 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
             nothing,
             algoParams.epsilon_outerLoop,
             nothing,
+            model.ext[:total_cuts],
+            model.ext[:active_cuts],
         ),
     )
 
