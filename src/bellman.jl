@@ -318,7 +318,8 @@ function _add_cut(
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
     #TODO: Should we add λᵏ? Actually, this information is not required.
-    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, λᵏ, binaryPrecision, sigma, JuMP.VariableRef[], JuMP.ConstraintRef[],
+    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, λᵏ, copy(binaryPrecision), copy(sigma), 
+                       JuMP.VariableRef[], JuMP.ConstraintRef[],
                        JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1, iteration)
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
