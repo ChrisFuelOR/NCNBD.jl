@@ -275,6 +275,7 @@ function _add_average_cut(
         iteration,
         algoParams.infiltrate_state,
         appliedSolvers,
+        cut_selection = algoParams.cut_selection
     )
 
     return (theta = θᵏ, pi = πᵏ, λ = bin_states, obj_y = obj_y, belief_y = belief_y)
