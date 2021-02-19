@@ -318,7 +318,7 @@ function _add_cut(
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
     #TODO: Should we add λᵏ? Actually, this information is not required.
-    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, λᵏ, copy(binaryPrecision), copy(sigma), 
+    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, λᵏ, copy(binaryPrecision), copy(sigma),
                        JuMP.VariableRef[], JuMP.ConstraintRef[],
                        JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1, iteration)
 
@@ -863,8 +863,6 @@ function _eval_height(node::SDDP.Node, cut::NCNBD.NonlinearCut, states::Dict{Sym
 
         end
     end
-
-    @infiltrate
 
     @assert(size(allCoefficients, 1) == size(binary_state_storage, 1)
                 == binary_variables_so_far
