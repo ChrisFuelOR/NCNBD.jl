@@ -845,7 +845,7 @@ function _eval_height(node::SDDP.Node, cut::NCNBD.NonlinearCut, states::Dict{Sym
 
     # ADD OBJECTIVE TO THE MODEL
     ####################################################################
-    objective_sense_stage = JuMP.objective_sense(node.ext[:lin_subproblem])
+    objective_sense_stage = JuMP.objective_sense(node.ext[:linSubproblem])
     eval_sense = (
         objective_sense_stage == JuMP.MOI.MIN_SENSE ? JuMP.MOI.MAX_SENSE : JuMP.MOI.MIN_SENSE
     )
