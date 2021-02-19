@@ -838,7 +838,7 @@ function _eval_height(node::SDDP.Node, cut::NCNBD.NonlinearCut, states::Dict{Sym
         end
     end
 
-    @assert(size(allCoefficients), 1 == size(binary_state_storage, 1)
+    @assert(size(allCoefficients, 1) == size(binary_state_storage, 1)
                 == binary_variables_so_far
                 == size(collect(values(cut.coefficients)),1)
                 )
