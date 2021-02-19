@@ -812,7 +812,7 @@ function _eval_height(node::SDDP.Node, cut::Cut, states::Dict{Symbol,Float64}, a
             binary_constraint = JuMP.@constraint(model, SDDP.bincontract([binary_var[k] for k=1:K], epsilon) == value)
 
             # determine the correct cut coefficient
-            relatedCoefficients = Vector{Float64})(undef, K)
+            relatedCoefficients = Vector{Float64}(undef, K)
             for (bin_name, value) in cut.coefficients
                 if cut.binary_state[bin_name].x_name == state_name
                     index = cut.binary_state[bin_name].k
