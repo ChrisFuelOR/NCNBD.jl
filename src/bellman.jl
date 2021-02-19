@@ -697,7 +697,7 @@ function _cut_selection_update(
 
         # For anchor state (is this required? the cuts should be tight here and
         # we also do not have a stochastic program)
-        height = _eval_height(node, old_cut, sampled_state_anchor, appliedSolvers)
+        height = _eval_height(node, old_cut, anchor_state, appliedSolvers)
         if SDDP._dominates(height, sampled_state_anchor.best_objective, is_minimization)
             sampled_state_anchor.dominating_cut.non_dominated_count -= 1
             old_cut.non_dominated_count += 1
@@ -707,7 +707,7 @@ function _cut_selection_update(
         end
 
         # For trial state
-        height = _eval_height(node, old_cut, sampled_state_trial, appliedSolvers)
+        height = _eval_height(node, old_cut, trial_state, appliedSolvers)
         if SDDP._dominates(height, sampled_state_trial.best_objective, is_minimization)
             sampled_state_trial.dominating_cut.non_dominated_count -= 1
             old_cut.non_dominated_count += 1
