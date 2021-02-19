@@ -136,13 +136,15 @@ struct NonlinearCut
     trial_state::Dict{Symbol,Float64} # point at which this cut was created
     binary_state::Dict{Symbol,BinaryState} # point in binary space where cut was created
     binary_precision::Dict{Symbol,Float64} # binary precision at moment of creation
-    cutVariables::Vector{JuMP.VariableRef}
-    cutConstraints::Vector{JuMP.ConstraintRef}
-    cutVariables_lin::Vector{JuMP.VariableRef}
-    cutConstraints_lin::Vector{JuMP.ConstraintRef}
+    sigma::Float64
+    cutVariables::Union{Nothing,Vector{JuMP.VariableRef}}
+    cutConstraints::Union{Nothing,Vector{JuMP.ConstraintRef}}
+    cutVariables_lin::Union{Nothing,Vector{JuMP.VariableRef}}
+    cutConstraints_lin::Union{Nothing,Vector{JuMP.ConstraintRef}}
     obj_y::Union{Nothing,NTuple{N,Float64} where {N}} # SDDP
     belief_y::Union{Nothing,Dict{T,Float64} where {T}} # SDDP
     non_dominated_count::Int # SDDP
+    iteration::Int64
 end
     # TODO: Do we need to store the trial point also in binary form?
     # I think not because we can always determine it using trial_state

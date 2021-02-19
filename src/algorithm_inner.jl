@@ -479,13 +479,15 @@ function inner_loop_backward_pass(
                     node_index,
                     node.bellman_function,
                     options.risk_measures[node_index],
+                    outgoing_state,
                     used_trial_points,
                     items.bin_state,
                     items.duals,
                     items.supports,
                     items.probability,
                     items.objectives,
-                    algoParams
+                    algoParams,
+                    appliedSolvers
                 )
             end
             push!(cuts[node_index], new_cuts)
