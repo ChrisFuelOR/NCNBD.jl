@@ -68,6 +68,9 @@ function unitCommitment()
     bundle_factor = 1.0
     level_factor = 0.8
 
+    # cut selection strategy
+    cut_selection = true
+
     # used solvers
     solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
 
