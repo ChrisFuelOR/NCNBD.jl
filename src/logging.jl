@@ -167,7 +167,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con         cuts   active     Lag iterations      ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations      ",
     )
     flush(io)
 end
@@ -215,6 +215,7 @@ function print_iteration(io, log::Log)
     end
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%5d", log.total_cuts), 7))
+    print(io, "   ")
     print(io, lpad(Printf.@sprintf("%5d", log.active_cuts), 7))
     print(io, "   ")
 
