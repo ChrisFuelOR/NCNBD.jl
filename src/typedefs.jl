@@ -132,7 +132,7 @@ struct AppliedSolvers
 end
 
 # Struct to store information on a nonlinear cut
-struct NonlinearCut
+mutable struct NonlinearCut
     intercept::Float64 # intercept of the cut (Lagrangian function value)
     coefficients::Dict{Symbol,Float64} # optimal dual variables in binary space
     trial_state::Dict{Symbol,Float64} # point at which this cut was created
