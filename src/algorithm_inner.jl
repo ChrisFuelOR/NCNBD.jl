@@ -97,7 +97,6 @@ function inner_loop_iteration(
         if length(node.children) == 0
             continue
         end
-        @infiltrate
         model.ext[:total_cuts] += node.ext[:total_cuts]
         model.ext[:active_cuts] += node.ext[:active_cuts]
     end

@@ -682,8 +682,10 @@ function _cut_selection_update(
     end
     push!(oracle.states, sampled_state_anchor)
     push!(oracle.states, sampled_state_trial)
+    push!(oracle_lin.states, sampled_state_anchor)
+    push!(oracle_lin.states, sampled_state_trial)
 
-    # LOOP THROUGH PREVIOUSLY VISITED STATES (ANCHOR OR TRIAL STATES)
+    # LOOP THROUGH PREVIOUSLY VISITED CUTS
     ############################################################################
     # Now loop through previously discovered cuts and compare their height at
     # `sampled_state`. If a cut is an improvement, add it to a queue to be added.
@@ -701,7 +703,7 @@ function _cut_selection_update(
             old_cut.non_dominated_count += 1
             sampled_state_anchor.dominating_cut = old_cut
             sampled_state_anchor.best_objective = height
-            add_cut_constraint_to_model(V, old_cut)
+            add_cut_constraints_to_models(node, V, V_lin, old_cut, infiltrate_state)
         end
 
         # For trial state
@@ -715,13 +717,25 @@ function _cut_selection_update(
         end
     end
     push!(oracle.cuts, cut)
+    push!(oracle_lin.cuts, cut)
 
     # DETERMINE CUTS TO BE DELETED
     ############################################################################
+    #NOTE: The cuts to be deleted should be the same for V and V_lin,
+    #so in principle, it should not be required to determine this in two loops
+
     for cut in V.cut_oracle.cuts
         if cut.non_dominated_count < 1
-            if cut.constraint_ref !== nothing
+            if cut.cutConstraints !== nothing
                 push!(oracle.cuts_to_be_deleted, cut)
+            end
+        end
+    end
+
+    for cut in V_lin.cut_oracle.cuts
+        if cut.non_dominated_count < 1
+            if cut.cutConstraints_lin !== nothing
+                push!(oracle_lin.cuts_to_be_deleted, cut)
             end
         end
     end
@@ -730,7 +744,6 @@ function _cut_selection_update(
     ############################################################################
     if length(oracle.cuts_to_be_deleted) >= oracle.deletion_minimum
         for cut in oracle.cuts_to_be_deleted
-            # MINLP model
             for variable_ref in cut.cutVariables
                 JuMP.delete(model, cut.variable_ref)
             end
@@ -740,12 +753,18 @@ function _cut_selection_update(
             cut.cutVariables = nothing
             cut.cutConstraints = nothing
 
-            # MILP model
+            #cut.non_dominated_count = 0
+        end
+    end
+    empty!(oracle.cuts_to_be_deleted)
+
+    if length(oracle_lin.cuts_to_be_deleted) >= oracle_lin.deletion_minimum
+        for cut in oracle_lin.cuts_to_be_deleted
             for variable_ref in cut.cutVariables_lin
-                JuMP.delete(model_lin, cut.variable_ref)
+                JuMP.delete(model, cut.variable_ref)
             end
             for constraint_ref in cut.cutConstraints_lin
-                JuMP.delete(model_lin, cut.constraint_ref)
+                JuMP.delete(model, cut.constraint_ref)
             end
             cut.cutVariables_lin = nothing
             cut.cutConstraints_lin = nothing
@@ -753,7 +772,7 @@ function _cut_selection_update(
             cut.non_dominated_count = 0
         end
     end
-    empty!(oracle.cuts_to_be_deleted)
+    empty!(oracle_lin.cuts_to_be_deleted)
 
     # DETERMINE NUMBER OF CUTS FOR LOGGING
     ############################################################################
