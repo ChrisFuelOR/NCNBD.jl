@@ -211,13 +211,13 @@ function print_iteration(io, log::Log)
         print(io, "   ")
        	print(io, Printf.@sprintf("%9d", log.subproblem_size[:total_con]))
     else
-        print(io, lpad(Printf.@sprintf(""), 36))
+        print(io, lpad(Printf.@sprintf(""), 45))
     end
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%5d", log.total_cuts), 7))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%5d", log.active_cuts), 7))
-    print(io, "   ")
+    print(io, "     ")
 
     if !isnothing(log.lag_iterations)
         print(io, log.lag_iterations)
