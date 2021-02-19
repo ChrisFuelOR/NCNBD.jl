@@ -1,6 +1,12 @@
+mutable struct SampledState
+    state::Dict{Symbol,Float64}
+    dominating_cut::NCNBD.NonlinearCut
+    best_objective::Float64
+end
+
 mutable struct LevelOneOracle
     cuts::Vector{NCNBD.NonlinearCut}
-    states::Vector{SDDP.SampledState}
+    states::Vector{NCNBD.SampledState}
     cuts_to_be_deleted::Vector{NCNBD.NonlinearCut}
     deletion_minimum::Int
     function LevelOneOracle(deletion_minimum)
@@ -652,8 +658,8 @@ function _cut_selection_update(
 
     # GET TRIAL STATE AND BINARY STATE
     ############################################################################
-    sampled_state_anchor = SDDP.SampledState(anchor_state, cut, _eval_height(node, cut, anchor_state, appliedSolvers))
-    sampled_state_trial = SDDP.SampledState(trial_state, cut, _eval_height(node, cut, trial_state, appliedSolvers))
+    sampled_state_anchor = NCNBD.SampledState(anchor_state, cut, _eval_height(node, cut, anchor_state, appliedSolvers))
+    sampled_state_trial = NCNBD.SampledState(trial_state, cut, _eval_height(node, cut, trial_state, appliedSolvers))
 
     # NOTE: By considering both type of states, we have way more states than
     # cuts, so we may not eliminiate that many cuts.
