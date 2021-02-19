@@ -690,7 +690,7 @@ function _cut_selection_update(
     # Now loop through previously discovered cuts and compare their height at
     # `sampled_state`. If a cut is an improvement, add it to a queue to be added.
     for old_cut in oracle.cuts
-        if old_cut.constraint_ref !== nothing
+        if old_cut.cutConstraints !== nothing
             # We only care about cuts not currently in the model.
             continue
         end
