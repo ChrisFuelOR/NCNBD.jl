@@ -88,6 +88,15 @@ function inner_loop_iteration(
 
     # PREPARE LOGGING
     ############################################################################
+    model.ext[:total_cuts] = 0
+    model.ext[:active_cuts] = 0
+
+    for (node_index, children) in model.nodes
+        node = model.nodes[node_index]
+        model.ext[:total_cuts] += node.ext[:total_cuts]
+        model.ext[:active_cuts] + = node.ext[:active_cuts]
+    end
+
     push!(
          options.log_inner,
          Log(
@@ -107,6 +116,8 @@ function inner_loop_iteration(
              subproblem_size,
              algoParams.epsilon_innerLoop,
              model.ext[:lag_iterations],
+             model.ext[:total_cuts],
+             model.ext[:active_cuts],
          ),
      )
 

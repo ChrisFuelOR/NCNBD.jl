@@ -320,7 +320,9 @@ function _add_cut(
     add_cut_constraints_to_models(node, V, V_lin, cut, infiltrate_state)
 
     if cut_selection
-        NCNBD._cut_selection_update(node, V, V_lin, cut, xᵏ, trial_points, appliedSolvers, infiltrate_state)
+        TimerOutputs.@timeit NCNBD_TIMER "cut_selection" begin
+            NCNBD._cut_selection_update(node, V, V_lin, cut, xᵏ, trial_points, appliedSolvers, infiltrate_state)
+        end
     else
         push!(V.cut_oracle.cuts, cut)
         push!(V_lin.cut_oracle.cuts, cut)
@@ -746,6 +748,18 @@ function _cut_selection_update(
         end
     end
     empty!(oracle.cuts_to_be_deleted)
+
+    # DETERMINE NUMBER OF CUTS FOR LOGGING
+    ############################################################################
+    node.ext[:total_cuts] = size(V_lin.cut_oracle.cuts, 1)
+    counter = 0
+    for cut in V_lin.cut_oracle.cuts
+        if cut.constraint_ref !== nothing
+            counter += 1
+        end
+    end
+    node.ext[:active_cuts] = counter
+
     return
 end
 
@@ -799,7 +813,7 @@ function _eval_height(node::SDDP.Node, cut::NCNBD.NonlinearCut, states::Dict{Sym
                 K = SDDP._bitsrequired(state_comp.info.out.upper_bound)
                 epsilon = 1
             else
-                epsilon = cut.binary_precision[name]
+                epsilon = cut.binary_precision[state_name]
                 K = SDDP._bitsrequired(round(Int, state_comp.info.out.upper_bound / epsilon))
             end
 
