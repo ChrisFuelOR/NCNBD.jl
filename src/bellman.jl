@@ -751,7 +751,7 @@ end
 
 
 # Internal function: calculate the height of `cut` evaluated at `state`.
-function _eval_height(node::SDDP.Node, cut::Cut, states::Dict{Symbol,Float64}, appliedSolvers::NCNBD.AppliedSolvers)
+function _eval_height(node::SDDP.Node, cut::NCNBD.NonlinearCut, states::Dict{Symbol,Float64}, appliedSolvers::NCNBD.AppliedSolvers)
 
     # Create a new JuMP model to evaluate the height of a non-convex cut
     model = JuMP.Model()
