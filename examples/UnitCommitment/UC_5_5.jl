@@ -68,6 +68,9 @@ function unitCommitment()
     bundle_factor = 1.0
     level_factor = 0.2
 
+    # cut selection strategy
+    cut_selection = true
+
     # used solvers
     solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
 
@@ -92,6 +95,7 @@ function unitCommitment()
         bundle_factor=bundle_factor,
         level_factor=level_factor,
         solvers=solvers,
+        cut_selection=cut_selection,
     )
 end
 
@@ -115,6 +119,7 @@ function unitCommitment_with_parameters(;
     bundle_factor::Float64 = 1.0,
     level_factor::Float64 = 0.4,
     solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
+    cut_selection::Bool = true,
     )
 
     # DEFINE MODEL
@@ -147,14 +152,16 @@ function unitCommitment_with_parameters(;
                             sigma, sigma_factor, lagrangian_atol,
                             lagrangian_rtol, lagrangian_iteration_limit,
                             dual_initialization_regime, lagrangian_method,
-                            bundle_alpha, bundle_factor, level_factor)
+                            bundle_alpha, bundle_factor, level_factor,
+                            cut_selection)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
                                       lagrangian_rtol, lagrangian_iteration_limit,
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
-                                      bundle_factor, level_factor)
+                                      bundle_factor, level_factor,
+                                      cut_selection)
 
     # SOLVE MODEL
     ############################################################################
