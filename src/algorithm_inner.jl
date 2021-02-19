@@ -91,12 +91,11 @@ function inner_loop_iteration(
     model.ext[:total_cuts] = 0
     model.ext[:active_cuts] = 0
 
-    for (node_index, children) in model.nodes
-        if node_index < size(model.nodes, 1)
-            node = model.nodes[node_index]
-            model.ext[:total_cuts] += node.ext[:total_cuts]
-            model.ext[:active_cuts] += node.ext[:active_cuts]
-        end
+    for index = length(scenario_path):-1:1
+        node_index, _ = scenario_path[index]
+        node = model.nodes[node_index]
+        model.ext[:total_cuts] += node.ext[:total_cuts]
+        model.ext[:active_cuts] += node.ext[:active_cuts]
     end
 
     push!(
