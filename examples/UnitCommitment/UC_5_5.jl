@@ -72,7 +72,7 @@ function unitCommitment()
     cut_selection = true
 
     # used solvers
-    solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
+    solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
 
     # CALL METHOD WITH PARAMETERS
     ############################################################################
