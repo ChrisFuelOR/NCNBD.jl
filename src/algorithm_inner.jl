@@ -800,33 +800,34 @@ function get_dual_variables_backward(
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
     try
-        # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
-        ########################################################################
-        if algoParams.lagrangian_method == :kelley
-            results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
-            lag_obj = results.lag_obj
-            lag_iterations = results.iterations
-        elseif algoParams.lagrangian_method == :bundle_proximal
-            results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
-            lag_obj = results.lag_obj
-            lag_iterations = results.iterations
-        elseif algoParams.lagrangian_method == :bundle_level
-            results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
-            lag_obj = results.lag_obj
-            lag_iterations = results.iterations
-        end
-
-        @infiltrate !isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
-        @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
-
-        # if one of the dual variables exceeds the bounds (e.g. in case of an
-        # discontinuous value function), use bounded version of Kelley's method
-        boundCheck = true
-        for dual_var in dual_vars
-            if dual_var > dual_bound
-                boundCheck = false
-            end
-        end
+        # # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
+        # ########################################################################
+        # if algoParams.lagrangian_method == :kelley
+        #     results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
+        #     lag_obj = results.lag_obj
+        #     lag_iterations = results.iterations
+        # elseif algoParams.lagrangian_method == :bundle_proximal
+        #     results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
+        #     lag_obj = results.lag_obj
+        #     lag_iterations = results.iterations
+        # elseif algoParams.lagrangian_method == :bundle_level
+        #     results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
+        #     lag_obj = results.lag_obj
+        #     lag_iterations = results.iterations
+        # end
+        #
+        # @infiltrate !isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        # @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        #
+        # # if one of the dual variables exceeds the bounds (e.g. in case of an
+        # # discontinuous value function), use bounded version of Kelley's method
+        # boundCheck = true
+        # for dual_var in dual_vars
+        #     if dual_var > dual_bound
+        #         boundCheck = false
+        #     end
+        # end
+        boundCheck = false
 
         # SOLUTION WITH BOUNDED DUAL VARIABLES
         ########################################################################
