@@ -305,5 +305,3 @@ function define_thirdExample()
 end
 
 end
-
-#thirdExample()
