@@ -563,7 +563,7 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             ####################################################################
             # Define overestimation/underestimation problem
             estimationProblem = JuMP.Model()
-            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+            set_optimizer(estimationProblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.NLP, "optcr"=>0.0))
             #set_optimizer(estimationProblem, GAMS.Optimizer)
             #JuMP.set_optimizer_attribute(estimationProblem, "Solver", appliedSolvers.NLP)
             #JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
