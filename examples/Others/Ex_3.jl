@@ -1,4 +1,4 @@
-module thirdExample
+module Ex_3
 
 export thirdExample
 export thirdExample_with_parameters
