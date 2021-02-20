@@ -35,7 +35,7 @@ function thirdExample()
     binaryPrecisionFactor = 0.5
 
     # define infiltration level
-    infiltrate_state = :all
+    infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
