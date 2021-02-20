@@ -71,14 +71,14 @@ function inner_loop_iteration(
     # CHECK IF BEST KNOWN SOLUTION HAS BEEN IMPROVED
     ############################################################################
     if model.objective_sense == JuMP.MOI.MIN_SENSE
-        if forward_trajectory.cumulative_value < model.ext[:best_inner_loop_objective]
+        if forward_trajectory.cumulative_value < model.ext[:best_inner_loop_objective] || sigma_increased
             # udpate best upper bound
             model.ext[:best_inner_loop_objective] = forward_trajectory.cumulative_value
             # update best point so far
             model.ext[:best_inner_loop_point] = forward_trajectory.sampled_states
         end
     else
-        if forward_trajectory.cumulative_value > model.ext[:best_inner_loop_objective]
+        if forward_trajectory.cumulative_value > model.ext[:best_inner_loop_objective] || sigma_increased
             # udpate best lower bound
             model.ext[:best_inner_loop_objective] = forward_trajectory.cumulative_value
             # update best point so far
