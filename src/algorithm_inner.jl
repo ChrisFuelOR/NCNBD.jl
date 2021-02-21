@@ -1197,6 +1197,8 @@ function solve_subproblem_sigma_test(
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
 
+    @infiltrate algoParams.infiltrate_state in [:all, :sigma] || model.ext[:iteration] == 14
+
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
     # variable. If require_duals=false, return an empty dictionary for
