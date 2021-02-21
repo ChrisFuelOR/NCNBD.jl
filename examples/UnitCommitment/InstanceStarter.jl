@@ -16,6 +16,7 @@ include("UC_2_10.jl")
 #import .UC_1_10
 include("UC_5_5.jl")
 #import .UC_1_10
+include("UC_3_5.jl")
 
 function start_instances()
 
