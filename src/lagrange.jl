@@ -333,11 +333,6 @@ function _bundle_proximal(
         JuMP.set_upper_bound(bin_state, 1)
     end
 
-    # LOGGING OF LAGRANGIAN DUAL
-    ############################################################################
-    lag_log_file_handle = open("C:/Users/cg4102/Documents/julia_logs/Lagrange.log", "a")
-    print_helper(print_lagrange_header, lag_log_file_handle)
-
     # SET-UP APPROXIMATION MODEL
     ############################################################################
     # Subgradient at current solution
@@ -539,6 +534,11 @@ function _bundle_level(
         JuMP.set_lower_bound(bin_state, 0)
         JuMP.set_upper_bound(bin_state, 1)
     end
+
+    # LOGGING OF LAGRANGIAN DUAL
+    ############################################################################
+    lag_log_file_handle = open("C:/Users/cg4102/Documents/julia_logs/Lagrange.log", "a")
+    print_helper(print_lagrange_header, lag_log_file_handle)
 
     # SET-UP APPROXIMATION MODEL
     ############################################################################
