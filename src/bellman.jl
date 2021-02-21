@@ -691,7 +691,7 @@ function _cut_selection_update(
     # Now loop through previously discovered cuts and compare their height at
     # `sampled_state`. If a cut is an improvement, add it to a queue to be added.
     for old_cut in oracle.cuts
-        if old_cut.cutConstraints !== nothing
+        if !isempty(old_cut.cutConstraints)
             # We only care about cuts not currently in the model.
             continue
         end
@@ -727,7 +727,7 @@ function _cut_selection_update(
 
     for cut in V.cut_oracle.cuts
         if cut.non_dominated_count < 1
-            if cut.cutConstraints !== nothing
+            if !isempty(cut.cutConstraints)
                 push!(oracle.cuts_to_be_deleted, cut)
             end
         end
@@ -735,7 +735,7 @@ function _cut_selection_update(
 
     for cut in V_lin.cut_oracle.cuts
         if cut.non_dominated_count < 1
-            if cut.cutConstraints_lin !== nothing
+            if !isempty(cut.cutConstraints_lin)
                 push!(oracle_lin.cuts_to_be_deleted, cut)
             end
         end
@@ -751,8 +751,8 @@ function _cut_selection_update(
             for constraint_ref in cut.cutConstraints
                 JuMP.delete(model, constraint_ref)
             end
-            cut.cutVariables = nothing
-            cut.cutConstraints = nothing
+            cut.cutVariables = JuMP.VariableRef[]
+            cut.cutConstraints = JuMP.ConstraintRef[]
 
             #cut.non_dominated_count = 0
         end
@@ -767,8 +767,8 @@ function _cut_selection_update(
             for constraint_ref in cut.cutConstraints_lin
                 JuMP.delete(model_lin, constraint_ref)
             end
-            cut.cutVariables_lin = nothing
-            cut.cutConstraints_lin = nothing
+            cut.cutVariables_lin = JuMP.VariableRef[]
+            cut.cutConstraints_lin = JuMP.ConstraintRef[]
 
             cut.non_dominated_count = 0
         end
@@ -780,7 +780,7 @@ function _cut_selection_update(
     node.ext[:total_cuts] = size(V_lin.cut_oracle.cuts, 1)
     counter = 0
     for cut in V_lin.cut_oracle.cuts
-        if cut.cutConstraints_lin !== nothing
+        if !isempty(cut.cutConstraints_lin)
             counter += 1
         end
     end
