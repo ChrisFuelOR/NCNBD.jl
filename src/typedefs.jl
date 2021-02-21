@@ -30,8 +30,8 @@ import Revise
 # Mutable struct for algorithmic parameters that may change during the iterations
 # Vector{Float64} or Dict{Int64, Float64}?
 mutable struct AlgoParams
-    epsilon_outerLoop :: Float64 # optimality tolerance for outer loop
-    epsilon_innerLoop :: Float64 # optimality tolerance for inner loop
+    epsilon_outerLoop :: Float64 # optimality tolerance for outer loop (relative!)
+    epsilon_innerLoop :: Float64 # optimality tolerance for inner loop (relative!)
     #binaryPrecision :: Vector{Float64} # Epsilons for latest/current binary expansion (better vector?)
     binaryPrecision :: Dict{Symbol, Float64}
     sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)

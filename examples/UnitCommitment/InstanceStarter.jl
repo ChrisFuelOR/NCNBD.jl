@@ -84,6 +84,8 @@ function start_instances()
         dual_initialization_regime = parameter_set[4]
         lagrangian_method = parameter_set[5]
         level_factor = parameter_set[6]
+        rgap_outer_loop = parameter_set[7]
+        rgap_inner_loop = parameter_set[8]
 
         # used solvers
         solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
@@ -92,7 +94,8 @@ function start_instances()
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
             dual_initialization_regime=dual_initialization_regime,
             lagrangian_method=lagrangian_method, level_factor=level_factor,
-            solvers=solvers,
+            solvers=solvers, epsilon_outer_loop = rgap_outer_loop,
+            epsilon_inner_loop = rgap_inner_loop
         )
 
     end
