@@ -679,6 +679,8 @@ function _bundle_level(
             JuMP.setlowerbound(θ, level)
         end
 
+        @infiltrate node_index == 4
+
         # DETERMINE NEXT ITERATE USING PROXIMAL PROBLEM
         ########################################################################
         # Objective function of approx model has to be adapted to new center
