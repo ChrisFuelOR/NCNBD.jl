@@ -536,7 +536,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             upper_bound_non_reg = sigma_test_results.cumulative_value
             upper_bound_reg = result_inner.upper_bound
 
-            @infiltrate algoParams.infiltrate_state in [:all, :sigma, :outer] #|| model.ext[:iteration] == 14
+            @infiltrate algoParams.infiltrate_state in [:all, :sigma, :outer] || model.ext[:iteration] == 14
 
             if isapprox(upper_bound_non_reg, upper_bound_reg)
                 # by solving the regularized problem, approximately the real MILP has been solved
