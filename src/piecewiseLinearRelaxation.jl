@@ -18,7 +18,7 @@ Determines a piecewise linear relaxation for all nonlinear functions in node.
 
 """
 
-function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appliedSolvers::NCNBD.AppliedSolvers)
+function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Vector{Float64}, appliedSolvers::NCNBD.AppliedSolvers)
 
     # MILP subproblem
     linearizedSubproblem = node.ext[:linSubproblem]
@@ -33,6 +33,9 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
     for nlIndex in 1:size(node.ext[:nlFunctions],1)
         # Get nonlinear function
         nlFunction = node.ext[:nlFunctions][nlIndex]
+
+        # Get precision
+        plaPrecision = plaPrecision[nlIndex]
 
         # Determine Triangulation
         nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)

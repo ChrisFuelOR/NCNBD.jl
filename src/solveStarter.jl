@@ -346,13 +346,10 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     for (node_index, children) in model.nodes
         node = model.nodes[node_index]
 
-        # get corresponding pla precision (node_index is stage for non-Markovian policy graphs)
-        plaPrecision = initialAlgoParams.plaPrecision[node_index]
-
         # determines a piecewise linear relaxation for all nonlinear functions
         # in this node
         TimerOutputs.@timeit NCNBD_TIMER "initialize_PLR" begin
-            NCNBD.piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
+            NCNBD.piecewiseLinearRelaxation!(node, initialAlgoParams.plaPrecision, appliedSolvers)
         end
     end
 
@@ -540,7 +537,7 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             end
             sigma_increased = sigma_test_results.sigma_increased
 
-            @infiltrate algoParams.infiltrate_state in [:all, :sigma, :outer] || model.ext[:iteration] == 14
+            @infiltrate algoParams.infiltrate_state in [:all, :sigma, :outer] #|| model.ext[:iteration] == 14
 
             if !sigma_increased
                 # update information for MINLP
