@@ -108,7 +108,7 @@ function unitCommitment_with_parameters(;
     lagrangian_iteration_limit::Int = 1000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
-    sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
+    sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
     plaPrecision::Vector{Float64} = [0.4, 0.64, 0.3, 1.04, 0.56], # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
