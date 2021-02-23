@@ -34,13 +34,11 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Vector{Float6
         # Get nonlinear function
         nlFunction = node.ext[:nlFunctions][nlIndex]
 
-        @infiltrate
-
         # Get precision
-        plaPrecision = plaPrecision[nlIndex]
+        plaPrecision_value = plaPrecision[nlIndex]
 
         # Determine Triangulation
-        nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)
+        nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision_value)
 
         # Define overestimation/underestimation problem
         estimationProblem = JuMP.Model()
