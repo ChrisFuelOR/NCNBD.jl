@@ -260,6 +260,7 @@ function solve_subproblem_forward_outer(
     # BOUND THE MINLP OPTIMAL VALUE
     # This way, a lot of branch-and-cut nodes can be pruned early on
     ############################################################################
+    @infiltrate
     if model.ext[:outer_iteration] == 1
         if model.objective_sense == JuMP.MOI.MIN_SENSE
             JuMP.@constraint(node.subproblem, bound_constr, JuMP.objective_function(node.subproblem) >= bound_value)
