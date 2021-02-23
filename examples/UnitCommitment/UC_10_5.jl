@@ -177,7 +177,7 @@ function unitCommitment_with_parameters(;
 end
 
 
-function define_5_5()
+function define_10_5()
 
     generators = [
         Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
