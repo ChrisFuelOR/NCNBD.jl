@@ -1032,7 +1032,8 @@ end
 function inner_loop_forward_sigma_test(
     model::SDDP.PolicyGraph{T}, options::NCNBD.Options,
     algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
-    scenario_path::Vector{Tuple{T,S}}, ::SDDP.DefaultForwardPass) where {T,S}
+    scenario_path::Vector{Tuple{T,S}}, ::SDDP.DefaultForwardPass,
+    sigma_increased::Bool) where {T,S}
 
     # INITIALIZATION (NO SAMPLING HERE!)
     ############################################################################
@@ -1100,25 +1101,62 @@ function inner_loop_forward_sigma_test(
         #JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", appliedSolvers.MILP)
         #JuMP.set_optimizer_attribute(linearizedSubproblem, "optcr", 0.0)
 
-        # SUBPROBLEM SOLUTION
+        # SOLVE REGULARIZED PROBLEM
         ############################################################################
+        # This has to be done in this sigma test again, since the current upper bound
+        # may not be the best upper bound and thus, just comparing the bounds is not
+        # sufficient. Moreover, we do it in this loop to not increase sigma for
+        # all stages, but only where it is needed
+
+        # Solve the subproblem, note that `require_duals = false`.
+        TimerOutputs.@timeit NCNBD_TIMER "solve_sigma_test_reg" begin
+            reg_results = solve_subproblem_forward_inner(
+                model,
+                node,
+                node_index
+                incoming_state_value, # only values, no State struct!
+                noise,
+                scenario_path[1:depth],
+                algoParams.sigma[node_index],
+                algoParams.infiltrate_state,
+                require_duals = false,
+            )
+        end
+
+        # SOLVE NON-REGULARIZED PROBLEM
+        ########################################################################
         # Solve the subproblem, note that `require_duals = false`.
         TimerOutputs.@timeit NCNBD_TIMER "solve_sigma_test" begin
-            subproblem_results = solve_subproblem_sigma_test(
+            non_reg_results = solve_subproblem_sigma_test(
                 model,
                 node,
                 incoming_state_value, # only values, no State struct!
                 noise,
                 scenario_path[1:depth],
                 algoParams.sigma[node_index],
+                algoParams.infiltrate_state,
                 require_duals = false,
             )
         end
-        # Cumulate the stage_objective.
-        cumulative_value += subproblem_results.stage_objective
+
+        # COMPARE SOLUTIONS
+        ########################################################################
+        if !isapprox(reg_results.objective, non_reg_results.objective)
+            # if stage objectives are not approximately equal, then the
+            # regularization is not exact and sigma should be increased
+            algoParams.sigma[node_index] = algoParams.sigma[node_index] * algoParams.sigma_factor
+            # marker if new inner loop iteration should be started
+            # instead of heading to outer loop
+            sigma_increased = true
+        end
+
+        # Cumulate the stage_objective. (NOTE: not really required anymore)
+        cumulative_value += non_reg_results.stage_objective
         # Set the outgoing state value as the incoming state value for the next
         # node.
-        incoming_state_value = copy(subproblem_results.state)
+        # NOTE: We use the states determined by the regularized problem here
+        #incoming_state_value = copy(subproblem_results.state)
+        incoming_state_value = copy(reg_results.state)
         # Add the outgoing state variable to the list of states we have sampled
         # on this forward pass.
         push!(sampled_states, incoming_state_value)
@@ -1148,6 +1186,7 @@ function inner_loop_forward_sigma_test(
         objective_states = objective_states,
         belief_states = belief_states,
         cumulative_value = cumulative_value,
+        sigma_increased = sigma_increased,
     )
 end
 
@@ -1158,7 +1197,8 @@ function solve_subproblem_sigma_test(
     state::Dict{Symbol,Float64},
     noise,
     scenario_path::Vector{Tuple{T,S}},
-    sigma::Float64;
+    sigma::Float64,
+    infiltrate_state::Symbol;
     require_duals::Bool,
 ) where {T,S}
     #TODO: We can actually delete the duals part here

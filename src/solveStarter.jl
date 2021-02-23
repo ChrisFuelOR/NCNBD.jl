@@ -517,51 +517,48 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     # ACTUAL LOOP
     ############################################################################
     while true
+        # INNER LOOP
+        ########################################################################
         # start an inner loop
         result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, boundCheck, sigma_increased)
         # logging
         log_iteration(options, options.log_inner)
 
+        # initialize sigma_increased
+        sigma_increased = false
+
         # initialize boundCheck
         boundCheck = true
-
         @infiltrate algoParams.infiltrate_state in [:all, :sigma]
 
+        # IF CONVERGENCE IS ACHIEVED, CHECK IF ACTUAL OR ONLY REGULARIZED PROBLEM IS SOLVED
+        ########################################################################
         if result_inner.has_converged
 
             TimerOutputs.@timeit NCNBD_TIMER "sigma_test" begin
-                sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
+                sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass, sigma_increased)
             end
-
-            upper_bound_non_reg = sigma_test_results.cumulative_value
-            upper_bound_reg = result_inner.upper_bound
+            sigma_increased = sigma_test_results.sigma_increased
 
             @infiltrate algoParams.infiltrate_state in [:all, :sigma, :outer] || model.ext[:iteration] == 14
 
-            if isapprox(upper_bound_non_reg, upper_bound_reg)
-                # by solving the regularized problem, approximately the real MILP has been solved
-                # we do not need an epsilon tolerance here, because the values should be exactly equal for a sufficiently high sigma
-                # WARNING: isapprox should not be used with 0 as comparison
-
+            if !sigma_increased
                 # update information for MINLP
-                result_inner.upper_bound = upper_bound_non_reg
-                result_inner.current_sol = sigma_test_results.sampled_states
-                sigma_increased = false
+                #result_inner.upper_bound = upper_bound_non_reg
+                #result_inner.current_sol = sigma_test_results.sampled_states
 
                 # return all results here to keep them accessible in outer pass
                 return result_inner
 
             else
-                # increase sigma
-                algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
-                sigma_increased = true
+                # reset previous values
                 previousSolution = nothing
                 previousBound = nothing
                 boundCheck = false # only refine bin. approx if sigma is not refined
-
             end
-            # return all results here to keep them accessible in outer pass
-            # return result_inner
+
+        # IF NO CONVERGENCE IS ACHIEVED, DO DIFFERENT CHECKS
+        ########################################################################
         else
             # CHECK IF LOWER BOUND HAS IMPROVED
             ############################################################################
