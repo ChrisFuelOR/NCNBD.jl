@@ -34,6 +34,8 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Vector{Float6
         # Get nonlinear function
         nlFunction = node.ext[:nlFunctions][nlIndex]
 
+        @infiltrate
+
         # Get precision
         plaPrecision = plaPrecision[nlIndex]
 
