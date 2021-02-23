@@ -268,7 +268,7 @@ function solve_subproblem_forward_outer(
             JuMP.@constraint(node.subproblem, bound_constr, JuMP.objective_function(node.subproblem) <= bound_value)
         end
     else
-        JuMP.set_normalized_rhs(bound_constr, bound_value)
+        JuMP.set_normalized_rhs(node.subproblem[:bound_constr], bound_value)
     end
 
     # SOLVE THE MINLP
