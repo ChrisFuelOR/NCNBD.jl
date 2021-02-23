@@ -1150,6 +1150,8 @@ function inner_loop_forward_sigma_test(
             sigma_increased = true
         end
 
+        @infiltrate model.ext[:iteration] == 14
+
         # Cumulate the stage_objective. (NOTE: not really required anymore)
         cumulative_value += non_reg_results.stage_objective
         # Set the outgoing state value as the incoming state value for the next
