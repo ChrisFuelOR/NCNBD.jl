@@ -1123,7 +1123,7 @@ function inner_loop_forward_sigma_test(
             )
         end
 
-        @infiltrate model.ext[:iteration] == 14
+        @infiltrate
 
         # SOLVE NON-REGULARIZED PROBLEM
         ########################################################################
@@ -1141,7 +1141,7 @@ function inner_loop_forward_sigma_test(
             )
         end
 
-        @infiltrate model.ext[:iteration] == 14
+        @infiltrate
 
         # COMPARE SOLUTIONS
         ########################################################################
