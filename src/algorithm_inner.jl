@@ -1123,6 +1123,8 @@ function inner_loop_forward_sigma_test(
             )
         end
 
+        @infiltrate model.ext[:iteration] == 14
+
         # SOLVE NON-REGULARIZED PROBLEM
         ########################################################################
         # Solve the subproblem, note that `require_duals = false`.
@@ -1139,6 +1141,8 @@ function inner_loop_forward_sigma_test(
             )
         end
 
+        @infiltrate model.ext[:iteration] == 14
+
         # COMPARE SOLUTIONS
         ########################################################################
         if !isapprox(reg_results.objective, non_reg_results.objective)
@@ -1149,8 +1153,6 @@ function inner_loop_forward_sigma_test(
             # instead of heading to outer loop
             sigma_increased = true
         end
-
-        #@infiltrate model.ext[:iteration] == 14
 
         # Cumulate the stage_objective. (NOTE: not really required anymore)
         cumulative_value += non_reg_results.stage_objective
