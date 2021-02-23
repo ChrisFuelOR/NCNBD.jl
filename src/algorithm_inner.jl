@@ -1113,7 +1113,7 @@ function inner_loop_forward_sigma_test(
             reg_results = solve_subproblem_forward_inner(
                 model,
                 node,
-                node_index
+                node_index,
                 incoming_state_value, # only values, no State struct!
                 noise,
                 scenario_path[1:depth],
