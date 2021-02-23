@@ -535,6 +535,11 @@ function _bundle_level(
         JuMP.set_upper_bound(bin_state, 1)
     end
 
+    # LOGGING OF LAGRANGIAN DUAL
+    ############################################################################
+    lag_log_file_handle = open("C:/Users/cg4102/Documents/julia_logs/Lagrange.log", "a")
+    print_helper(print_lagrange_header, lag_log_file_handle)
+
     # SET-UP APPROXIMATION MODEL
     ############################################################################
     # Subgradient at current solution
@@ -687,6 +692,9 @@ function _bundle_level(
         replace!(dual_vars, NaN => 0)
 
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
+
+        # Logging
+        print_helper(print_lag_iteration, lag_log_file_handle, iter, f_approx, best_actual, f_actual)
 
     end
     error("Could not solve for Lagrangian duals. Iteration limit exceeded.")

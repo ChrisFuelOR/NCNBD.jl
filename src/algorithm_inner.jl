@@ -71,14 +71,14 @@ function inner_loop_iteration(
     # CHECK IF BEST KNOWN SOLUTION HAS BEEN IMPROVED
     ############################################################################
     if model.objective_sense == JuMP.MOI.MIN_SENSE
-        if forward_trajectory.cumulative_value < model.ext[:best_inner_loop_objective]
+        if forward_trajectory.cumulative_value < model.ext[:best_inner_loop_objective] || sigma_increased
             # udpate best upper bound
             model.ext[:best_inner_loop_objective] = forward_trajectory.cumulative_value
             # update best point so far
             model.ext[:best_inner_loop_point] = forward_trajectory.sampled_states
         end
     else
-        if forward_trajectory.cumulative_value > model.ext[:best_inner_loop_objective]
+        if forward_trajectory.cumulative_value > model.ext[:best_inner_loop_objective] || sigma_increased
             # udpate best lower bound
             model.ext[:best_inner_loop_objective] = forward_trajectory.cumulative_value
             # update best point so far
@@ -88,6 +88,19 @@ function inner_loop_iteration(
 
     # PREPARE LOGGING
     ############################################################################
+    model.ext[:total_cuts] = 0
+    model.ext[:active_cuts] = 0
+
+    for (node_index, children) in model.nodes
+        node = model.nodes[node_index]
+
+        if length(node.children) == 0
+            continue
+        end
+        model.ext[:total_cuts] += node.ext[:total_cuts]
+        model.ext[:active_cuts] += node.ext[:active_cuts]
+    end
+
     push!(
          options.log_inner,
          Log(
@@ -107,6 +120,8 @@ function inner_loop_iteration(
              subproblem_size,
              algoParams.epsilon_innerLoop,
              model.ext[:lag_iterations],
+             model.ext[:total_cuts],
+             model.ext[:active_cuts],
          ),
      )
 
@@ -322,7 +337,7 @@ function solve_subproblem_forward_inner(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
-    @infiltrate infiltrate_state in [:all, :inner]
+    @infiltrate infiltrate_state in [:all, :inner] || model.ext[:iteration] == 14
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -479,13 +494,15 @@ function inner_loop_backward_pass(
                     node_index,
                     node.bellman_function,
                     options.risk_measures[node_index],
+                    outgoing_state,
                     used_trial_points,
                     items.bin_state,
                     items.duals,
                     items.supports,
                     items.probability,
                     items.objectives,
-                    algoParams
+                    algoParams,
+                    appliedSolvers
                 )
             end
             push!(cuts[node_index], new_cuts)
@@ -1179,6 +1196,8 @@ function solve_subproblem_sigma_test(
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
     stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
+
+    @infiltrate model.ext[:iteration] == 14
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state

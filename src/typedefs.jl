@@ -30,8 +30,8 @@ import Revise
 # Mutable struct for algorithmic parameters that may change during the iterations
 # Vector{Float64} or Dict{Int64, Float64}?
 mutable struct AlgoParams
-    epsilon_outerLoop :: Float64 # optimality tolerance for outer loop
-    epsilon_innerLoop :: Float64 # optimality tolerance for inner loop
+    epsilon_outerLoop :: Float64 # optimality tolerance for outer loop (relative!)
+    epsilon_innerLoop :: Float64 # optimality tolerance for inner loop (relative!)
     #binaryPrecision :: Vector{Float64} # Epsilons for latest/current binary expansion (better vector?)
     binaryPrecision :: Dict{Symbol, Float64}
     sigma :: Vector{Float64} # parameters used to obtain the regularized problem (better vector?)
@@ -45,6 +45,7 @@ mutable struct AlgoParams
     bundle_alpha :: Float64
     bundle_factor :: Float64
     level_factor :: Float64
+    cut_selection :: Bool
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run
@@ -63,6 +64,7 @@ struct InitialAlgoParams
     bundle_alpha :: Float64
     bundle_factor :: Float64
     level_factor :: Float64
+    cut_selection :: Bool
 end
 
 # struct for Simplex
@@ -130,12 +132,13 @@ struct AppliedSolvers
 end
 
 # Struct to store information on a nonlinear cut
-struct NonlinearCut
+mutable struct NonlinearCut
     intercept::Float64 # intercept of the cut (Lagrangian function value)
     coefficients::Dict{Symbol,Float64} # optimal dual variables in binary space
     trial_state::Dict{Symbol,Float64} # point at which this cut was created
     binary_state::Dict{Symbol,BinaryState} # point in binary space where cut was created
     binary_precision::Dict{Symbol,Float64} # binary precision at moment of creation
+    sigma::Float64
     cutVariables::Vector{JuMP.VariableRef}
     cutConstraints::Vector{JuMP.ConstraintRef}
     cutVariables_lin::Vector{JuMP.VariableRef}
@@ -143,6 +146,7 @@ struct NonlinearCut
     obj_y::Union{Nothing,NTuple{N,Float64} where {N}} # SDDP
     belief_y::Union{Nothing,Dict{T,Float64} where {T}} # SDDP
     non_dominated_count::Int # SDDP
+    iteration::Int64
 end
     # TODO: Do we need to store the trial point also in binary form?
     # I think not because we can always determine it using trial_state

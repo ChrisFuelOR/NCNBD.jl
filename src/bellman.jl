@@ -1,6 +1,12 @@
+mutable struct SampledState
+    state::Dict{Symbol,Float64}
+    dominating_cut::NCNBD.NonlinearCut
+    best_objective::Float64
+end
+
 mutable struct LevelOneOracle
     cuts::Vector{NCNBD.NonlinearCut}
-    states::Vector{SDDP.SampledState}
+    states::Vector{NCNBD.SampledState}
     cuts_to_be_deleted::Vector{NCNBD.NonlinearCut}
     deletion_minimum::Int
     function LevelOneOracle(deletion_minimum)
@@ -157,13 +163,15 @@ function refine_bellman_function(
     node_index::Int64,
     bellman_function::BellmanFunction,
     risk_measure::SDDP.AbstractRiskMeasure,
+    trial_points::Dict{Symbol,Float64},
     used_trial_points::Dict{Symbol,Float64},
     bin_states::Vector{Dict{Symbol,BinaryState}},
     dual_variables::Vector{Dict{Symbol,Float64}},
     noise_supports::Vector,
     nominal_probability::Vector{Float64},
     objective_realizations::Vector{Float64},
-    algoParams::NCNBD.AlgoParams
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers,
 ) where {T}
     # Sanity checks.
     @assert length(dual_variables) ==
@@ -187,6 +195,7 @@ function refine_bellman_function(
         return _add_average_cut(
             node,
             node_index,
+            trial_points,
             used_trial_points,
             bin_states,
             risk_adjusted_probability,
@@ -194,7 +203,8 @@ function refine_bellman_function(
             dual_variables,
             offset,
             algoParams,
-            model.ext[:iteration]
+            model.ext[:iteration],
+            appliedSolvers
         )
     else  # Add a multi-cut
         @assert bellman_function.cut_type == SDDP.MULTI_CUT
@@ -217,6 +227,7 @@ end
 function _add_average_cut(
     node::SDDP.Node,
     node_index::Int64,
+    trial_points::Dict{Symbol,Float64},
     used_trial_points::Dict{Symbol,Float64},
     bin_states::Vector{Dict{Symbol,BinaryState}},
     risk_adjusted_probability::Vector{Float64},
@@ -224,7 +235,8 @@ function _add_average_cut(
     dual_variables::Vector{Dict{Symbol,Float64}},
     offset::Float64,
     algoParams::NCNBD.AlgoParams,
-    iteration::Int64
+    iteration::Int64,
+    appliedSolvers::NCNBD.AppliedSolvers,
 )
 
     N = length(risk_adjusted_probability)
@@ -260,6 +272,7 @@ function _add_average_cut(
         θᵏ,
         πᵏ,
         bin_states,
+        trial_points,
         used_trial_points,
         obj_y,
         belief_y,
@@ -267,6 +280,8 @@ function _add_average_cut(
         sigma,
         iteration,
         algoParams.infiltrate_state,
+        appliedSolvers,
+        cut_selection = algoParams.cut_selection
     )
 
     return (theta = θᵏ, pi = πᵏ, λ = bin_states, obj_y = obj_y, belief_y = belief_y)
@@ -281,13 +296,15 @@ function _add_cut(
     θᵏ::Float64,
     πᵏ::Dict{Symbol,Float64},
     λᵏ::Dict{Symbol,BinaryState},
+    trial_points::Dict{Symbol,Float64},
     xᵏ::Dict{Symbol,Float64},
     obj_y::Union{Nothing,NTuple{N,Float64}},
     belief_y::Union{Nothing,Dict{T,Float64}},
     binaryPrecision::Dict{Symbol,Float64},
     sigma::Float64,
     iteration::Int64,
-    infiltrate_state::Symbol;
+    infiltrate_state::Symbol,
+    appliedSolvers::NCNBD.AppliedSolvers;
     cut_selection::Bool = false
 ) where {N,T}
 
@@ -301,16 +318,18 @@ function _add_cut(
     # CONSTRUCT NONLINEAR CUT STRUCT
     ############################################################################
     #TODO: Should we add λᵏ? Actually, this information is not required.
-    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, λᵏ, binaryPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1)
+    cut = NonlinearCut(θᵏ, πᵏ, xᵏ, λᵏ, copy(binaryPrecision), copy(sigma),
+                       JuMP.VariableRef[], JuMP.ConstraintRef[],
+                       JuMP.VariableRef[], JuMP.ConstraintRef[], obj_y, belief_y, 1, iteration)
 
     # ADD CUT PROJECTION TO BOTH MODELS (MINLP AND MILP)
     ############################################################################
-    add_cut_constraints_to_models(node, V, V_lin, cut, sigma, binaryPrecision, iteration, infiltrate_state)
+    add_cut_constraints_to_models(node, V, V_lin, cut, infiltrate_state)
 
     if cut_selection
-        #TODO
-        #SDDP._cut_selection_update(V, cut, xᵏ)
-        #SDDP._cut_selection_update(V_lin, cut, xᵏ)
+        TimerOutputs.@timeit NCNBD_TIMER "cut_selection" begin
+            NCNBD._cut_selection_update(node, V, V_lin, cut, xᵏ, trial_points, appliedSolvers, infiltrate_state)
+        end
     else
         push!(V.cut_oracle.cuts, cut)
         push!(V_lin.cut_oracle.cuts, cut)
@@ -326,9 +345,6 @@ function add_cut_constraints_to_models(
     V_lin::NonConvexApproximation,
     cut::NonlinearCut,
     #λᵏ::Dict{Symbol,Float64},
-    sigma::Float64,
-    binaryPrecision::Dict{Symbol,Float64},
-    iteration::Int64,
     infiltrate_state::Symbol,
     )
 
@@ -395,7 +411,7 @@ function add_cut_constraints_to_models(
                 K = SDDP._bitsrequired(state_comp.info.out.upper_bound)
                 epsilon = 1
             else
-                epsilon = binaryPrecision[name]
+                epsilon = cut.binary_precision[name]
                 K = SDDP._bitsrequired(round(Int, state_comp.info.out.upper_bound / epsilon))
             end
 
@@ -409,10 +425,10 @@ function add_cut_constraints_to_models(
                                 cut.binary_state,
                                 gamma,
                                 allCoefficients,
-                                iteration,
+                                cut.iteration,
                                 K,
                                 epsilon,
-                                sigma,
+                                cut.sigma,
                                 cut.cutVariables,
                                 cut.cutConstraints,
                                 i,
@@ -427,10 +443,10 @@ function add_cut_constraints_to_models(
                                 cut.binary_state,
                                 gamma_lin,
                                 allCoefficients_lin,
-                                iteration,
+                                cut.iteration,
                                 K,
                                 epsilon,
-                                sigma,
+                                cut.sigma,
                                 cut.cutVariables_lin,
                                 cut.cutConstraints_lin,
                                 i,
@@ -570,14 +586,14 @@ function add_cut_projection_to_model!(
     #bigM = 2 * sigma * Umax
 
     # new method for Big-M, since earlier method was probably not correct
-    # bigM = 0
-    # for k in 1:K
-    #     candidate = Umax * (sigma + abs(relatedCoefficients[k]) / (2^(k-1) * epsilon))
-    #     if bigM < candidate
-    #         bigM = candidate
-    #     end
-    # end
-    bigM = sigma
+    bigM = 0
+    for k in 1:K
+        candidate = Umax * (sigma + abs(relatedCoefficients[k]) / (2^(k-1) * epsilon))
+        if bigM < candidate
+            bigM = candidate
+        end
+    end
+    # bigM = sigma
 
     @infiltrate infiltrate_state in [:bellman]
 
@@ -612,5 +628,264 @@ function add_cut_projection_to_model!(
     duals_so_far += K
 
     return duals_so_far
+
+end
+
+
+# Internal function: update the Level-One datastructures inside `bellman_function`.
+function _cut_selection_update(
+    node::SDDP.Node,
+    V::NCNBD.NonConvexApproximation,
+    V_lin::NCNBD.NonConvexApproximation,
+    cut::NCNBD.NonlinearCut,
+    anchor_state::Dict{Symbol,Float64},
+    trial_state::Dict{Symbol,Float64},
+    appliedSolvers::NCNBD.AppliedSolvers,
+    infiltrate_state::Symbol,
+)
+    # if cut.obj_y !== nothing || cut.belief_y !== nothing
+    #     # Skip cut selection if belief or objective states present.
+    #     push!(V.cut_oracle.cuts, cut)
+    #     return
+    # end
+
+    # GET MODEL INFORMATION
+    ############################################################################
+    model = JuMP.owner_model(V.theta)
+    model_lin = JuMP.owner_model(V_lin.theta)
+    is_minimization = JuMP.objective_sense(model) == MOI.MIN_SENSE
+    oracle = V.cut_oracle
+    oracle_lin = V_lin.cut_oracle
+
+    # GET TRIAL STATE AND BINARY STATE
+    ############################################################################
+    sampled_state_anchor = NCNBD.SampledState(anchor_state, cut, _eval_height(node, cut, anchor_state, appliedSolvers))
+    sampled_state_trial = NCNBD.SampledState(trial_state, cut, _eval_height(node, cut, trial_state, appliedSolvers))
+
+    # NOTE: By considering both type of states, we have way more states than
+    # cuts, so we may not eliminiate that many cuts.
+    # On the other hand, only considering the trial points is not sufficient,
+    # because it may lead to creating the same cuts over and over again if the
+    # binary approximation is not refined.
+
+    # LOOP THROUGH PREVIOUSLY VISITED STATES (ANCHOR OR TRIAL STATES)
+    ############################################################################
+    # Loop through previously sampled states and compare the height of the most recent cut
+    # against the current best. If this new cut is an improvement, store this one instead.
+    for old_state in oracle.states
+        height = _eval_height(node, cut, old_state.state, appliedSolvers)
+        if SDDP._dominates(height, old_state.best_objective, is_minimization)
+            old_state.dominating_cut.non_dominated_count -= 1
+            cut.non_dominated_count += 1
+            old_state.dominating_cut = cut
+            old_state.best_objective = height
+        end
+    end
+    push!(oracle.states, sampled_state_anchor)
+    push!(oracle.states, sampled_state_trial)
+    push!(oracle_lin.states, sampled_state_anchor)
+    push!(oracle_lin.states, sampled_state_trial)
+
+    # LOOP THROUGH PREVIOUSLY VISITED CUTS
+    ############################################################################
+    # Now loop through previously discovered cuts and compare their height at
+    # `sampled_state`. If a cut is an improvement, add it to a queue to be added.
+    for old_cut in oracle.cuts
+        if !isempty(old_cut.cutConstraints)
+            # We only care about cuts not currently in the model.
+            continue
+        end
+
+        # For anchor state (is this required? the cuts should be tight here and
+        # we also do not have a stochastic program)
+        height = _eval_height(node, old_cut, anchor_state, appliedSolvers)
+        if SDDP._dominates(height, sampled_state_anchor.best_objective, is_minimization)
+            sampled_state_anchor.dominating_cut.non_dominated_count -= 1
+            old_cut.non_dominated_count += 1
+            sampled_state_anchor.dominating_cut = old_cut
+            sampled_state_anchor.best_objective = height
+            add_cut_constraints_to_models(node, V, V_lin, old_cut, infiltrate_state)
+        end
+
+        # For trial state
+        height = _eval_height(node, old_cut, trial_state, appliedSolvers)
+        if SDDP._dominates(height, sampled_state_trial.best_objective, is_minimization)
+            sampled_state_trial.dominating_cut.non_dominated_count -= 1
+            old_cut.non_dominated_count += 1
+            sampled_state_trial.dominating_cut = old_cut
+            sampled_state_trial.best_objective = height
+            add_cut_constraints_to_models(node, V, V_lin, old_cut, infiltrate_state)
+        end
+    end
+    push!(oracle.cuts, cut)
+    push!(oracle_lin.cuts, cut)
+
+    # DETERMINE CUTS TO BE DELETED
+    ############################################################################
+    #NOTE: The cuts to be deleted should be the same for V and V_lin,
+    #so in principle, it should not be required to determine this in two loops
+
+    for cut in V.cut_oracle.cuts
+        if cut.non_dominated_count < 1
+            if !isempty(cut.cutConstraints)
+                push!(oracle.cuts_to_be_deleted, cut)
+            end
+        end
+    end
+
+    for cut in V_lin.cut_oracle.cuts
+        if cut.non_dominated_count < 1
+            if !isempty(cut.cutConstraints_lin)
+                push!(oracle_lin.cuts_to_be_deleted, cut)
+            end
+        end
+    end
+
+    # DELETE CUTS FOR V AND V_LIN
+    ############################################################################
+    if length(oracle.cuts_to_be_deleted) >= oracle.deletion_minimum
+        for cut in oracle.cuts_to_be_deleted
+            for variable_ref in cut.cutVariables
+                JuMP.delete(model, variable_ref)
+            end
+            for constraint_ref in cut.cutConstraints
+                JuMP.delete(model, constraint_ref)
+            end
+            cut.cutVariables = JuMP.VariableRef[]
+            cut.cutConstraints = JuMP.ConstraintRef[]
+
+            #cut.non_dominated_count = 0
+        end
+    end
+    empty!(oracle.cuts_to_be_deleted)
+
+    if length(oracle_lin.cuts_to_be_deleted) >= oracle_lin.deletion_minimum
+        for cut in oracle_lin.cuts_to_be_deleted
+            for variable_ref in cut.cutVariables_lin
+                JuMP.delete(model_lin, variable_ref)
+            end
+            for constraint_ref in cut.cutConstraints_lin
+                JuMP.delete(model_lin, constraint_ref)
+            end
+            cut.cutVariables_lin = JuMP.VariableRef[]
+            cut.cutConstraints_lin = JuMP.ConstraintRef[]
+
+            cut.non_dominated_count = 0
+        end
+    end
+    empty!(oracle_lin.cuts_to_be_deleted)
+
+    # DETERMINE NUMBER OF CUTS FOR LOGGING
+    ############################################################################
+    node.ext[:total_cuts] = size(V_lin.cut_oracle.cuts, 1)
+    counter = 0
+    for cut in V_lin.cut_oracle.cuts
+        if !isempty(cut.cutConstraints_lin)
+            counter += 1
+        end
+    end
+    node.ext[:active_cuts] = counter
+
+    return
+end
+
+
+# Internal function: calculate the height of `cut` evaluated at `state`.
+function _eval_height(node::SDDP.Node, cut::NCNBD.NonlinearCut, states::Dict{Symbol,Float64}, appliedSolvers::NCNBD.AppliedSolvers)
+
+    # Create a new JuMP model to evaluate the height of a non-convex cut
+    model = JuMP.Model()
+    JuMP.set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.LP, "optcr"=>0.0))
+
+    # Storages for coefficients and binary states
+    binary_state_storage = JuMP.VariableRef[]
+    allCoefficients = Float64[]
+    binary_variables_so_far = 0
+
+    for (i, (state_name, value)) in enumerate(states)
+        # Get actual state from state_name
+        state_comp = node.ext[:lin_states][state_name]
+
+        if state_comp.info.out.binary
+            # BINARY CASE
+            ####################################################################
+            # introduce one binary variable to the model
+            binary_var = JuMP.@variable(model)
+            push!(binary_state_storage, binary_var)
+            binary_variables_so_far += 1
+
+            # introduce binary expansion constraint to the model
+            binary_constraint = JuMP.@constraint(model, binary_var == value)
+            #TODO: Alternatively, we can just fix this variable
+
+            # determine the correct cut coefficient
+            relatedCoefficient = 0.0
+            for (bin_name, value) in cut.coefficients
+                if cut.binary_state[bin_name].x_name == state_name
+                    relatedCoefficient = cut.coefficients[bin_name]
+                end
+            end
+            push!(allCoefficients, relatedCoefficient)
+
+        else
+            if !isfinite(state_comp.info.out.upper_bound) || !state_comp.info.out.has_ub
+            error("When using SDDiP, state variables require an upper bound.")
+            end
+
+            # INTEGER OR CONTINUOUS CASE
+            ####################################################################
+            # Get K and epsilon
+            if state_comp.info.out.integer
+                K = SDDP._bitsrequired(state_comp.info.out.upper_bound)
+                epsilon = 1
+            else
+                epsilon = cut.binary_precision[state_name]
+                K = SDDP._bitsrequired(round(Int, state_comp.info.out.upper_bound / epsilon))
+            end
+
+            # introduce binary variables to the model
+            binary_var = JuMP.@variable(model, [k in 1:K], lower_bound=0, upper_bound=1)
+            append!(binary_state_storage, binary_var)
+            binary_variables_so_far += K
+
+            # introduce binary expansion constraint to the model
+            binary_constraint = JuMP.@constraint(model, SDDP.bincontract([binary_var[k] for k=1:K], epsilon) == value)
+
+            # determine the correct cut coefficient
+            relatedCoefficients = Vector{Float64}(undef, K)
+            for (bin_name, value) in cut.coefficients
+                if cut.binary_state[bin_name].x_name == state_name
+                    index = cut.binary_state[bin_name].k
+                    relatedCoefficients[index] = cut.coefficients[bin_name]
+                end
+            end
+            append!(allCoefficients, relatedCoefficients)
+
+        end
+    end
+
+    @assert(size(allCoefficients, 1) == size(binary_state_storage, 1)
+                == binary_variables_so_far
+                == size(collect(values(cut.coefficients)),1)
+                )
+
+    # ADD OBJECTIVE TO THE MODEL
+    ####################################################################
+    objective_sense_stage = JuMP.objective_sense(node.ext[:linSubproblem])
+    eval_sense = (
+        objective_sense_stage == JuMP.MOI.MIN_SENSE ? JuMP.MOI.MAX_SENSE : JuMP.MOI.MIN_SENSE
+    )
+
+    JuMP.@objective(
+        model, eval_sense,
+        cut.intercept + sum(allCoefficients[j] * binary_state_storage[j] for j=1:binary_variables_so_far)
+    )
+
+    # SOLVE MODEL AND RETURN SOLUTION
+    ####################################################################
+    JuMP.optimize!(model)
+    height = JuMP.objective_value(model)
+    return height
+
 
 end
