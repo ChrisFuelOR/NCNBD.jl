@@ -61,10 +61,10 @@ function start_instances()
                       # [UC_4_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
                       # [UC_4_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
 
-                      [UC_5_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      [UC_5_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      [UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      #[UC_5_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      #[UC_5_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       [UC_5_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      [UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       #[UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       # [UC_5_5, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0],
                       # [UC_5_5, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2],
