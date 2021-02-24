@@ -15,6 +15,7 @@ include("UC_3_10.jl")
 include("UC_4_5.jl")
 include("UC_4_10.jl")
 include("UC_5_5.jl")
+include("UC_10_3.jl")
 include("UC_10_5.jl")
 
 function start_instances()
@@ -72,7 +73,8 @@ function start_instances()
                       # [UC_5_5, 1e-4, 1e-4, :none, :kelley, 0.0],
                       # [UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2],
 
-                      [UC_10_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      #[UC_10_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      [UC_10_3, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
                       [UC_10_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
                       ]
 
