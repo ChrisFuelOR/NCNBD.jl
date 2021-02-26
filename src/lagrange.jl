@@ -156,7 +156,7 @@ function _kelley(
         end
 
         # return
-        if lag == :sub || lag == :aopt || lag == :conv
+        if lag_status == :sub || lag_status == :aopt || lag_status == :conv
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
@@ -491,7 +491,7 @@ function _bundle_level(
         # zero subgradients (and no further improvement), despite no convergence
         # maybe possible due to numerical issues
         # -> valid cut
-        elseif subgradients.== 0
+    elseif all(subgradients.== 0)
             lag_status = :sub
 
         # lb exceeds ub: no convergence
@@ -500,7 +500,7 @@ function _bundle_level(
         end
 
         # return
-        if lag == :sub || lag == :aopt || lag == :conv
+        if lag_status == :sub || lag_status == :aopt || lag_status == :conv
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
