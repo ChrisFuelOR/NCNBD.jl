@@ -165,7 +165,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # ===== End: starting state for infinite horizon =====
 
         # Set optimizer to MINLP optimizer
-        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
+        #set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
         #set_optimizer(node.subproblem, GAMS.Optimizer)
         #JuMP.set_optimizer_attribute(node.subproblem, "Solver", appliedSolvers.MINLP)
         #JuMP.set_optimizer_attribute(node.subproblem, "optcr", 0.0)
@@ -187,8 +187,10 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # Cumulate the stage_objective.
         cumulative_value += subproblem_results.stage_objective
         # Determine the first stage objective
-        if node_index == 1
+        if node_index == 1 || algoParams.outer_loop == :opt
             first_stage_objective = subproblem_results.objective
+        elseif node_index == 1 || algoParams.outer_loop == :approx
+            first_stage_objective = subproblem_results.bound
         end
         # Set the outgoing state value as the incoming state value for the next
         # node.
@@ -273,15 +275,26 @@ function solve_subproblem_forward_outer(
 
     # SOLVE THE MINLP
     ############################################################################
-    JuMP.optimize!(node.subproblem)
+    if algoParams.outerLoop == :opt
+        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
+        JuMP.optimize!(node.subproblem)
+
+    elseif algoParams.outerLoop == :approx
+        relativeGap = algoParams.epsilon_outerLoop * 0.01
+        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>relativeGap))
+        JuMP.optimize!(node.subproblem)
+    end
+
+    state = SDDP.get_outgoing_state(node)
+    stage_objective = SDDP.stage_objective_value(node.stage_objective)
+    # upper bound (for minimization), primal solution
+    objective = JuMP.objective_value(node.subproblem)
+    # not actual objective, but lower bound (for minimization), dual solution
+    bound = JuMP.objective_bound(node.subproblem)
 
     #if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
     #    SDDP.attempt_numerical_recovery(node)
     #end
-
-    state = SDDP.get_outgoing_state(node)
-    stage_objective = SDDP.stage_objective_value(node.stage_objective)
-    objective = JuMP.objective_value(node.subproblem)
 
     @infiltrate infiltrate_state in [:all, :outer]
 
@@ -304,6 +317,7 @@ function solve_subproblem_forward_outer(
         duals = dual_values,
         objective = objective,
         stage_objective = stage_objective,
+        bound = bound
     )
 end
 
