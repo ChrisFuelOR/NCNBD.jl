@@ -84,6 +84,8 @@ function _kelley(
     # CUTTING-PLANE METHOD
     ############################################################################
     iter = 0
+    lag_status = :none
+
     while iter < integrality_handler.iteration_limit
         iter += 1
 
@@ -128,11 +130,33 @@ function _kelley(
         print("UB: ", f_approx, ", LB: ", f_actual)
         println()
 
-        # CONVERGENCE CHECK AND UPDATE
+        # CONVERGENCE CHECKS AND UPDATE
         ########################################################################
-        # More reliable than checking whether subgradient is zero
-        # NOTE: Checking if subgradients are 0 is removed since this would lead to an assertion error in the calling function
-        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) #|| all(subgradients.==0)
+        # convergence achieved
+        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol)
+            # convergence to obj -> tight cut
+            if isapprox(best_actual, obj, atol = atol, rtol = rtol)
+                lag_status = :aopt
+            # convergence to a smaller value than obj
+            # maybe possible due to numerical issues
+            # -> valid cut
+            else
+                lag_status = :conv
+            end
+
+        # zero subgradients (and no further improvement), despite no convergence
+        # maybe possible due to numerical issues
+        # -> valid cut
+        elseif subgradients.== 0
+            lag_status = :sub
+
+        # lb exceeds ub: no convergence
+        elseif best_actual > f_approx + atol/10.0
+            error("Could not solve for Lagrangian duals. LB > UB.")
+        end
+
+        # return
+        if lag == :sub || lag == :aopt || lag == :conv
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
@@ -145,8 +169,11 @@ function _kelley(
 
             set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
-            return (lag_obj = best_actual, iterations = iter)
+            return (lag_obj = best_actual, iterations = iter, lag_status = lag_status)
         end
+
+        # PREPARE NEXT ITERATION
+        ########################################################################
         # Next iterate
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange] #|| model.ext[:sddp_policy_graph].ext[:iteration] == 8
         dual_vars .= value.(x)
@@ -157,7 +184,11 @@ function _kelley(
         print_helper(print_lag_iteration, lag_log_file_handle, iter, f_approx, best_actual, f_actual)
 
     end
-    error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
+
+    lag_status = :iter
+    #error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
+    return (lag_obj = best_actual, iterations = iter, lag_status = lag_status)
+
 end
 
 
@@ -646,12 +677,33 @@ function _bundle_level(
         print("UB: ", f_approx, ", LB: ", f_actual, best_actual)
         println()
 
-        # CONVERGENCE CHECK AND UPDATE
+        # CONVERGENCE CHECKS AND UPDATE
         ########################################################################
-        # More reliable than checking whether subgradient is zero
-        # NOTE: Checking if subgradients are 0 is removed since this would lead to an assertion error in the calling function
-        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol) #|| all(subgradients.==0)
-            #TODO: Check if this is correct
+        # convergence achieved
+        if isapprox(best_actual, f_approx, atol = atol, rtol = rtol)
+            # convergence to obj -> tight cut
+            if isapprox(best_actual, obj, atol = atol, rtol = rtol)
+                lag_status = :aopt
+            # convergence to a smaller value than obj
+            # maybe possible due to numerical issues
+            # -> valid cut
+            else
+                lag_status = :conv
+            end
+
+        # zero subgradients (and no further improvement), despite no convergence
+        # maybe possible due to numerical issues
+        # -> valid cut
+        elseif subgradients.== 0
+            lag_status = :sub
+
+        # lb exceeds ub: no convergence
+        elseif best_actual > f_approx + atol/10.0
+            error("Could not solve for Lagrangian duals. LB > UB.")
+        end
+
+        # return
+        if lag == :sub || lag == :aopt || lag == :conv
             dual_vars .= best_mult
             if dualsense == JuMP.MOI.MIN_SENSE
                 dual_vars .*= -1
@@ -662,9 +714,9 @@ function _bundle_level(
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
 
-            set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+            set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
 
-            return (lag_obj = best_actual, iterations = iter)
+            return (lag_obj = best_actual, iterations = iter, lag_status = lag_status)
         end
 
         # FORM A NEW LEVEL
@@ -697,5 +749,9 @@ function _bundle_level(
         print_helper(print_lag_iteration, lag_log_file_handle, iter, f_approx, best_actual, f_actual)
 
     end
-    error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
+
+    lag_status = :iter
+    #error("Could not solve for Lagrangian duals. Iteration limit exceeded.")
+    return (lag_obj = best_actual, iterations = iter, lag_status = lag_status)
+    
 end

@@ -806,19 +806,36 @@ function get_dual_variables_backward(
             results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
             lag_obj = results.lag_obj
             lag_iterations = results.iterations
+            lag_status = lag_status
         elseif algoParams.lagrangian_method == :bundle_proximal
             results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
             lag_obj = results.lag_obj
             lag_iterations = results.iterations
+            lag_status = lag_status
         elseif algoParams.lagrangian_method == :bundle_level
             results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
             lag_obj = results.lag_obj
             lag_iterations = results.iterations
+            lag_status = lag_status
         end
 
-        @infiltrate !isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
-        @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        # OPTIMAL VALUE CHECKS
+        ########################################################################
+        if algoParams.lagrange_regime == :rigorous
+            if lag_status = :conv
+                error("Lagrangian dual converged to value < solver_obj.")
+            elseif lag_status = :sub
+                error("Lagrangian dual had subgradients zero without LB=UB.")
+            elseif lag_status = :iter
+                error("Solving Lagrangian dual exceeded iteration limit.")
+            end
 
+        elseif algoParams.lagrange_regime == :lax
+            # all cuts will be used as they are valid even though not necessarily tight
+        end
+
+        # DUAL VARIABLE BOUND CHECK
+        ########################################################################
         # if one of the dual variables exceeds the bounds (e.g. in case of an
         # discontinuous value function), use bounded version of Kelley's method
         boundCheck = true
@@ -831,29 +848,50 @@ function get_dual_variables_backward(
         # SOLUTION WITH BOUNDED DUAL VARIABLES
         ########################################################################
         if boundCheck == false
+            # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
+            ########################################################################
             if algoParams.lagrangian_method == :kelley
                 results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
                 lag_obj = results.lag_obj
                 lag_iterations = results.iterations
+                lag_status = lag_status
             elseif algoParams.lagrangian_method == :bundle_proximal
                 results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
                 lag_obj = results.lag_obj
                 lag_iterations = results.iterations
+                lag_status = lag_status
             elseif algoParams.lagrangian_method == :bundle_level
                 results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
                 lag_obj = results.lag_obj
                 lag_iterations = results.iterations
+                lag_status = lag_status
             end
 
-            @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+            # OPTIMAL VALUE CHECKS
+            ########################################################################
+            if algoParams.lagrange_regime == :rigorous
+                if lag_status = :conv
+                    error("Lagrangian dual converged to value < solver_obj.")
+                elseif lag_status = :sub
+                    error("Lagrangian dual had subgradients zero without LB=UB.")
+                elseif lag_status = :iter
+                    error("Solving Lagrangian dual exceeded iteration limit.")
+                end
+
+            elseif algoParams.lagrange_regime == :lax
+                # all cuts will be used as they are valid even though not necessarily tight
+            end
         end
 
         @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
+
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
         rethrow(e)
     end
 
+    # SET DUAL VARIABLES AND STATES CORRECTLY FOR RETURN
+    ############################################################################
     for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
         # TODO (maybe) change dual signs inside kelley to match LP duals
         dual_values[name] = -dual_vars[i]
@@ -869,6 +907,7 @@ function get_dual_variables_backward(
         bin_state=bin_state,
         intercept=lag_obj,
         iterations=lag_iterations,
+        lag_status=lag_status
     )
 end
 
