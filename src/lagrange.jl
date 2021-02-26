@@ -500,8 +500,6 @@ function _bundle_level(
             error("Could not solve for Lagrangian duals. LB > UB.")
         end
 
-        @infiltrate
-
         # return
         if lag_status == :sub || lag_status == :aopt || lag_status == :conv
             dual_vars .= best_mult

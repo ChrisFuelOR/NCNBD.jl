@@ -825,8 +825,6 @@ function get_dual_variables_backward(
             lag_status = results.lag_status
         end
 
-        @infiltrate
-
         # OPTIMAL VALUE CHECKS
         ########################################################################
         if algoParams.lag_status_regime == :rigorous
