@@ -46,6 +46,7 @@ mutable struct AlgoParams
     bundle_factor :: Float64
     level_factor :: Float64
     cut_selection :: Bool
+    lag_status_regime :: Symbol
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run
@@ -65,6 +66,7 @@ struct InitialAlgoParams
     bundle_factor :: Float64
     level_factor :: Float64
     cut_selection :: Bool
+    lag_status_regime :: Symbol
 end
 
 # struct for Simplex

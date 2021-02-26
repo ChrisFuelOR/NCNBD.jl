@@ -825,7 +825,7 @@ function get_dual_variables_backward(
 
         # OPTIMAL VALUE CHECKS
         ########################################################################
-        if algoParams.lagrange_regime == :rigorous
+        if algoParams.lag_status_regime == :rigorous
             if lag_status = :conv
                 error("Lagrangian dual converged to value < solver_obj.")
             elseif lag_status = :sub
@@ -834,7 +834,7 @@ function get_dual_variables_backward(
                 error("Solving Lagrangian dual exceeded iteration limit.")
             end
 
-        elseif algoParams.lagrange_regime == :lax
+        elseif algoParams.lag_status_regime == :lax
             # all cuts will be used as they are valid even though not necessarily tight
         end
 
