@@ -807,11 +807,6 @@ function get_dual_variables_backward(
             lag_obj = results.lag_obj
             lag_iterations = results.iterations
             lag_status = lag_status
-        elseif algoParams.lagrangian_method == :bundle_proximal
-            results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
-            lag_obj = results.lag_obj
-            lag_iterations = results.iterations
-            lag_status = lag_status
         elseif algoParams.lagrangian_method == :bundle_level
             results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
             lag_obj = results.lag_obj
@@ -852,11 +847,6 @@ function get_dual_variables_backward(
             ########################################################################
             if algoParams.lagrangian_method == :kelley
                 results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
-                lag_obj = results.lag_obj
-                lag_iterations = results.iterations
-                lag_status = lag_status
-            elseif algoParams.lagrangian_method == :bundle_proximal
-                results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
                 lag_obj = results.lag_obj
                 lag_iterations = results.iterations
                 lag_status = lag_status
