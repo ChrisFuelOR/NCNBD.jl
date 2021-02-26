@@ -419,6 +419,7 @@ function _bundle_level(
     # CUTTING-PLANE METHOD
     ############################################################################
     iter = 0
+    lag_status = :none
     while iter < integrality_handler.iteration_limit
         iter += 1
 
@@ -498,6 +499,8 @@ function _bundle_level(
         elseif best_actual > f_approx + atol/10.0
             error("Could not solve for Lagrangian duals. LB > UB.")
         end
+
+        @infiltrate
 
         # return
         if lag_status == :sub || lag_status == :aopt || lag_status == :conv
