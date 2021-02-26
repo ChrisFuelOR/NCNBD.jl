@@ -181,6 +181,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
                 noise,
                 scenario_path[1:depth],
                 algoParams,
+                appliedSolvers,
                 require_duals = false,
             )
         end
@@ -235,7 +236,8 @@ function solve_subproblem_forward_outer(
     state::Dict{Symbol,Float64},
     noise,
     scenario_path::Vector{Tuple{T,S}},
-    algoParams::NCNBD.AlgoParams;
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers;
     require_duals::Bool,
 ) where {T,S}
     #TODO: We can actually delete the duals part here
