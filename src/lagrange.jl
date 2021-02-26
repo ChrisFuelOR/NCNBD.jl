@@ -147,7 +147,7 @@ function _kelley(
         # zero subgradients (and no further improvement), despite no convergence
         # maybe possible due to numerical issues
         # -> valid cut
-        elseif subgradients.== 0
+    elseif all(subgradients.==0)
             lag_status = :sub
 
         # lb exceeds ub: no convergence
