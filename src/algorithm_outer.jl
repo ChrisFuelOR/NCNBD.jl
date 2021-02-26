@@ -294,6 +294,8 @@ function solve_subproblem_forward_outer(
     # not actual objective, but lower bound (for minimization), dual solution
     bound = JuMP.objective_bound(node.subproblem)
 
+    @infiltrate
+
     #if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
     #    SDDP.attempt_numerical_recovery(node)
     #end
