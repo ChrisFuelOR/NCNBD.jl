@@ -187,9 +187,9 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # Cumulate the stage_objective.
         cumulative_value += subproblem_results.stage_objective
         # Determine the first stage objective
-        if node_index == 1 || algoParams.outer_loop == :opt
+        if node_index == 1 || algoParams.outer_loop_strategy == :opt
             first_stage_objective = subproblem_results.objective
-        elseif node_index == 1 || algoParams.outer_loop == :approx
+        elseif node_index == 1 || algoParams.outer_loop_strategy == :approx
             first_stage_objective = subproblem_results.bound
         end
         # Set the outgoing state value as the incoming state value for the next
@@ -275,11 +275,11 @@ function solve_subproblem_forward_outer(
 
     # SOLVE THE MINLP
     ############################################################################
-    if algoParams.outerLoop == :opt
+    if algoParams.outer_loop_strategy == :opt
         set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
         JuMP.optimize!(node.subproblem)
 
-    elseif algoParams.outerLoop == :approx
+    elseif algoParams.outer_loop_strategy == :approx
         relativeGap = algoParams.epsilon_outerLoop * 0.01
         set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>relativeGap))
         JuMP.optimize!(node.subproblem)
