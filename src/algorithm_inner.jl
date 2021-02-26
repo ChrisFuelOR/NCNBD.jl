@@ -826,11 +826,11 @@ function get_dual_variables_backward(
         # OPTIMAL VALUE CHECKS
         ########################################################################
         if algoParams.lag_status_regime == :rigorous
-            if lag_status = :conv
+            if lag_status == :conv
                 error("Lagrangian dual converged to value < solver_obj.")
-            elseif lag_status = :sub
+            elseif lag_status == :sub
                 error("Lagrangian dual had subgradients zero without LB=UB.")
-            elseif lag_status = :iter
+            elseif lag_status == :iter
                 error("Solving Lagrangian dual exceeded iteration limit.")
             end
 
@@ -869,11 +869,11 @@ function get_dual_variables_backward(
             # OPTIMAL VALUE CHECKS
             ########################################################################
             if algoParams.lagrange_regime == :rigorous
-                if lag_status = :conv
+                if lag_status == :conv
                     error("Lagrangian dual converged to value < solver_obj.")
-                elseif lag_status = :sub
+                elseif lag_status == :sub
                     error("Lagrangian dual had subgradients zero without LB=UB.")
-                elseif lag_status = :iter
+                elseif lag_status == :iter
                     error("Solving Lagrangian dual exceeded iteration limit.")
                 end
 
