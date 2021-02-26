@@ -785,6 +785,7 @@ function get_dual_variables_backward(
 
     lag_obj = 0
     lag_iterations = 0
+    lag_status = :none
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
@@ -815,12 +816,12 @@ function get_dual_variables_backward(
             results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
             lag_obj = results.lag_obj
             lag_iterations = results.iterations
-            lag_status = lag_status
+            lag_status = results.lag_status
         elseif algoParams.lagrangian_method == :bundle_level
             results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
             lag_obj = results.lag_obj
             lag_iterations = results.iterations
-            lag_status = lag_status
+            lag_status = results.lag_status
         end
 
         # OPTIMAL VALUE CHECKS
