@@ -71,6 +71,10 @@ function unitCommitment()
     # cut selection strategy
     cut_selection = true
 
+    # lagrangian status
+    lag_status_regime = :lax
+    # alternatives: :rigorous, :lax
+
     # used solvers
     solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
 
@@ -96,6 +100,7 @@ function unitCommitment()
         level_factor=level_factor,
         solvers=solvers,
         cut_selection=cut_selection,
+        lag_status_regime=lag_status_regime,
     )
 end
 
@@ -120,6 +125,7 @@ function unitCommitment_with_parameters(;
     level_factor::Float64 = 0.4,
     solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
     cut_selection::Bool = true,
+    lag_status_regime::Symbol = :lax,
     )
 
     # DEFINE MODEL
@@ -153,7 +159,7 @@ function unitCommitment_with_parameters(;
                             lagrangian_rtol, lagrangian_iteration_limit,
                             dual_initialization_regime, lagrangian_method,
                             bundle_alpha, bundle_factor, level_factor,
-                            cut_selection)
+                            cut_selection, lag_status_regime)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
@@ -161,7 +167,7 @@ function unitCommitment_with_parameters(;
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
                                       bundle_factor, level_factor,
-                                      cut_selection)
+                                      cut_selection, lag_status_regime)
 
     # SOLVE MODEL
     ############################################################################

@@ -125,7 +125,7 @@ function unitCommitment_with_parameters(;
     level_factor::Float64 = 0.4,
     solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
     cut_selection::Bool = true,
-    lag_status_regime::Symbol = :rigorous,
+    lag_status_regime::Symbol = :lax,
     )
 
     # DEFINE MODEL
