@@ -145,12 +145,14 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, applie
     println(io, initialAlgoParams.lagrangian_rtol)
     println(io, "Dual initialization:")
     println(io, initialAlgoParams.dual_initialization_regime)
-    println(io, "Lagrangian method:")
+    println(io, "Lagrangian solution method:")
     println(io, initialAlgoParams.lagrangian_method)
     if initialAlgoParams.lagrangian_method == :bundle_level
         println(io, "Level parameter:")
         println(io, initialAlgoParams.level_factor)
     end
+    println(io, "Lagrangian solution regime:")
+    println(io, initialAlgoParams.lag_status_regime)
 
     println(io, "Used solvers:")
     println(io, "LP:", appliedSolvers.LP)
