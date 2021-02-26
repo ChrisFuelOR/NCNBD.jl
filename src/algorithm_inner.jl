@@ -398,6 +398,7 @@ function inner_loop_backward_pass(
     cuts = Dict{T,Vector{Any}}(index => Any[] for index in keys(model.nodes))
 
     model.ext[:lag_iterations] = Int[]
+    model.ext[:lag_status] = Symbol[]
 
     for index = length(scenario_path):-1:1
         outgoing_state = sampled_states[index]
