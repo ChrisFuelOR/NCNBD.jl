@@ -120,6 +120,7 @@ function inner_loop_iteration(
              subproblem_size,
              algoParams.epsilon_innerLoop,
              model.ext[:lag_iterations],
+             model.ext[:lag_status],
              model.ext[:total_cuts],
              model.ext[:active_cuts],
          ),
@@ -507,6 +508,9 @@ function inner_loop_backward_pass(
             end
             push!(cuts[node_index], new_cuts)
             push!(model.ext[:lag_iterations], sum(items.lag_iterations))
+            #TODO: Has to be adapted for stochastic case
+            push!(model.ext[:lag_status], items.lag_status[1])
+
             # if options.refine_at_similar_nodes
             #     # Refine the bellman function at other nodes with the same
             #     # children, e.g., in the same stage of a Markovian policy graph.
@@ -574,6 +578,7 @@ function solve_all_children(
                 push!(items.belief, belief)
                 push!(items.bin_state, items.bin_state[sol_index])
                 push!(items.lag_iterations, items.lag_iterations[sol_index])
+                push!(items.lag_status, items.lag_status[sol_index])
             else
                 # Update belief state, etc.
                 if belief_state !== nothing
@@ -613,6 +618,7 @@ function solve_all_children(
                 push!(items.belief, belief)
                 push!(items.bin_state, subproblem_results.bin_state)
                 push!(items.lag_iterations, subproblem_results.iterations)
+                push!(items.lag_status, subproblem_results.lag_status)
                 items.cached_solutions[(child.term, noise.term)] = length(items.duals)
                 #TODO: Maybe add binary precision
             end
@@ -726,12 +732,14 @@ function solve_subproblem_backward(
         bin_state = lagrangian_results.bin_state
         objective = lagrangian_results.intercept
         iterations = lagrangian_results.iterations
+        lag_status = lagrangian_results.lag_status
     else
         #NOTE: not required in my implementation
         dual_values = Dict{Symbol,Float64}()
         bin_state = Dict{Symbol,BinaryState}()
         objective = solver_obj
         iterations = 0
+        lag_status = :none
     end
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
@@ -751,6 +759,7 @@ function solve_subproblem_backward(
         bin_state = bin_state,
         objective = objective,
         iterations = iterations,
+        lag_status = lag_status,
     )
 end
 
@@ -897,7 +906,7 @@ function get_dual_variables_backward(
         bin_state=bin_state,
         intercept=lag_obj,
         iterations=lag_iterations,
-        lag_status=lag_status
+        lag_status=lag_status,
     )
 end
 

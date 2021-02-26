@@ -17,6 +17,7 @@ struct Log
     subproblem_size::Union{Dict{Symbol,Int64},Nothing}
     opt_tolerance::Float64
     lag_iterations::Union{Vector{Int},Nothing}
+    lag_status::Union{Vector{Symbol},Nothing}
     total_cuts::Int
     active_cuts::Int
 end
@@ -167,7 +168,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations      ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
     )
     flush(io)
 end
@@ -225,6 +226,13 @@ function print_iteration(io, log::Log)
         print(io, lpad(Printf.@sprintf(""), 19))
     end
     print(io, "   ")
+    if !isnothing(log.lag_status)
+        print(io, log.lag_status)
+    else
+        print(io, lpad(Printf.@sprintf(""), 19))
+    end
+    print(io, "   ")
+
 
     println(io)
     flush(io)
