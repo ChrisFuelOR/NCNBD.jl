@@ -76,7 +76,7 @@ function unitCommitment()
     # alternatives: :rigorous, :lax
 
     # outer loop strategy
-    outer_loop_strategy = :approx
+    outer_loop_strategy = :rigorous
 
     # used solvers
     solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
@@ -119,7 +119,7 @@ function unitCommitment_with_parameters(;
     time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Vector{Float64} = [0.4, 0.64, 0.3, 1.04, 0.56, 0.2, 0.24, 0.22, 0.16, 0.12], # apart from one generator always 1/5 of pmax
+    plaPrecision::Vector{Float64} = [0.2, 0.32, 0.15, 0.52, 0.28, 0.1, 0.12, 0.11, 0.08, 0.06], # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
