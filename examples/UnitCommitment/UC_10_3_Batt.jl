@@ -295,6 +295,7 @@ function define_10_3()
         for problem in [subproblem, linearizedSubproblem]
             gen = problem[:gen]
             commit = problem[:commit]
+            level = problem[:level]
 
             # start-up variables
             JuMP.@variable(problem, up[i=1:num_of_generators], Bin)
