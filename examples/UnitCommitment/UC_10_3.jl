@@ -33,8 +33,8 @@ end
 function unitCommitment()
 
     # define required tolerances
-    epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-3
+    epsilon_outerLoop = 1e-2
+    epsilon_innerLoop = 1e-2
     lagrangian_atol = 1e-8
     lagrangian_rtol = 1e-8
 
