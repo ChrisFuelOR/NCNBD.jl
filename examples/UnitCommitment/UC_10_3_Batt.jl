@@ -348,7 +348,7 @@ function define_10_3()
             JuMP.@constraint(problem, dischargelevel[i=1:num_of_batteries], discharge[i] <= level[i].in + charge[i])
             JuMP.@constraint(problem, soc_eq[i=1:num_of_batteries], soc[i] == level[i].in / batteries[i].max_level)
 
-            if t == num_of_stages:
+            if t == num_of_stages
                 JuMP.@constraint(problem, end_level[i=1:num_of_batteries] level[i].out == batteries[i].level_end)
             end
 
