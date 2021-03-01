@@ -193,7 +193,7 @@ function define_10_3()
     num_of_generators = size(generators,1)
 
     demand_penalty = 5e2
-    emission_price = 25
+    emission_price = 2.5
 
     demand = [1.04 1.8 1.72 1.15 1.24 1.33 1.4 2.1 1.8 1.2]
 
