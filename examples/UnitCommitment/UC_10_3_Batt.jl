@@ -444,7 +444,7 @@ function define_10_3()
 
             # user-defined function for expression building
             nlf_charge_expr = function nonl_function_expr(x_charge::JuMP.VariableRef, x_soc::JuMP.VariableRef)
-                return :($(x_charge[i])  * (1/12 + log($(x_soc[i]) / (1 + $(x_soc[i]))) + 1))
+                return :($(x_charge)  * (1/12 + log($(x_soc) / (1 + $(x_soc))) + 1))
             end
 
             # define nonlinear expression
@@ -472,7 +472,7 @@ function define_10_3()
 
             # user-defined function for expression building
             nlf_discharge_expr = function nonl_function_expr(x_discharge::JuMP.VariableRef, x_soc::JuMP.VariableRef)
-                return :($(x_discharge[i]) / (1/12 + log($(x_soc[i]) / (1 + $(x_soc[i]))) + 1))
+                return :($(x_discharge) / (1/12 + log($(x_soc) / (1 + $(x_soc))) + 1))
             end
 
             # define nonlinear expression
