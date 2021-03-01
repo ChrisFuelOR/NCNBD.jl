@@ -88,6 +88,9 @@ function unitCommitment()
     lag_status_regime = :lax
     # alternatives: :rigorous, :lax
 
+    # outer loop strategy
+    outer_loop_strategy = :approx
+
     # used solvers
     solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
 
@@ -114,6 +117,7 @@ function unitCommitment()
         solvers=solvers,
         cut_selection=cut_selection,
         lag_status_regime=lag_status_regime,
+        outer_loop_strategy=outer_loop_strategy,
     )
 end
 
@@ -139,6 +143,7 @@ function unitCommitment_with_parameters(;
     solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
     cut_selection::Bool = true,
     lag_status_regime::Symbol = :lax,
+    outer_loop_strategy::Symbol = :approx,
     )
 
     # DEFINE MODEL
@@ -172,7 +177,8 @@ function unitCommitment_with_parameters(;
                             lagrangian_rtol, lagrangian_iteration_limit,
                             dual_initialization_regime, lagrangian_method,
                             bundle_alpha, bundle_factor, level_factor,
-                            cut_selection, lag_status_regime)
+                            cut_selection, lag_status_regime,
+                            outer_loop_strategy)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
@@ -180,7 +186,8 @@ function unitCommitment_with_parameters(;
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
                                       bundle_factor, level_factor,
-                                      cut_selection, lag_status_regime)
+                                      cut_selection, lag_status_regime,
+                                      outer_loop_strategy)
 
     # SOLVE MODEL
     ############################################################################
