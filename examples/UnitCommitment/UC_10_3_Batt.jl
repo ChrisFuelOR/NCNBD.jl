@@ -1,4 +1,4 @@
-module UC_10_3
+module UC_10_3_Batt
 
 export unitCommitment
 export unitCommitment_with_parameters
@@ -46,10 +46,10 @@ end
 function unitCommitment()
 
     # define required tolerances
-    epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-3
-    lagrangian_atol = 1e-8
-    lagrangian_rtol = 1e-8
+    epsilon_outerLoop = 1e-2
+    epsilon_innerLoop = 1e-2
+    lagrangian_atol = 1e-4
+    lagrangian_rtol = 1e-4
 
     # define time and iteration limits
     lagrangian_iteration_limit = 10000
@@ -61,8 +61,8 @@ function unitCommitment()
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = [0.4, 0.64, 0.3] # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor = 1/7
+    plaPrecision = [0.2, 0.32, 0.15] # apart from one generator always 1/5 of pmax
+    binaryPrecisionFactor = 1/15
 
     # define infiltration level
     # TODO: Abstract data type
