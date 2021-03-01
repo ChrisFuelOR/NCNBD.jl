@@ -48,8 +48,8 @@ function unitCommitment()
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = [0.4, 0.64, 0.3] # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor = 1/7
+    plaPrecision = [0.2, 0.32, 0.15] # apart from one generator always 1/5 of pmax
+    binaryPrecisionFactor = 1/15
 
     # define infiltration level
     # TODO: Abstract data type
@@ -61,7 +61,7 @@ function unitCommitment()
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :bundle_level
+    lagrangian_method = :kelley
     # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5
