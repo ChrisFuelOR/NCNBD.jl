@@ -18,7 +18,7 @@ Determines a piecewise linear relaxation for all nonlinear functions in node.
 
 """
 
-function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{Float64},1} appliedSolvers::NCNBD.AppliedSolvers)
+function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{Float64},1}, appliedSolvers::NCNBD.AppliedSolvers)
 
     # MILP subproblem
     linearizedSubproblem = node.ext[:linSubproblem]
