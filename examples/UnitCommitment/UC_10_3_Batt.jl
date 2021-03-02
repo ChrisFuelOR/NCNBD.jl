@@ -497,7 +497,7 @@ function define_10_3()
             soc = linearizedSubproblem[:soc][i]
             aux = linearizedSubproblem[:discharge_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_discharge_eval, nlf_discharge_expr, aux, [discharge, soc], :shiftUp, :keep) # concave, but in equality (or >=)
+            nlf = NCNBD.NonlinearFunction(nlf_discharge_eval, nlf_discharge_expr, aux, [discharge, soc], :shiftDown, :keep) # convex, but in equality (or >=)
             push!(nonlinearFunctionList, nlf)
 
         end
