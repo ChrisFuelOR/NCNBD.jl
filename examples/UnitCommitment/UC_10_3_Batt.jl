@@ -493,7 +493,7 @@ function define_10_3()
             JuMP.add_NL_constraint(subproblem, :($(aux) == $(nonlinear_exp)))
 
             # define nonlinearFunction struct for PLA
-            discharge = linearizedSubproblem[:charge][i]
+            discharge = linearizedSubproblem[:discharge][i]
             soc = linearizedSubproblem[:soc][i]
             aux = linearizedSubproblem[:discharge_aux][i]
 
