@@ -459,11 +459,11 @@ function define_10_3()
             # define nonlinear expression
             charge = subproblem[:charge][i]
             soc = subproblem[:soc][i]
-            nonlinear_exp = nlf_charge_expr(charge, soc)
+            nonlinear_exp_1 = nlf_charge_expr(charge, soc)
 
             # nonlinear constraint
             aux = subproblem[:charge_aux][i]
-            JuMP.add_NL_constraint(subproblem, :($(aux) == $(nonlinear_exp)))
+            JuMP.add_NL_constraint(subproblem, :($(aux) == $(nonlinear_exp_1)))
 
             # define nonlinearFunction struct for PLA
             charge = linearizedSubproblem[:charge][i]
@@ -488,11 +488,11 @@ function define_10_3()
             # define nonlinear expression
             discharge = subproblem[:discharge][i]
             soc = subproblem[:soc][i]
-            nonlinear_exp = nlf_discharge_expr(discharge, soc)
+            nonlinear_exp_2 = nlf_discharge_expr(discharge, soc)
 
             # nonlinear constraint
             aux = subproblem[:discharge_aux][i]
-            JuMP.add_NL_constraint(subproblem, :($(aux) == $(nonlinear_exp)))
+            JuMP.add_NL_constraint(subproblem, :($(aux) == $(nonlinear_exp_2)))
 
             # define nonlinearFunction struct for PLA
             discharge = linearizedSubproblem[:discharge][i]
