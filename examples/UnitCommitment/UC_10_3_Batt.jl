@@ -416,12 +416,12 @@ function define_10_3()
 
         for i in 1:num_of_generators
             # user-defined function for evaluation
-            nlf_emission_eval = function nonl_function_eval(y::Float64)
+            nlf_emission_eval = function nonl_emission_eval(y::Float64)
                 return generators[i].b * y + generators[i].a * y^2
             end
 
             # user-defined function for expression building
-            nlf_emission_expr = function nonl_function_expr(y::JuMP.VariableRef)
+            nlf_emission_expr = function nonl_emission_expr(y::JuMP.VariableRef)
                 return :($(generators[i].b) * $(y) + $(generators[i].a) * $(y)^2)
             end
 
@@ -447,12 +447,12 @@ function define_10_3()
 
         for i in 1:num_of_batteries
             # user-defined function for evaluation
-            nlf_charge_eval = function nonl_function_eval(x_charge::Float64, x_soc::Float64)
+            nlf_charge_eval = function nonl_charge_eval(x_charge::Float64, x_soc::Float64)
                 return x_charge * (1/12 * log(x_soc / (1 + x_soc)) + 1)
             end
 
             # user-defined function for expression building
-            nlf_charge_expr = function nonl_function_expr(x_charge::JuMP.VariableRef, x_soc::JuMP.VariableRef)
+            nlf_charge_expr = function nonl_charge_expr(x_charge::JuMP.VariableRef, x_soc::JuMP.VariableRef)
                 return :($(x_charge) * (1/12 + log($(x_soc) / (1 + $(x_soc))) + 1))
             end
 
@@ -476,12 +476,12 @@ function define_10_3()
             ####################################################################
 
             # user-defined function for evaluation
-            nlf_discharge_eval = function nonl_function_eval(x_discharge::Float64, x_soc::Float64)
+            nlf_discharge_eval = function nonl_discharge_eval(x_discharge::Float64, x_soc::Float64)
                 return x_discharge / (1/12 * log(x_soc / (1 + x_soc)) + 1)
             end
 
             # user-defined function for expression building
-            nlf_discharge_expr = function nonl_function_expr(x_discharge::JuMP.VariableRef, x_soc::JuMP.VariableRef)
+            nlf_discharge_expr = function nonl_discharge_expr(x_discharge::JuMP.VariableRef, x_soc::JuMP.VariableRef)
                 return :($(x_discharge) / (1/12 + log($(x_soc) / (1 + $(x_soc))) + 1))
             end
 
