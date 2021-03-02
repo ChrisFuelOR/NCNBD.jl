@@ -422,6 +422,7 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
         # TODO: Check if globally optimal solution
         underestimation = JuMP.objective_value(estimationProblem)
         nlfunction.triangulation.simplices[simplex_index].maxUnderestimation = underestimation
+    end
 
     # UNFIX VARIABLES AGAIN
     ############################################################################
