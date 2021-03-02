@@ -54,7 +54,7 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{
         number_of_simplices = size(nlFunction.triangulation.simplices, 1)
 
         @assert nlFunction.refineType == :replace || nlFunction.refineType == :keep
-        @assert nlFunction.shift == :shift || nlFunction.shift == :noshift
+        @assert nlFunction.shift == :shift || nlFunction.shift == :noshift || nlFunction.shift == :shiftUp || nlFunction.shift == :shiftDown
 
         # Shift approximation to obtain a relaxation (if required)
         for simplex_index in 1:number_of_simplices
