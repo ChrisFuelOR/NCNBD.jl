@@ -451,7 +451,7 @@ function define_10_3()
 
             # user-defined function for expression building
             nlf_charge_expr = function nonl_function_expr(x_charge::JuMP.VariableRef, x_soc::JuMP.VariableRef)
-                return :($(x_charge)  * (1/12 + log($(x_soc) / (1 + $(x_soc))) + 1))
+                return :($(x_charge) * (1/12 + log($(x_soc) / (1 + $(x_soc))) + 1))
             end
 
             # define nonlinear expression
@@ -468,8 +468,8 @@ function define_10_3()
             soc = linearizedSubproblem[:soc][i]
             aux = linearizedSubproblem[:charge_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_charge_eval, nlf_charge_expr, aux, [charge, soc], :shiftUp, :keep) # concave, but in equality (or >=)
-            push!(nonlinearFunctionList, nlf)
+            nlf2 = NCNBD.NonlinearFunction(nlf_charge_eval, nlf_charge_expr, aux, [charge, soc], :shiftUp, :keep) # concave, but in equality (or >=)
+            push!(nonlinearFunctionList, nlf2)
 
             ####################################################################
 
@@ -497,8 +497,8 @@ function define_10_3()
             soc = linearizedSubproblem[:soc][i]
             aux = linearizedSubproblem[:discharge_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_discharge_eval, nlf_discharge_expr, aux, [discharge, soc], :shiftDown, :keep) # convex, but in equality (or >=)
-            push!(nonlinearFunctionList, nlf)
+            nlf3 = NCNBD.NonlinearFunction(nlf_discharge_eval, nlf_discharge_expr, aux, [discharge, soc], :shiftDown, :keep) # convex, but in equality (or >=)
+            push!(nonlinearFunctionList, nlf3)
 
         end
 

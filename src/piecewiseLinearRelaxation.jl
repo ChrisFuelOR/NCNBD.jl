@@ -27,6 +27,7 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{
     # and constraint references in linearizedSubproblem.ext.
     #linearizedSubproblem.ext[:varReferences]
     #linearizedSubproblem.ext[:constrReferences]
+    @infiltrate
 
     # LOOP OVER ALL NONLINEAR FUNCTIONS AND CALL MORE SPECIFIC FUNCTIONS
     ############################################################################
