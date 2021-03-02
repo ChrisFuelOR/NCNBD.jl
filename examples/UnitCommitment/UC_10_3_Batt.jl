@@ -342,8 +342,8 @@ function define_10_3()
             JuMP.@constraint(problem, omcost[i=1:num_of_generators], generators[i].om_cost * gen[i].out == om_costs[i])
 
             # battery variables
-            JuMP.@variable(problem, charge[1:num_of_batteries] >= 0.0)
-            JuMP.@variable(problem, discharge[1:num_of_batteries] >= 0.0)
+            JuMP.@variable(problem, 0.0 <= charge[1:num_of_batteries] <= batteries[i].max_charge)
+            JuMP.@variable(problem, 0.0 <= discharge[1:num_of_batteries] <= batteries[i].max_discharge)
             JuMP.@variable(problem, charging[i=1:num_of_batteries], Bin)
             JuMP.@variable(problem, discharging[i=1:num_of_batteries], Bin)
             JuMP.@variable(problem, 0.6 <= efficiency[i=1:num_of_batteries] <= 1.0)
