@@ -27,7 +27,6 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{
     # and constraint references in linearizedSubproblem.ext.
     #linearizedSubproblem.ext[:varReferences]
     #linearizedSubproblem.ext[:constrReferences]
-    @infiltrate
 
     # LOOP OVER ALL NONLINEAR FUNCTIONS AND CALL MORE SPECIFIC FUNCTIONS
     ############################################################################
@@ -411,7 +410,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
         # DETERMINE AND SOLVE MAXIMUM OVERESTIMATION PROBLEM
         ############################################################################
         JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(y_est) - $(nonlinearobj)))
-        @infiltrate
         JuMP.optimize!(estimationProblem)
         # TODO: Check if globally optimal solution
         overestimation = JuMP.objective_value(estimationProblem)
@@ -420,7 +418,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
         # DETERMINE AND SOLVE MAXIMUM UNDERESTIMATION PROBLEM
         ############################################################################
         JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(nonlinearobj) - $(y_est)))
-        @infiltrate
         JuMP.optimize!(estimationProblem)
         # TODO: Check if globally optimal solution
         underestimation = JuMP.objective_value(estimationProblem)

@@ -150,8 +150,6 @@ function unitCommitment_with_parameters(;
     ############################################################################
     model = define_10_3()
 
-    @infiltrate
-
     # DEFINE SOLVERS
     ############################################################################
     appliedSolvers = NCNBD.AppliedSolvers(solvers[1], solvers[2], solvers[3], solvers[4], solvers[5])
