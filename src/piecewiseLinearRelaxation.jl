@@ -209,7 +209,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         end
 
         # set up triangulation
-        triangulation = Triangulation(simplices, plaPrecision, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())
+        triangulation = Triangulation(simplices, plaPrecision_vector, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())
 
         nlFunction.triangulation = triangulation
         nlFunction.triangulation.ext[:nonlinearFunction] = nlFunction

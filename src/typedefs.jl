@@ -83,7 +83,7 @@ end
 # better to use dicts instead of vectors without index?
 mutable struct Triangulation
     simplices :: Vector{Simplex}
-    precision :: Float64
+    plaPrecision_vector :: Vector{Float64}
     plrVariables :: Vector{JuMP.VariableRef}
     plrConstraints :: Vector{JuMP.ConstraintRef}
     # An extension dictionary.
