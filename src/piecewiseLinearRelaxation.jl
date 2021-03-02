@@ -35,7 +35,7 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{
         nlFunction = node.ext[:nlFunctions][nlIndex]
 
         # Get precision
-        plaPrecision_vector = plaPrecision[index]
+        plaPrecision_vector = plaPrecision[nlIndex]
 
         # Determine Triangulation
         nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision_vector)
