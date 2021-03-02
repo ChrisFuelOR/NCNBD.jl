@@ -435,7 +435,7 @@ function define_10_3()
             gen = linearizedSubproblem[:gen][i]
             aux = linearizedSubproblem[:emission_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, aux, [gen.out], :noshift, :replace)
+            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, aux, [gen.out], :noshift, :replace) #concave, but in minimum (or <=)
             push!(nonlinearFunctionList, nlf)
 
         end
@@ -468,7 +468,7 @@ function define_10_3()
             soc = linearizedSubproblem[:soc][i]
             aux = linearizedSubproblem[:charge_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_charge_eval, nlf_charge_expr, aux, [charge, soc], :shift, :keep)
+            nlf = NCNBD.NonlinearFunction(nlf_charge_eval, nlf_charge_expr, aux, [charge, soc], :shiftUp, :keep) # concave, but in equality (or >=)
             push!(nonlinearFunctionList, nlf)
 
             ####################################################################
@@ -497,7 +497,7 @@ function define_10_3()
             soc = linearizedSubproblem[:soc][i]
             aux = linearizedSubproblem[:discharge_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_discharge_eval, nlf_discharge_expr, aux, [discharge, soc], :shift, :keep)
+            nlf = NCNBD.NonlinearFunction(nlf_discharge_eval, nlf_discharge_expr, aux, [discharge, soc], :shiftUp, :keep) # concave, but in equality (or >=)
             push!(nonlinearFunctionList, nlf)
 
         end

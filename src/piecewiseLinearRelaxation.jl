@@ -58,11 +58,11 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{
 
         # Shift approximation to obtain a relaxation (if required)
         for simplex_index in 1:number_of_simplices
-            if nlFunction.shift == :shift
-                determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
+            if nlFunction.shift == :shift || nlFunction.shift == :shiftUp || nlFunction.shift == :shiftDown
+                determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers, nlFunction.shift)
             elseif nlFunction.shift == :noshift
-                nlFunction.triangulation.simplices[simplex_index].maxOverestimation = 0
-                nlFunction.triangulation.simplices[simplex_index].maxUnderestimation = 0
+                nlFunction.triangulation.simplices[simplex_index].maxOverestimation = 0.0
+                nlFunction.triangulation.simplices[simplex_index].maxUnderestimation = 0.0
             end
         end
 
@@ -365,7 +365,9 @@ Return both shifts in a vector.
 
 """
 
-function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunction, estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers)
+function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunction, estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers, direction::Symbol)
+
+    @assert direction == :shiftUp || direction == :shiftDown || direction == :shift
 
     # DEFINE SIMPLEX CONSTRAINTS BY SETTING LOG VARIABLES TO SPECIFIC GRAY CODE
     ############################################################################
@@ -379,7 +381,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     for l = 1:number_log
         JuMP.fix(z[l], nlfunction.triangulation.ext[:gray_code][simplex_index][l], force=true)
     end
-    # ; force = true
 
     # INITIALIZATION
     ############################################################################
@@ -389,7 +390,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     y_est = estimationProblem[:y_est]
 
     # variableRefs to insert into nonlinear expression
-    # variablesContained = nlfunction.variablesContained
     # note that we cannot insert nlfunction.variablesContained, since those variables
     # belong to the linearized subproblem. We have to use x_1_est and x_2_est
 
@@ -402,73 +402,32 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
         nonlinearobj = nlfunction.nonlinfunc_exp(x_1, x_2)
     end
 
-    # DETERMINE AND SOLVE MAXIMUM OVERESTIMATION PROBLEM
-    ############################################################################
-    # nonlinear expression describing the approximated function
-    JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(y_est) - $(nonlinearobj)))
+    # Initialize estimation errors
+    nlfunction.triangulation.simplices[simplex_index].maxOverestimation = 0.0
+    nlfunction.triangulation.simplices[simplex_index].maxUnderestimation = 0.0
 
-    #println("###################################################################")
-    #println("Simplex: ", simplex_index)
-    #println("Max overestimation error")
-    #println(estimationProblem)
-
-    JuMP.optimize!(estimationProblem)
-    # TODO: Check if globally optimal solution
-    overestimation = JuMP.objective_value(estimationProblem)
-
-    #println("optimal x: ", JuMP.value(estimationProblem[:x_1_est]))
-    #println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
-    #println("optimal value: ", overestimation)
-
-    # x_opt = JuMP.value(estimationProblem[:x_1_est])
-    # y_opt = JuMP.value(estimationProblem[:y_est])
-    # l_opt_1 = JuMP.value(estimationProblem[:λ_est][simplex_index,1])
-    # l_opt_2 = JuMP.value(estimationProblem[:λ_est][simplex_index,2])
-    # l_opt_r = JuMP.value(estimationProblem[:λ_est][simplex_index+1,1])
-    # println(l_opt_1)
-    # println(l_opt_2)
-    # println(l_opt_r)
-
-    # vertex_indices = nlfunction.triangulation.simplices[simplex_index, :]
-    # x_val = 0
-    # y_val = 0
-    #
-    # for i in 1:dimension+1
-    #     vertex_index = vertex_indices[i]
-    #     vertex = nlfunction.triangulation.vertices[vertex_index]
-    #     vertex_value = nlfunction.triangulation.verticeValues[vertex_index]
-    #     x_val += JuMP.value(estimationProblem[:λ_est][simplex_index,i]) * vertex
-    #     y_val += JuMP.value(estimationProblem[:λ_est][simplex_index,i]) * vertex_value
-    # end
-    # println("calculated x: ", x_val)
-    # println("calculated y: ", y_val)
-
-    # DETERMINE AND SOLVE MAXIMUM UNDERESTIMATION PROBLEM
-    ############################################################################
-    JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(nonlinearobj) - $(y_est)))
-    # println("Max underestimation error")
-    # println(estimationProblem)
-
-
-    JuMP.optimize!(estimationProblem)
-    # TODO: Check if globally optimal solution
-    underestimation = JuMP.objective_value(estimationProblem)
-
-    # println("optimal x: ", JuMP.value(estimationProblem[:x_1_est]))
-    # println("optimal y: ", JuMP.value(estimationProblem[:y_est]))
-    # println("optimal value: ", underestimation)
-    # println("###################################################################")
+    if direction == :shiftDown || direction == :shift
+        # DETERMINE AND SOLVE MAXIMUM OVERESTIMATION PROBLEM
+        ############################################################################
+        JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(y_est) - $(nonlinearobj)))
+        JuMP.optimize!(estimationProblem)
+        # TODO: Check if globally optimal solution
+        overestimation = JuMP.objective_value(estimationProblem)
+        nlfunction.triangulation.simplices[simplex_index].maxOverestimation = overestimation
+    elseif direction == :shiftUp || direction == :shift
+        # DETERMINE AND SOLVE MAXIMUM UNDERESTIMATION PROBLEM
+        ############################################################################
+        JuMP.set_NL_objective(estimationProblem, MathOptInterface.MAX_SENSE, :($(nonlinearobj) - $(y_est)))
+        JuMP.optimize!(estimationProblem)
+        # TODO: Check if globally optimal solution
+        underestimation = JuMP.objective_value(estimationProblem)
+        nlfunction.triangulation.simplices[simplex_index].maxUnderestimation = underestimation
 
     # UNFIX VARIABLES AGAIN
     ############################################################################
     for l = 1:number_log
         JuMP.unfix(z[l])
     end
-
-    # STORE ESTIMATION ERRORS
-    ############################################################################
-    nlfunction.triangulation.simplices[simplex_index].maxOverestimation = overestimation
-    nlfunction.triangulation.simplices[simplex_index].maxUnderestimation = underestimation
 
 end
 
@@ -567,10 +526,6 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # Define overestimation/underestimation problem
             estimationProblem = JuMP.Model()
             set_optimizer(estimationProblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.NLP, "optcr"=>0.0))
-            #set_optimizer(estimationProblem, GAMS.Optimizer)
-            #JuMP.set_optimizer_attribute(estimationProblem, "Solver", appliedSolvers.NLP)
-            #JuMP.set_optimizer_attribute(estimationProblem, "optcr", 0.0)
-            #JuMP.set_silent(estimationProblem)
 
             piecewiseLinearApproximation!(nlIndex, nlFunction.triangulation, linearizedSubproblem, estimationProblem)
 
@@ -580,11 +535,11 @@ function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers:
             # since the other approximations essentially did not change
             # Shift approximation to obtain a relaxation (if required)
             for simplex_index in new_simplex_indices_list
-                if nlFunction.shift == :shift
-                    determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers)
+                if nlFunction.shift == :shift || nlFunction.shift == :shiftUp || nlFunction.shift == :shiftDown
+                    determineShifts!(simplex_index, nlFunction, estimationProblem, appliedSolvers, nlFunction.shift)
                 elseif nlFunction.shift == :noshift
-                    nlFunction.triangulation.simplices[simplex_index].maxOverestimation = 0
-                    nlFunction.triangulation.simplices[simplex_index].maxUnderestimation = 0
+                    nlFunction.triangulation.simplices[simplex_index].maxOverestimation = 0.0
+                    nlFunction.triangulation.simplices[simplex_index].maxUnderestimation = 0.0
                 end
             end
 
