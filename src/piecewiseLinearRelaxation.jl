@@ -12,13 +12,13 @@
 
 
 """
-    NCNBD.piecewiseLinearRelaxation!(node::SDDP.Node, algoParams::AlgoParams, appliedSolvers::AppliedSolvers)
+    NCNBD.piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{Float64},1}, appliedSolvers::AppliedSolvers)
 
 Determines a piecewise linear relaxation for all nonlinear functions in node.
 
 """
 
-function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Vector{Float64}, appliedSolvers::NCNBD.AppliedSolvers)
+function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{Float64},1} appliedSolvers::NCNBD.AppliedSolvers)
 
     # MILP subproblem
     linearizedSubproblem = node.ext[:linSubproblem]
@@ -35,10 +35,10 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Vector{Float6
         nlFunction = node.ext[:nlFunctions][nlIndex]
 
         # Get precision
-        plaPrecision_value = plaPrecision[nlIndex]
+        plaPrecision_vector = plaPrecision[index]
 
         # Determine Triangulation
-        nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision_value)
+        nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision_vector)
 
         # Define overestimation/underestimation problem
         estimationProblem = JuMP.Model()
@@ -82,14 +82,7 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Vector{Float6
 end
 
 
-"""
-    NCNBD.piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64)
-
-Determines a piecewise linear relaxation for all nonlinear functions in node.
-
-"""
-
-function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaPrecision::Float64)
+function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaPrecision_vector::Vector{Float64})
 
     # CHECK FOR ONE- OR TWO-DIMENSIONAL CASE
     ############################################################################
@@ -98,6 +91,9 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
     # 1D
     ############################################################################
     if dimension == 1
+        # get plaPrecision
+        plaPrecision = plaPrecision_vector[1]
+
         # get interval to be considered
         lower_bound = JuMP.lower_bound(nlFunction.variablesContained[1])
         upper_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
@@ -145,6 +141,10 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
     # 2D
     ############################################################################
     elseif dimension == 2
+        # get plaPrecisions
+        plaPrecision_1 = plaPrecision_vector[1]
+        plaPrecision_2 = plaPrecision_vector[2]
+
         # DETERMINE UNIFORM GRID
         ########################################################################
         # get interval to be considered
@@ -159,8 +159,8 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         # determine uniform grid based on user-given precision
         # note: if precision is no exact divisor of interval_length, the precision
         # is decreased to obtain a uniform grid
-        number_of_points_1 = ceil(Int64, interval_length_1 / plaPrecision) + 1
-        number_of_points_2 = ceil(Int64, interval_length_2 / plaPrecision) + 1
+        number_of_points_1 = ceil(Int64, interval_length_1 / plaPrecision_1) + 1
+        number_of_points_2 = ceil(Int64, interval_length_2 / plaPrecision_2) + 1
         number_of_points = number_of_points_1 * number_of_points_2
 
         # length of grid elements

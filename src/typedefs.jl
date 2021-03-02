@@ -55,7 +55,7 @@ struct InitialAlgoParams
     epsilon_outerLoop :: Float64
     epsilon_innerLoop :: Float64
     binaryPrecision :: Dict{Symbol, Float64}
-    plaPrecision :: Vector{Float64}
+    plaPrecision :: Array{Vector{Float64},1}
     sigma :: Vector{Float64}
     sigma_factor :: Float64
     lagrangian_atol :: Float64
