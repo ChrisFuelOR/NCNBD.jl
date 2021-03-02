@@ -465,7 +465,8 @@ function define_10_3()
 
             # define nonlinearFunction struct for PLA
             charge = linearizedSubproblem[:charge][i]
-            aux = linearizedSubproblem[:soc][i]
+            soc = linearizedSubproblem[:soc][i]
+            aux = linearizedSubproblem[:charge_aux][i]
 
             nlf = NCNBD.NonlinearFunction(nlf_charge_eval, nlf_charge_expr, aux, [charge, soc], :shift, :keep)
             push!(nonlinearFunctionList, nlf)
@@ -493,7 +494,8 @@ function define_10_3()
 
             # define nonlinearFunction struct for PLA
             discharge = linearizedSubproblem[:charge][i]
-            aux = linearizedSubproblem[:soc][i]
+            soc = linearizedSubproblem[:soc][i]
+            aux = linearizedSubproblem[:discharge_aux][i]
 
             nlf = NCNBD.NonlinearFunction(nlf_discharge_eval, nlf_discharge_expr, aux, [discharge, soc], :shift, :keep)
             push!(nonlinearFunctionList, nlf)
