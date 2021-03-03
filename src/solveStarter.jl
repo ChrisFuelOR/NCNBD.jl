@@ -117,10 +117,10 @@ function solve(
     #     print_helper(print, log_file_handle, report)
     # end
 
-    if print_level > 0
-        print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), log_file_handle)
-        print_helper(print_iteration_header, log_file_handle)
-    end
+    # if print_level > 0
+    #     print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), log_file_handle)
+    #     print_helper(print_iteration_header, log_file_handle)
+    # end
 
     # Convert the vector to an AbstractStoppingRule. Otherwise if the user gives
     # something like stopping_rules = [SDDP.IterationLimit(100)], the vector
@@ -354,6 +354,11 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
         NCNBD.log_piecewise_linear(options, node_index)
 
+    end
+
+    if print_level > 0
+        print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), options.log_file_handle)
+        print_helper(print_iteration_header, options.log_file_handle)
     end
 
     @infiltrate algoParams.infiltrate_state == :all

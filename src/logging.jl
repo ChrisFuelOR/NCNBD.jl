@@ -250,7 +250,7 @@ function print_piecewise_linear(io, time::Float64, node_index::Int)
     print(io, "   ")
     print(io, "Initialized PLA for stage ", node_index)
     print(io, " - ", time)
-    print(Io, " sec. elapsed.")
+    print(io, " sec. elapsed.")
 
     println(io)
     flush(io)
