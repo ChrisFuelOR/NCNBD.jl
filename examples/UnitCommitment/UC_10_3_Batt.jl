@@ -55,12 +55,12 @@ function unitCommitment()
     time_limit = 10800
 
     # define sigma
-    sigma = [0.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
+    sigma = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0]
     sigma_factor = 2.0
 
     # define initial approximations
     plaPrecision = [[0.2], [0.32], [0.15], [0.05, 0.1], [0.05, 0.1]]
-    binaryPrecisionFactor = 1/15
+    binaryPrecisionFactor = 1/31
 
     # define infiltration level
     # TODO: Abstract data type
