@@ -172,7 +172,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Gap     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound      Gap     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
     )
     flush(io)
 end
@@ -193,8 +193,8 @@ function print_iteration(io, log::Log)
     print(io, lpad(Printf.@sprintf("%1.6e", log.lower_bound), 13))
     print(io, "   ")
 
-    gap = abs(log.best_upper_bound - log.lower_bound)/max(log.best_upper_bound - log.lower_bound)
-    print(io, lpad(Printf.@sprintf("%3.2f", gap), 13))
+    gap = abs(log.best_upper_bound - log.lower_bound)/max(log.best_upper_bound, log.lower_bound)
+    print(io, lpad(Printf.@sprintf("%3.2f", gap), 6))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.time), 13))
     print(io, "   ")
@@ -247,6 +247,7 @@ end
 
 
 function print_piecewise_linear(io, time::Float64, node_index::Int)
+    println(io)
     print(io, "   ")
     print(io, "Initialized PLA for stage ", node_index)
     print(io, " - ", time)
