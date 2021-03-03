@@ -194,7 +194,7 @@ function print_iteration(io, log::Log)
     print(io, "   ")
 
     gap = abs(log.best_upper_bound - log.lower_bound)/max(log.best_upper_bound - log.lower_bound)
-    print(io, lpad(Printf.@sprintf("%3.2f", log.gap), 13))
+    print(io, lpad(Printf.@sprintf("%3.2f", gap), 13))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.time), 13))
     print(io, "   ")
