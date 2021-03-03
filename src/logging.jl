@@ -257,7 +257,7 @@ function print_piecewise_linear(io, time::Float64, node_index::Int)
 end
 
 function log_piecewise_linear(options, node_index::Int)
-    print_piecewise_linear(options.log_file_handle, options.time() - options.start_time, node_index)
+    print_piecewise_linear(options.log_file_handle, time() - options.start_time, node_index)
 
 end
 
