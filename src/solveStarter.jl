@@ -356,7 +356,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
 
     end
 
-    if print_level > 0
+    if options.print_level > 0
         print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), options.log_file_handle)
         print_helper(print_iteration_header, options.log_file_handle)
     end
