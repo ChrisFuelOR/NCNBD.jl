@@ -219,6 +219,8 @@ function define_2_2()
 
     demand = [1.04 1.80]
 
+    num_of_stages = 2
+
     model = SDDP.LinearPolicyGraph(
         stages = 2,
         lower_bound = 0.0,
