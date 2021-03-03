@@ -351,6 +351,9 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         TimerOutputs.@timeit NCNBD_TIMER "initialize_PLR" begin
             NCNBD.piecewiseLinearRelaxation!(node, initialAlgoParams.plaPrecision, appliedSolvers)
         end
+
+        NCNBD.log_piecewise_linear(options, node_index)
+
     end
 
     @infiltrate algoParams.infiltrate_state == :all

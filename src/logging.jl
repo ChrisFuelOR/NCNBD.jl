@@ -153,6 +153,8 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, applie
     end
     println(io, "Lagrangian solution regime:")
     println(io, initialAlgoParams.lag_status_regime)
+    println(io, "Outer loop solution regime:")
+    println(io, initialAlgoParams.outer_loop_strategy)
 
     println(io, "Used solvers:")
     println(io, "LP:", appliedSolvers.LP)
@@ -235,9 +237,24 @@ function print_iteration(io, log::Log)
     end
     print(io, "   ")
 
+    println(io)
+    flush(io)
+end
+
+
+function print_piecewise_linear(io, time::Float64, node_index::Int)
+    print(io, "   ")
+    print(io, "Initialized PLA for stage ", node_index)
+    print(io, " - ", time)
+    print(Io, " sec. elapsed.")
 
     println(io)
     flush(io)
+end
+
+function log_piecewise_linear(options, node_index::Int)
+    print_piecewise_linear(options.log_file_handle, options.time() - options.start_time, node_index)
+
 end
 
 
