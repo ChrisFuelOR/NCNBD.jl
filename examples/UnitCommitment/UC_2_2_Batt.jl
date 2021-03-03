@@ -114,7 +114,7 @@ function unitCommitment()
         level_factor=level_factor,
         cut_selection=cut_selection,
         lag_status_regime=lag_status_regime,
-        outer_loop_strategy::Symbol = :approx,
+        outer_loop_strategy=outer_loop_strategy,
     )
 end
 
