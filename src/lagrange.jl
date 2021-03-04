@@ -79,6 +79,12 @@ function _kelley(
             JuMP.set_lower_bound(x[i], -dual_bound)
             JuMP.set_upper_bound(x[i], dual_bound)
         end
+
+        if dualsense == MOI.MIN_SENSE
+            JuMP.set_lower_bound(θ, -Inf)
+        else
+            JuMP.set_upper_bound(θ, Inf)
+        end
     end
 
     # CUTTING-PLANE METHOD

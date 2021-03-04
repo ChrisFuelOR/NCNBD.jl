@@ -856,6 +856,8 @@ function get_dual_variables_backward(
         # SOLUTION WITH BOUNDED DUAL VARIABLES
         ########################################################################
         if boundCheck == false
+            dual_vars = dual_vars_initial
+
             # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
             ########################################################################
             if algoParams.lagrangian_method == :kelley
