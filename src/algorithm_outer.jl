@@ -17,6 +17,9 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
         TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
             inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
         end
+    else
+        model.ext[:total_cuts] = 0
+        model.ext[:active_cuts] = 0    
     end
 
     # START AN OUTER LOOP FORWARD PASS
