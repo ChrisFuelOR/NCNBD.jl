@@ -64,7 +64,7 @@ function unitCommitment()
 
     # define infiltration level
     # TODO: Abstract data type
-    infiltrate_state = :inner
+    infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
@@ -91,7 +91,7 @@ function unitCommitment()
     # alternatives: :opt, :approx
 
     # used solvers
-    solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
+    solvers = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"]
 
     # CALL METHOD WITH PARAMETERS
     ############################################################################
