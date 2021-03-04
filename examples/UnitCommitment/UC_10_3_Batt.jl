@@ -64,7 +64,7 @@ function unitCommitment()
 
     # define infiltration level
     # TODO: Abstract data type
-    infiltrate_state = :none
+    infiltrate_state = :inner
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
     # define regime for initializing duals for Lagrangian relaxation
@@ -72,7 +72,7 @@ function unitCommitment()
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :bundle_level
+    lagrangian_method = :kelley
     # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5
