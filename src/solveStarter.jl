@@ -434,10 +434,12 @@ function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
             return result_outer.status
         end
 
-       # Piecewise linear refinement
-       TimerOutputs.@timeit NCNBD_TIMER "refine_PLR" begin
-            NCNBD.piecewise_linear_refinement(model, appliedSolvers)
-       end
+        if model.ext[:outer_iteration] > 1
+           # Piecewise linear refinement
+           TimerOutputs.@timeit NCNBD_TIMER "refine_PLR" begin
+                NCNBD.piecewise_linear_refinement(model, appliedSolvers)
+            end
+        end
 
     end
 end
