@@ -72,12 +72,12 @@ function unitCommitment()
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :bundle_level
+    lagrangian_method = :kelley
     # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5
     bundle_factor = 1.0
-    level_factor = 0.8
+    level_factor = 0.2
 
     # cut selection strategy
     cut_selection = true
