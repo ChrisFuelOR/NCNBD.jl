@@ -851,6 +851,8 @@ function get_dual_variables_backward(
             end
         end
 
+        @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
+
         # SOLUTION WITH BOUNDED DUAL VARIABLES
         ########################################################################
         if boundCheck == false
