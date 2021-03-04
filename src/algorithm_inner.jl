@@ -853,42 +853,42 @@ function get_dual_variables_backward(
 
         @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
 
-        # SOLUTION WITH BOUNDED DUAL VARIABLES
-        ########################################################################
-        if boundCheck == false
-            dual_vars = dual_vars_initial
-
-            # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
-            ########################################################################
-            if algoParams.lagrangian_method == :kelley
-                results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
-                lag_obj = results.lag_obj
-                lag_iterations = results.iterations
-                lag_status = lag_status
-            elseif algoParams.lagrangian_method == :bundle_level
-                results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
-                lag_obj = results.lag_obj
-                lag_iterations = results.iterations
-                lag_status = lag_status
-            end
-
-            # OPTIMAL VALUE CHECKS
-            ########################################################################
-            if algoParams.lag_status_regime == :rigorous
-                if lag_status == :conv
-                    error("Lagrangian dual converged to value < solver_obj.")
-                elseif lag_status == :sub
-                    error("Lagrangian dual had subgradients zero without LB=UB.")
-                elseif lag_status == :iter
-                    error("Solving Lagrangian dual exceeded iteration limit.")
-                end
-
-            elseif algoParams.lag_status_regime == :lax
-                # all cuts will be used as they are valid even though not necessarily tight
-            end
-        end
-
-        @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
+        # # SOLUTION WITH BOUNDED DUAL VARIABLES
+        # ########################################################################
+        # if boundCheck == false
+        #     dual_vars = dual_vars_initial
+        #
+        #     # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
+        #     ########################################################################
+        #     if algoParams.lagrangian_method == :kelley
+        #         results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
+        #         lag_obj = results.lag_obj
+        #         lag_iterations = results.iterations
+        #         lag_status = lag_status
+        #     elseif algoParams.lagrangian_method == :bundle_level
+        #         results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
+        #         lag_obj = results.lag_obj
+        #         lag_iterations = results.iterations
+        #         lag_status = lag_status
+        #     end
+        #
+        #     # OPTIMAL VALUE CHECKS
+        #     ########################################################################
+        #     if algoParams.lag_status_regime == :rigorous
+        #         if lag_status == :conv
+        #             error("Lagrangian dual converged to value < solver_obj.")
+        #         elseif lag_status == :sub
+        #             error("Lagrangian dual had subgradients zero without LB=UB.")
+        #         elseif lag_status == :iter
+        #             error("Solving Lagrangian dual exceeded iteration limit.")
+        #         end
+        #
+        #     elseif algoParams.lag_status_regime == :lax
+        #         # all cuts will be used as they are valid even though not necessarily tight
+        #     end
+        # end
+        #
+        # @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
 
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
