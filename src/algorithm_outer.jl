@@ -254,6 +254,7 @@ function solve_subproblem_forward_outer(
     set_incoming_lin_state(node, state)
     parameterize_lin(node, noise)
     linearizedSubproblem = node.ext[:linSubproblem]
+    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
     JuMP.optimize!(linearizedSubproblem)
     bound_value = JuMP.objective_value(node.ext[:linSubproblem])
 
