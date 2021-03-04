@@ -126,7 +126,7 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, applie
 
     # Printint the file name
     print(io, "calling ")
-    print(io, @__FILE__)
+    print(io, @__DIR__)
     println(io)
     println(io)
 
