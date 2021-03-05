@@ -1167,7 +1167,7 @@ function inner_loop_forward_sigma_test(
             )
         end
 
-        #@infiltrate
+        @infiltrate
 
         # SOLVE NON-REGULARIZED PROBLEM
         ########################################################################
@@ -1185,7 +1185,7 @@ function inner_loop_forward_sigma_test(
             )
         end
 
-        #@infiltrate
+        @infiltrate
 
         # COMPARE SOLUTIONS
         ########################################################################
