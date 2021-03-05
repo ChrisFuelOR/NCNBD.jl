@@ -1140,7 +1140,7 @@ function inner_loop_forward_sigma_test(
 
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
-        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>1))
         #set_optimizer(linearizedSubproblem, GAMS.Optimizer)
         #JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", appliedSolvers.MILP)
         #JuMP.set_optimizer_attribute(linearizedSubproblem, "optcr", 0.0)
