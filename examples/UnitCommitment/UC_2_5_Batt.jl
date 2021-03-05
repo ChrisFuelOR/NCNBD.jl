@@ -113,6 +113,7 @@ function unitCommitment()
         bundle_alpha=bundle_alpha,
         bundle_factor=bundle_factor,
         level_factor=level_factor,
+        solvers=solvers,
         cut_selection=cut_selection,
         lag_status_regime=lag_status_regime,
         outer_loop_strategy=outer_loop_strategy,
