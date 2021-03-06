@@ -172,7 +172,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound      Gap     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound      Gap       Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
     )
     flush(io)
 end
@@ -194,7 +194,7 @@ function print_iteration(io, log::Log)
     print(io, "   ")
 
     gap = abs(log.best_upper_bound - log.lower_bound)/max(log.best_upper_bound, log.lower_bound)
-    print(io, lpad(Printf.@sprintf("%3.2f", gap), 6))
+    print(io, lpad(Printf.@sprintf("%3.4f", gap), 8))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.time), 13))
     print(io, "   ")
