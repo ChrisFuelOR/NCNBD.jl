@@ -1,4 +1,4 @@
-module UC_2_10_Batt
+module UC_5_5_Batt
 
 export unitCommitment
 export unitCommitment_with_parameters
@@ -55,11 +55,11 @@ function unitCommitment()
     time_limit = 10800
 
     # define sigma
-    sigma = [0.0, 1000.0]
+    sigma = [0.0, 1000.0, 1000.0, 1000.0, 1000.0]
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = [[0.4], [0.64], [0.3], [1.04], [0.56], [0.2], [0.24], [0.22], [0.16], [0.12], [0.05, 0.1], [0.05, 0.1]] # apart from one generator always 1/5 of pmax
+    plaPrecision = [[0.4], [0.64], [0.3], [1.04], [0.56], [0.05, 0.1], [0.05, 0.1]] # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor = 1/7
 
     # define infiltration level
@@ -128,9 +128,9 @@ function unitCommitment_with_parameters(;
     lagrangian_iteration_limit::Int = 1000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
-    sigma::Vector{Float64} = [0.0, 1000.0],
+    sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Array{Vector{Float64},1} = [[0.4], [0.64], [0.3], [1.04], [0.56], [0.2], [0.24], [0.22], [0.16], [0.12], [0.05, 0.1], [0.05, 0.1]], # apart from one generator always 1/5 of pmax
+    plaPrecision::Array{Vector{Float64},1} = [[0.4], [0.64], [0.3], [1.04], [0.56], [0.05, 0.1], [0.05, 0.1]], # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
@@ -146,7 +146,7 @@ function unitCommitment_with_parameters(;
 
     # DEFINE MODEL
     ############################################################################
-    model = define_2_10()
+    model = define_5_5()
 
     # DEFINE SOLVERS
     ############################################################################
@@ -192,7 +192,7 @@ function unitCommitment_with_parameters(;
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = iteration_limit, print_level = 2,
                 time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_2_10_batt.log")
+                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_5_5_batt.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
@@ -201,7 +201,7 @@ function unitCommitment_with_parameters(;
 end
 
 
-function define_2_10()
+function define_4_10()
 
     generators = [
         Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
@@ -209,11 +209,6 @@ function define_2_10()
         Generator(0, 0.0, 1.5, 0.3, 17.0, 2.0, 57.1, 57.1, 0.3, 0.3, -0.39, 0.95, 0.0),
         Generator(1, 4.0, 5.0, 1.04, 13.2, 4.0, 47.1, 47.1, 1.04, 1.04, -0.14, 1.09, 0.0),
         Generator(1, 2.8, 2.8, 0.56, 14.3, 4.0, 56.9, 56.9, 0.56, 0.56, -0.24, 1.0, 0.0),
-        Generator(0, 0.0, 0.8, 0.16, 40.2, 4.0, 141.5, 141.5, 0.3, 0.3, -0.85, 1.0, 0.0),
-        Generator(1, 1.2, 1.2, 0.24, 17.1, 2.0, 113.5, 113.5, 0.24, 0.24, -0.53, 0.91, 0.0),
-        Generator(1, 1.1, 1.1, 0.22, 17.3, 2.0, 42.6, 42.6, 0.22, 0.22, -0.62, 0.95, 0.0),
-        Generator(0, 0.0, 0.8, 0.16, 59.4, 4.0, 50.6, 50.6, 0.16, 0.16, -0.79, 0.95, 0.0),
-        Generator(0, 0.0, 0.6, 0.12, 19.5, 2.0, 57.1, 57.1, 0.12, 0.12, -1.13, 1.0, 0.0),
     ]
     num_of_generators = size(generators,1)
 
@@ -226,12 +221,12 @@ function define_2_10()
     demand_penalty = 5e2
     emission_price = 2.5
 
-    demand = [8.83 9.15]
+    demand = [8.0 8.5 10.1 11.49 12.36]
 
-    num_of_stages = 2
+    num_of_stages = 5
 
     model = SDDP.LinearPolicyGraph(
-        stages = 2,
+        stages = 5,
         lower_bound = 0.0,
         optimizer = GAMS.Optimizer,
         sense = :Min

@@ -122,10 +122,10 @@ end
 
 
 function unitCommitment_with_parameters(;
-    epsilon_outerLoop::Float64 = 1e-3,
-    epsilon_innerLoop::Float64 = 1e-3,
-    lagrangian_atol::Float64 = 1e-8,
-    lagrangian_rtol::Float64 = 1e-8,
+    epsilon_outerLoop::Float64 = 1e-2,
+    epsilon_innerLoop::Float64 = 1e-2,
+    lagrangian_atol::Float64 = 1e-4,
+    lagrangian_rtol::Float64 = 1e-4,
     lagrangian_iteration_limit::Int = 1000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
@@ -138,10 +138,10 @@ function unitCommitment_with_parameters(;
     lagrangian_method::Symbol = :kelley, # alternatives: :kelley, :bundle_proximal, :bundle_level
     bundle_alpha::Float64 = 0.5,
     bundle_factor::Float64 = 1.0,
-    level_factor::Float64 = 0.4,
-    solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
+    level_factor::Float64 = 0.2,
+    solvers::Vector{String} = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"],
     cut_selection::Bool = true,
-    lag_status_regime::Symbol = :rigorous,
+    lag_status_regime::Symbol = :lax,
     outer_loop_strategy::Symbol = :approx,
     )
 
