@@ -1,4 +1,4 @@
-module UC_5_5
+module UC_4_5
 
 export unitCommitment
 export unitCommitment_with_parameters
@@ -44,7 +44,7 @@ function unitCommitment()
     time_limit = 10800
 
     # define sigma
-    sigma = [0.0, 50.0, 50.0, 500.0, 1000.0]
+    sigma = [0.0, 1000.0, 1000.0, 1000.0]
     sigma_factor = 2.0
 
     # define initial approximations
@@ -108,9 +108,9 @@ function unitCommitment_with_parameters(;
     lagrangian_iteration_limit::Int = 1000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
-    sigma::Vector{Float64} = [0.0, 50.0, 50.0, 500.0, 1000.0],
+    sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Vector{Float64} = [0.2, 0.32, 0.15, 0.52, 0.28], # apart from one generator always 1/5 of pmax
+    plaPrecision::Vector{Float64} = [0.4, 0.64, 0.3, 1.04, 0.56], # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
@@ -124,7 +124,7 @@ function unitCommitment_with_parameters(;
 
     # DEFINE MODEL
     ############################################################################
-    model = define_5_5()
+    model = define_4_5()
 
     # DEFINE SOLVERS
     ############################################################################
@@ -168,7 +168,7 @@ function unitCommitment_with_parameters(;
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = iteration_limit, print_level = 2,
                 time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_5_5.log")
+                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_4_5.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
@@ -177,7 +177,7 @@ function unitCommitment_with_parameters(;
 end
 
 
-function define_5_5()
+function define_4_5()
 
     generators = [
         Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
@@ -191,10 +191,10 @@ function define_5_5()
     demand_penalty = 5e2
     emission_price = 2.5
 
-    demand = [8.0 8.5 10.1 11.49 12.36]
+    demand = [8.0 8.5 10.1 11.49]
 
     model = SDDP.LinearPolicyGraph(
-        stages = 5,
+        stages = 4,
         lower_bound = 0.0,
         optimizer = GAMS.Optimizer,
         sense = :Min
@@ -366,4 +366,4 @@ end
 
 end
 
-#unitCommitment_5_5()
+#unitCommitment_3_5()

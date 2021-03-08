@@ -249,6 +249,29 @@ function solve_subproblem_forward_outer(
     #     nothing
     # end
 
+    # SOLVE THE MILP TO OBTAIN A BOUND ON THE MINLP
+    ############################################################################
+    set_incoming_lin_state(node, state)
+    parameterize_lin(node, noise)
+    linearizedSubproblem = node.ext[:linSubproblem]
+    JuMP.optimize!(linearizedSubproblem)
+    bound_value = JuMP.objective_value(node.ext[:linSubproblem])
+
+    # BOUND THE MINLP OPTIMAL VALUE
+    # This way, a lot of branch-and-cut nodes can be pruned early on
+    ############################################################################
+    if model.ext[:outer_iteration] == 1
+        if model.objective_sense == JuMP.MOI.MIN_SENSE
+            JuMP.@constraint(node.subproblem, bound_constr, JuMP.objective_function(node.subproblem) >= bound_value)
+        else
+            JuMP.@constraint(node.subproblem, bound_constr, JuMP.objective_function(node.subproblem) <= bound_value)
+        end
+    else
+        JuMP.set_normalized_rhs(node.subproblem[:bound_constr], bound_value)
+    end
+
+    # SOLVE THE MINLP
+    ############################################################################
     JuMP.optimize!(node.subproblem)
 
     #if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT

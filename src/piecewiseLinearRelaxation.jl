@@ -18,7 +18,7 @@ Determines a piecewise linear relaxation for all nonlinear functions in node.
 
 """
 
-function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appliedSolvers::NCNBD.AppliedSolvers)
+function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Vector{Float64}, appliedSolvers::NCNBD.AppliedSolvers)
 
     # MILP subproblem
     linearizedSubproblem = node.ext[:linSubproblem]
@@ -34,8 +34,11 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Float64, appl
         # Get nonlinear function
         nlFunction = node.ext[:nlFunctions][nlIndex]
 
+        # Get precision
+        plaPrecision_value = plaPrecision[nlIndex]
+
         # Determine Triangulation
-        nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision)
+        nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision_value)
 
         # Define overestimation/underestimation problem
         estimationProblem = JuMP.Model()
