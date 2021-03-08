@@ -33,10 +33,10 @@ end
 function unitCommitment()
 
     # define required tolerances
-    epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-3
-    lagrangian_atol = 1e-8
-    lagrangian_rtol = 1e-8
+    epsilon_outerLoop = 1e-2
+    epsilon_innerLoop = 1e-2
+    lagrangian_atol = 1e-4
+    lagrangian_rtol = 1e-4
 
     # define time and iteration limits
     lagrangian_iteration_limit = 10000
@@ -48,8 +48,8 @@ function unitCommitment()
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = [0.4, 0.64, 0.3] # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor = 1/7
+    plaPrecision = [0.2, 0.32, 0.15] # apart from one generator always 1/5 of pmax
+    binaryPrecisionFactor = 1/15
 
     # define infiltration level
     # TODO: Abstract data type
@@ -193,7 +193,7 @@ function define_10_3()
     num_of_generators = size(generators,1)
 
     demand_penalty = 5e2
-    emission_price = 2.5
+    emission_price = 25
 
     demand = [1.04 1.8 1.72 1.15 1.24 1.33 1.4 2.1 1.8 1.2]
 
