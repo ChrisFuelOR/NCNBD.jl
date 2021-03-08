@@ -120,6 +120,7 @@ function inner_loop_iteration(
              subproblem_size,
              algoParams.epsilon_innerLoop,
              model.ext[:lag_iterations],
+             model.ext[:lag_status],
              model.ext[:total_cuts],
              model.ext[:active_cuts],
          ),
@@ -397,6 +398,7 @@ function inner_loop_backward_pass(
     cuts = Dict{T,Vector{Any}}(index => Any[] for index in keys(model.nodes))
 
     model.ext[:lag_iterations] = Int[]
+    model.ext[:lag_status] = Symbol[]
 
     for index = length(scenario_path):-1:1
         outgoing_state = sampled_states[index]
@@ -507,6 +509,9 @@ function inner_loop_backward_pass(
             end
             push!(cuts[node_index], new_cuts)
             push!(model.ext[:lag_iterations], sum(items.lag_iterations))
+            #TODO: Has to be adapted for stochastic case
+            push!(model.ext[:lag_status], items.lag_status[1])
+
             # if options.refine_at_similar_nodes
             #     # Refine the bellman function at other nodes with the same
             #     # children, e.g., in the same stage of a Markovian policy graph.
@@ -574,6 +579,7 @@ function solve_all_children(
                 push!(items.belief, belief)
                 push!(items.bin_state, items.bin_state[sol_index])
                 push!(items.lag_iterations, items.lag_iterations[sol_index])
+                push!(items.lag_status, items.lag_status[sol_index])
             else
                 # Update belief state, etc.
                 if belief_state !== nothing
@@ -613,6 +619,7 @@ function solve_all_children(
                 push!(items.belief, belief)
                 push!(items.bin_state, subproblem_results.bin_state)
                 push!(items.lag_iterations, subproblem_results.iterations)
+                push!(items.lag_status, subproblem_results.lag_status)
                 items.cached_solutions[(child.term, noise.term)] = length(items.duals)
                 #TODO: Maybe add binary precision
             end
@@ -726,12 +733,14 @@ function solve_subproblem_backward(
         bin_state = lagrangian_results.bin_state
         objective = lagrangian_results.intercept
         iterations = lagrangian_results.iterations
+        lag_status = lagrangian_results.lag_status
     else
         #NOTE: not required in my implementation
         dual_values = Dict{Symbol,Float64}()
         bin_state = Dict{Symbol,BinaryState}()
         objective = solver_obj
         iterations = 0
+        lag_status = :none
     end
 
     @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
@@ -751,6 +760,7 @@ function solve_subproblem_backward(
         bin_state = bin_state,
         objective = objective,
         iterations = iterations,
+        lag_status = lag_status,
     )
 end
 
@@ -776,6 +786,7 @@ function get_dual_variables_backward(
 
     lag_obj = 0
     lag_iterations = 0
+    lag_status = :none
 
     # Create an SDDiP integrality_handler here to store the Lagrangian dual information
     #TODO: Store tolerances in algoParams
@@ -806,19 +817,31 @@ function get_dual_variables_backward(
             results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
             lag_obj = results.lag_obj
             lag_iterations = results.iterations
-        elseif algoParams.lagrangian_method == :bundle_proximal
-            results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
-            lag_obj = results.lag_obj
-            lag_iterations = results.iterations
+            lag_status = results.lag_status
         elseif algoParams.lagrangian_method == :bundle_level
             results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, nothing)
             lag_obj = results.lag_obj
             lag_iterations = results.iterations
+            lag_status = results.lag_status
         end
 
-        @infiltrate !isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
-        @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+        # OPTIMAL VALUE CHECKS
+        ########################################################################
+        if algoParams.lag_status_regime == :rigorous
+            if lag_status == :conv
+                error("Lagrangian dual converged to value < solver_obj.")
+            elseif lag_status == :sub
+                error("Lagrangian dual had subgradients zero without LB=UB.")
+            elseif lag_status == :iter
+                error("Solving Lagrangian dual exceeded iteration limit.")
+            end
 
+        elseif algoParams.lag_status_regime == :lax
+            # all cuts will be used as they are valid even though not necessarily tight
+        end
+
+        # DUAL VARIABLE BOUND CHECK
+        ########################################################################
         # if one of the dual variables exceeds the bounds (e.g. in case of an
         # discontinuous value function), use bounded version of Kelley's method
         boundCheck = true
@@ -831,29 +854,45 @@ function get_dual_variables_backward(
         # SOLUTION WITH BOUNDED DUAL VARIABLES
         ########################################################################
         if boundCheck == false
+            # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
+            ########################################################################
             if algoParams.lagrangian_method == :kelley
                 results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
                 lag_obj = results.lag_obj
                 lag_iterations = results.iterations
-            elseif algoParams.lagrangian_method == :bundle_proximal
-                results = _bundle_proximal(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
-                lag_obj = results.lag_obj
-                lag_iterations = results.iterations
+                lag_status = lag_status
             elseif algoParams.lagrangian_method == :bundle_level
                 results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
                 lag_obj = results.lag_obj
                 lag_iterations = results.iterations
+                lag_status = lag_status
             end
 
-            @assert isapprox(solver_obj, results.lag_obj, atol = integrality_handler.atol, rtol = integrality_handler.rtol)
+            # OPTIMAL VALUE CHECKS
+            ########################################################################
+            if algoParams.lag_status_regime == :rigorous
+                if lag_status == :conv
+                    error("Lagrangian dual converged to value < solver_obj.")
+                elseif lag_status == :sub
+                    error("Lagrangian dual had subgradients zero without LB=UB.")
+                elseif lag_status == :iter
+                    error("Solving Lagrangian dual exceeded iteration limit.")
+                end
+
+            elseif algoParams.lag_status_regime == :lax
+                # all cuts will be used as they are valid even though not necessarily tight
+            end
         end
 
         @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
+
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
         rethrow(e)
     end
 
+    # SET DUAL VARIABLES AND STATES CORRECTLY FOR RETURN
+    ############################################################################
     for (i, name) in enumerate(keys(node.ext[:backward_data][:bin_states]))
         # TODO (maybe) change dual signs inside kelley to match LP duals
         dual_values[name] = -dual_vars[i]
@@ -869,6 +908,7 @@ function get_dual_variables_backward(
         bin_state=bin_state,
         intercept=lag_obj,
         iterations=lag_iterations,
+        lag_status=lag_status,
     )
 end
 

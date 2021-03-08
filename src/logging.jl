@@ -17,6 +17,7 @@ struct Log
     subproblem_size::Union{Dict{Symbol,Int64},Nothing}
     opt_tolerance::Float64
     lag_iterations::Union{Vector{Int},Nothing}
+    lag_status::Union{Vector{Symbol},Nothing}
     total_cuts::Int
     active_cuts::Int
 end
@@ -144,12 +145,14 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, applie
     println(io, initialAlgoParams.lagrangian_rtol)
     println(io, "Dual initialization:")
     println(io, initialAlgoParams.dual_initialization_regime)
-    println(io, "Lagrangian method:")
+    println(io, "Lagrangian solution method:")
     println(io, initialAlgoParams.lagrangian_method)
     if initialAlgoParams.lagrangian_method == :bundle_level
         println(io, "Level parameter:")
         println(io, initialAlgoParams.level_factor)
     end
+    println(io, "Lagrangian solution regime:")
+    println(io, initialAlgoParams.lag_status_regime)
 
     println(io, "Used solvers:")
     println(io, "LP:", appliedSolvers.LP)
@@ -167,7 +170,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations      ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
     )
     flush(io)
 end
@@ -225,6 +228,13 @@ function print_iteration(io, log::Log)
         print(io, lpad(Printf.@sprintf(""), 19))
     end
     print(io, "   ")
+    if !isnothing(log.lag_status)
+        print(io, log.lag_status)
+    else
+        print(io, lpad(Printf.@sprintf(""), 19))
+    end
+    print(io, "   ")
+
 
     println(io)
     flush(io)

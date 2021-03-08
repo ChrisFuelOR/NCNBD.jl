@@ -72,6 +72,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
             nothing,
             algoParams.epsilon_outerLoop,
             nothing,
+            nothing,
             model.ext[:total_cuts],
             model.ext[:active_cuts],
         ),
@@ -164,7 +165,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # ===== End: starting state for infinite horizon =====
 
         # Set optimizer to MINLP optimizer
-        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
+        #set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
         #set_optimizer(node.subproblem, GAMS.Optimizer)
         #JuMP.set_optimizer_attribute(node.subproblem, "Solver", appliedSolvers.MINLP)
         #JuMP.set_optimizer_attribute(node.subproblem, "optcr", 0.0)
@@ -179,15 +180,18 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
                 incoming_state_value, # no State struct!
                 noise,
                 scenario_path[1:depth],
-                algoParams.infiltrate_state,
+                algoParams,
+                appliedSolvers,
                 require_duals = false,
             )
         end
         # Cumulate the stage_objective.
         cumulative_value += subproblem_results.stage_objective
         # Determine the first stage objective
-        if node_index == 1
+        if node_index == 1 && algoParams.outer_loop_strategy == :opt
             first_stage_objective = subproblem_results.objective
+        elseif node_index == 1 && algoParams.outer_loop_strategy == :approx
+            first_stage_objective = subproblem_results.bound
         end
         # Set the outgoing state value as the incoming state value for the next
         # node.
@@ -232,7 +236,8 @@ function solve_subproblem_forward_outer(
     state::Dict{Symbol,Float64},
     noise,
     scenario_path::Vector{Tuple{T,S}},
-    infiltrate_state::Symbol;
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers;
     require_duals::Bool,
 ) where {T,S}
     #TODO: We can actually delete the duals part here
@@ -272,17 +277,28 @@ function solve_subproblem_forward_outer(
 
     # SOLVE THE MINLP
     ############################################################################
-    JuMP.optimize!(node.subproblem)
+    if algoParams.outer_loop_strategy == :opt
+        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
+        JuMP.optimize!(node.subproblem)
+
+    elseif algoParams.outer_loop_strategy == :approx
+        relativeGap = algoParams.epsilon_outerLoop * 0.01
+        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>relativeGap))
+        JuMP.optimize!(node.subproblem)
+    end
+
+    state = SDDP.get_outgoing_state(node)
+    stage_objective = SDDP.stage_objective_value(node.stage_objective)
+    # upper bound (for minimization), primal solution
+    objective = JuMP.objective_value(node.subproblem)
+    # not actual objective, but lower bound (for minimization), dual solution
+    bound = JuMP.objective_bound(node.subproblem)
 
     #if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
     #    SDDP.attempt_numerical_recovery(node)
     #end
 
-    state = SDDP.get_outgoing_state(node)
-    stage_objective = SDDP.stage_objective_value(node.stage_objective)
-    objective = JuMP.objective_value(node.subproblem)
-
-    @infiltrate infiltrate_state in [:all, :outer]
+    @infiltrate algoParams.infiltrate_state in [:all, :outer]
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -303,6 +319,7 @@ function solve_subproblem_forward_outer(
         duals = dual_values,
         objective = objective,
         stage_objective = stage_objective,
+        bound = bound
     )
 end
 

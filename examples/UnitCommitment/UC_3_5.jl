@@ -33,10 +33,10 @@ end
 function unitCommitment()
 
     # define required tolerances
-    epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-3
-    lagrangian_atol = 1e-8
-    lagrangian_rtol = 1e-8
+    epsilon_outerLoop = 1e-2
+    epsilon_innerLoop = 1e-2
+    lagrangian_atol = 1e-4
+    lagrangian_rtol = 1e-4
 
     # define time and iteration limits
     lagrangian_iteration_limit = 10000
@@ -71,6 +71,13 @@ function unitCommitment()
     # cut selection strategy
     cut_selection = true
 
+    # lagrangian status
+    lag_status_regime = :lax
+    # alternatives: :rigorous, :lax
+
+    # outer loop strategy
+    outer_loop_strategy = :approx
+
     # used solvers
     solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
 
@@ -96,6 +103,8 @@ function unitCommitment()
         level_factor=level_factor,
         solvers=solvers,
         cut_selection=cut_selection,
+        lag_status_regime=lag_status_regime,
+        outer_loop_strategy=outer_loop_strategy
     )
 end
 
@@ -120,6 +129,8 @@ function unitCommitment_with_parameters(;
     level_factor::Float64 = 0.4,
     solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
     cut_selection::Bool = true,
+    lag_status_regime::Symbol = :lax,
+    outer_loop_strategy::Symbol = :approx,
     )
 
     # DEFINE MODEL
@@ -153,7 +164,8 @@ function unitCommitment_with_parameters(;
                             lagrangian_rtol, lagrangian_iteration_limit,
                             dual_initialization_regime, lagrangian_method,
                             bundle_alpha, bundle_factor, level_factor,
-                            cut_selection)
+                            cut_selection, lag_status_regime,
+                            outer_loop_strategy)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
@@ -161,7 +173,8 @@ function unitCommitment_with_parameters(;
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
                                       bundle_factor, level_factor,
-                                      cut_selection)
+                                      cut_selection, lag_status_regime,
+                                      outer_loop_strategy)
 
     # SOLVE MODEL
     ############################################################################

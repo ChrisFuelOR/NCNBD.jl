@@ -46,6 +46,8 @@ mutable struct AlgoParams
     bundle_factor :: Float64
     level_factor :: Float64
     cut_selection :: Bool
+    lag_status_regime :: Symbol
+    outer_loop_strategy :: Symbol
 end
 
 # Struct for initial algorithmic parameters that remain fixed and characterize a model run
@@ -65,6 +67,8 @@ struct InitialAlgoParams
     bundle_factor :: Float64
     level_factor :: Float64
     cut_selection :: Bool
+    lag_status_regime :: Symbol
+    outer_loop_strategy :: Symbol
 end
 
 # struct for Simplex
@@ -192,6 +196,7 @@ struct BackwardPassItems{T,U}
     belief::Vector{Float64}
     bin_state::Vector{Dict{Symbol,BinaryState}}
     lag_iterations::Vector{Int}
+    lag_status::Vector{Symbol}
     #TODO: We could also store sigma and binary precision here possibly
     function BackwardPassItems(T, U)
         return new{T,U}(
@@ -204,6 +209,7 @@ struct BackwardPassItems{T,U}
             Float64[],
             Dict{Symbol,Float64}[],
             Int[],
+            Symbol[]
         )
     end
 end
