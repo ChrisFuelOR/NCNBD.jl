@@ -55,7 +55,7 @@ struct InitialAlgoParams
     epsilon_outerLoop :: Float64
     epsilon_innerLoop :: Float64
     binaryPrecision :: Dict{Symbol, Float64}
-    plaPrecision :: Vector{Float64}
+    plaPrecision :: Array{Vector{Float64},1}
     sigma :: Vector{Float64}
     sigma_factor :: Float64
     lagrangian_atol :: Float64
@@ -83,7 +83,7 @@ end
 # better to use dicts instead of vectors without index?
 mutable struct Triangulation
     simplices :: Vector{Simplex}
-    precision :: Float64
+    plaPrecision_vector :: Vector{Float64}
     plrVariables :: Vector{JuMP.VariableRef}
     plrConstraints :: Vector{JuMP.ConstraintRef}
     # An extension dictionary.

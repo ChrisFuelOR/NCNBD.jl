@@ -126,7 +126,7 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, applie
 
     # Printint the file name
     print(io, "calling ")
-    print(io, @__FILE__)
+    print(io, @__DIR__)
     println(io)
     println(io)
 
@@ -153,6 +153,8 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, applie
     end
     println(io, "Lagrangian solution regime:")
     println(io, initialAlgoParams.lag_status_regime)
+    println(io, "Outer loop solution regime:")
+    println(io, initialAlgoParams.outer_loop_strategy)
 
     println(io, "Used solvers:")
     println(io, "LP:", appliedSolvers.LP)
@@ -170,7 +172,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound     Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound      Gap       Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
     )
     flush(io)
 end
@@ -189,6 +191,10 @@ function print_iteration(io, log::Log)
     print(io, lpad(Printf.@sprintf("%1.6e", log.best_upper_bound), 16))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.lower_bound), 13))
+    print(io, "   ")
+
+    gap = abs(log.best_upper_bound - log.lower_bound)/max(log.best_upper_bound, log.lower_bound)
+    print(io, lpad(Printf.@sprintf("%3.4f", gap), 8))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.time), 13))
     print(io, "   ")
@@ -235,9 +241,25 @@ function print_iteration(io, log::Log)
     end
     print(io, "   ")
 
+    println(io)
+    flush(io)
+end
+
+
+function print_piecewise_linear(io, time::Float64, node_index::Int)
+    println(io)
+    print(io, "   ")
+    print(io, "Initialized PLA for stage ", node_index)
+    print(io, " - ", time)
+    print(io, " sec. elapsed.")
 
     println(io)
     flush(io)
+end
+
+function log_piecewise_linear(options, node_index::Int)
+    print_piecewise_linear(options.log_file_handle, time() - options.start_time, node_index)
+
 end
 
 

@@ -13,8 +13,13 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
 
     # CALL THE INNER LOOP AND GET BACK RESULTS IF CONVERGED
     ############################################################################
-    TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
-        inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
+    if model.ext[:outer_iteration] > 1
+        TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
+            inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
+        end
+    else
+        model.ext[:total_cuts] = 0
+        model.ext[:active_cuts] = 0    
     end
 
     # START AN OUTER LOOP FORWARD PASS
@@ -22,13 +27,6 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     TimerOutputs.@timeit NCNBD_TIMER "outer_loop_solution" begin
         forward_results = NCNBD.outer_loop_forward_pass(model, options, algoParams, appliedSolvers)
     end
-    # forward_pass options?
-    # TODO: values of which variables to return in optimal solution? Only states or all?
-
-    # DETERMINE AN ALTERNATIVE LOWER BOUND
-    ############################################################################
-    # TODO: TO BE IMPLEMENTED
-    # This can just be determined as the solution of the first stage from forward_results
 
     # CHECK IF BEST KNOWN SOLUTION HAS BEEN IMPROVED
     ############################################################################
@@ -259,6 +257,7 @@ function solve_subproblem_forward_outer(
     set_incoming_lin_state(node, state)
     parameterize_lin(node, noise)
     linearizedSubproblem = node.ext[:linSubproblem]
+    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
     JuMP.optimize!(linearizedSubproblem)
     bound_value = JuMP.objective_value(node.ext[:linSubproblem])
 

@@ -16,6 +16,14 @@ include("UC_4_5.jl")
 include("UC_4_10.jl")
 include("UC_5_5.jl")
 
+include("UC_2_2_Batt.jl")
+include("UC_2_5_Batt.jl")
+include("UC_2_10_Batt.jl")
+include("UC_3_10_Batt.jl")
+include("UC_4_10_Batt.jl")
+include("UC_5_5_Batt.jl")
+include("UC_10_3_Batt.jl")
+
 function start_instances()
 
     # INSTANCE DEFINITIONS
@@ -48,18 +56,18 @@ function start_instances()
 
                       #[UC_3_10, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
                       #[UC_3_10, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #[UC_3_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_3_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-
-                      #[UC_4_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_4_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #[UC_4_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_4_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-
-                      #[UC_4_10, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_4_10, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #[UC_4_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      [UC_4_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      # [UC_3_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      # [UC_3_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      #
+                      # #[UC_4_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      # #[UC_4_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      # [UC_4_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      # [UC_4_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      #
+                      # #[UC_4_10, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      # #[UC_4_10, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      # [UC_4_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      # [UC_4_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
 
                       #[UC_5_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
                       #[UC_5_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
@@ -70,6 +78,25 @@ function start_instances()
                       # [UC_5_5, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2],
                       # [UC_5_5, 1e-4, 1e-4, :none, :kelley, 0.0],
                       # [UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2],
+
+                      #[UC_2_5_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      #[UC_2_5_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+
+                      #[UC_2_10_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      #[UC_2_10_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+
+                      #[UC_3_10_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      #[UC_3_10_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+
+                      #[UC_4_10_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      #[UC_4_10_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+
+                      [UC_5_5_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      [UC_5_5_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+
+                      [UC_10_3_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      [UC_10_3_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+
                       ]
 
     for parameter_set in parameter_sets
@@ -84,7 +111,7 @@ function start_instances()
         rgap_inner_loop = parameter_set[8]
 
         # used solvers
-        solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
+        solvers = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"]
 
         module_name.unitCommitment_with_parameters(
             lagrangian_atol=lagrangian_atol, lagrangian_rtol=lagrangian_rtol,
