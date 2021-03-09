@@ -809,7 +809,7 @@ function get_dual_variables_backward(
     end
     dual_bound = algoParams.sigma[node_index] * B_norm_bound
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
+    @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange] || node.ext[:linSubproblem].ext[:sddp_policy_graph].ext[:iteration] == 12
     try
         # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################

@@ -99,7 +99,7 @@ function _kelley(
         ########################################################################
         # Evaluate the real function and a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks, :yes)
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] #|| model.ext[:sddp_policy_graph].ext[:iteration] == 8
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] == 12
 
         # ADD CUTTING PLANE
         ########################################################################
@@ -433,6 +433,7 @@ function _bundle_level(
         ########################################################################
         # Evaluate the real function and determine a subgradient
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks, :yes)
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] == 12
 
         # ADD CUTTING PLANE TO APPROX_MODEL
         ########################################################################
@@ -472,7 +473,7 @@ function _bundle_level(
         @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
         f_approx = JuMP.objective_value(approx_model)
 
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] == 12
 
         # Construct the gap (not directly used for termination, though)
         #gap = abs(best_actual - f_approx)
@@ -547,7 +548,7 @@ function _bundle_level(
         # can be deleted with the next update of GAMS.jl
         replace!(dual_vars, NaN => 0)
 
-        @infiltrate algoParams.infiltrate_state in [:all, :lagrange]
+        @infiltrate algoParams.infiltrate_state in [:all, :lagrange] || model.ext[:sddp_policy_graph].ext[:iteration] == 12
 
         # Logging
         print_helper(print_lag_iteration, lag_log_file_handle, iter, f_approx, best_actual, f_actual)
