@@ -6,7 +6,6 @@ using GAMS
 #using SCIP
 using Infiltrator
 
-include("UC_1_10.jl")
 include("UC_2_2.jl")
 include("UC_2_5.jl")
 include("UC_2_10.jl")
