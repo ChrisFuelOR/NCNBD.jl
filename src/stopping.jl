@@ -12,9 +12,9 @@ stopping_rule_status(::DeterministicStopping) = :DeterministicStopping
 
 function convergence_test(graph::SDDP.PolicyGraph, log::Vector{Log}, rule::DeterministicStopping, loop::Symbol)
 
-    bool_1 = abs(log[end].upper_bound - log[end].lower_bound)/abs(max(log[end].upper_bound, log[end].lower_bound)) <= log[end].opt_tolerance
+    bool_1 = abs(log[end].best_upper_bound - log[end].lower_bound)/abs(max(log[end].best_upper_bound, log[end].lower_bound)) <= log[end].opt_tolerance
     #bool_1 = log[end].upper_bound - log[end].lower_bound <= log[end].opt_tolerance
-    bool_2 = log[end].upper_bound - log[end].lower_bound >= -1e-4
+    bool_2 = log[end].best_upper_bound - log[end].lower_bound >= -1e-4
 
     return bool_1 && bool_2
 end
