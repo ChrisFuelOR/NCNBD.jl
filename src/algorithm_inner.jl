@@ -220,7 +220,7 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
         linearizedSubproblem = node.ext[:linSubproblem]
 
         if appliedSolvers.MILP == "CPLEX"
-            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>1))
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>0))
         elseif appliedSolvers.MILP == "Gurobi"
             set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "NumericFocus"=>1))
         else
@@ -689,7 +689,7 @@ function solve_subproblem_backward(
 
     # reset solver as it may have been changed
     if appliedSolvers.MILP == "CPLEX"
-        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>1))
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>0))
     elseif appliedSolvers.MILP == "Gurobi"
         set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "NumericFocus"=>1))
     else

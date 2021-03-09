@@ -260,7 +260,7 @@ function solve_subproblem_forward_outer(
         linearizedSubproblem = node.ext[:linSubproblem]
 
         if appliedSolvers.MILP == "CPLEX"
-            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>1))
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>0))
         elseif appliedSolvers.MILP == "Gurobi"
             set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "NumericFocus"=>1))
         else
