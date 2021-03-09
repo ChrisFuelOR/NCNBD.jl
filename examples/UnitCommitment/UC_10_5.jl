@@ -114,7 +114,7 @@ function unitCommitment_with_parameters(;
     lagrangian_atol::Float64 = 1e-4,
     lagrangian_rtol::Float64 = 1e-4,
     lagrangian_iteration_limit::Int = 1000,
-    iteration_limit::Int=1000,
+    iteration_limit::Int=10000,
     time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
@@ -203,7 +203,7 @@ function define_10_5()
     # NOTE: start-up cost is scaled if less than 24 stages are used, shut-down cost not
 
     demand_penalty = 5e2
-    emission_price = 10
+    emission_price = 5
 
     demand = [4.27 4.01 3.69 3.66 3.72 4.01 4.79 5.85 6.84 7.14]
 
