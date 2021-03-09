@@ -19,7 +19,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
         end
     else
         model.ext[:total_cuts] = 0
-        model.ext[:active_cuts] = 0    
+        model.ext[:active_cuts] = 0
     end
 
     # START AN OUTER LOOP FORWARD PASS
@@ -256,21 +256,23 @@ function solve_subproblem_forward_outer(
     ############################################################################
     set_incoming_lin_state(node, state)
     parameterize_lin(node, noise)
-    linearizedSubproblem = node.ext[:linSubproblem]
-    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
-    JuMP.optimize!(linearizedSubproblem)
-    bound_value = JuMP.objective_value(node.ext[:linSubproblem])
+    if model.ext[:outer_iteration] > 1
+        linearizedSubproblem = node.ext[:linSubproblem]
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+        JuMP.optimize!(linearizedSubproblem)
+        bound_value = JuMP.objective_value(node.ext[:linSubproblem])
+    end
 
     # BOUND THE MINLP OPTIMAL VALUE
     # This way, a lot of branch-and-cut nodes can be pruned early on
     ############################################################################
-    if model.ext[:outer_iteration] == 1
+    if model.ext[:outer_iteration] == 2
         if model.objective_sense == JuMP.MOI.MIN_SENSE
             JuMP.@constraint(node.subproblem, bound_constr, JuMP.objective_function(node.subproblem) >= bound_value)
         else
             JuMP.@constraint(node.subproblem, bound_constr, JuMP.objective_function(node.subproblem) <= bound_value)
         end
-    else
+    elseif model.ext[:outer_iteration] > 2
         JuMP.set_normalized_rhs(node.subproblem[:bound_constr], bound_value)
     end
 
