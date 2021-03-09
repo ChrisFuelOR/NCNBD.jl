@@ -49,7 +49,7 @@ function unitCommitment()
 
     # define initial approximations
     plaPrecision = [[0.238], [0.226], [0.204], [0.564], [0.646]] # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor = 1/7
+    binaryPrecisionFactor = 1/15
 
     # define infiltration level
     infiltrate_state = :none
@@ -203,7 +203,7 @@ function define_10_5()
     # NOTE: start-up cost is scaled if less than 24 stages are used, shut-down cost not
 
     demand_penalty = 5e2
-    emission_price = 25
+    emission_price = 10
 
     demand = [4.27 4.01 3.69 3.66 3.72 4.01 4.79 5.85 6.84 7.14]
 
