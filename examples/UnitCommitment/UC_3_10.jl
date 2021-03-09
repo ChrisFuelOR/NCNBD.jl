@@ -163,7 +163,8 @@ function unitCommitment_with_parameters(;
                             lagrangian_rtol, lagrangian_iteration_limit,
                             dual_initialization_regime, lagrangian_method,
                             bundle_alpha, bundle_factor, level_factor,
-                            cut_selection, lag_status_regime)
+                            cut_selection, lag_status_regime,
+                            outer_loop_strategy)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
@@ -171,7 +172,8 @@ function unitCommitment_with_parameters(;
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
                                       bundle_factor, level_factor,
-                                      cut_selection, lag_status_regime)
+                                      cut_selection, lag_status_regime,
+                                      outer_loop_strategy)
 
     # SOLVE MODEL
     ############################################################################
