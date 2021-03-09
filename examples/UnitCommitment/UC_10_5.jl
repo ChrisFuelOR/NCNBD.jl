@@ -118,8 +118,8 @@ function unitCommitment_with_parameters(;
     time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Array{Array{Float64,1},1} = [[0.238], [0.226], [0.204], [0.564], [0.646]], # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor::Float64 = 1/7,
+    plaPrecision::Array{Array{Float64,1},1} = [[0.119], [0.113], [0.102], [0.282], [0.323]], # apart from one generator always 1/5 of pmax
+    binaryPrecisionFactor::Float64 = 1/15,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
     lagrangian_method::Symbol = :kelley, # alternatives: :kelley, :bundle_proximal, :bundle_level
@@ -203,7 +203,7 @@ function define_10_5()
     # NOTE: start-up cost is scaled if less than 24 stages are used, shut-down cost not
 
     demand_penalty = 5e2
-    emission_price = 5
+    emission_price = 2.5
 
     demand = [4.27 4.01 3.69 3.66 3.72 4.01 4.79 5.85 6.84 7.14]
 
