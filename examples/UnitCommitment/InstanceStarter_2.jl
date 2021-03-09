@@ -66,10 +66,11 @@ function start_instances()
 
                       #[UC_5_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
                       #[UC_5_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      [UC_5_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      [UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      [UC_5_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      #[UC_5_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      #[UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       [UC_5_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      [UC_5_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+
                       ]
 
     for parameter_set in parameter_sets
