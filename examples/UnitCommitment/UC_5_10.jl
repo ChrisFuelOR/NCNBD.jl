@@ -113,7 +113,7 @@ function unitCommitment_with_parameters(;
     epsilon_innerLoop::Float64 = 1e-2,
     lagrangian_atol::Float64 = 1e-4,
     lagrangian_rtol::Float64 = 1e-4,
-    lagrangian_iteration_limit::Int = 1000,
+    lagrangian_iteration_limit::Int = 10000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0],
