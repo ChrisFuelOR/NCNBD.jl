@@ -50,10 +50,17 @@ function _kelley(
 
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(Gurobi.Optimizer)
-    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
-    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
 
-    #JuMP.set_silent(approx_model)
+    if appliedSolvers.Lagrange == "CPLEX"
+        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+        set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+    elseif appliedSolvers.Lagrange == "Gurobi"
+        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "NumericFocus"=>1))
+        set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+    else
+        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
+        set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+    end
 
     # Objective estimate and Lagrangian duals
     @variables approx_model begin
@@ -173,7 +180,13 @@ function _kelley(
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
 
-            set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+            if appliedSolvers.MILP == "CPLEX"
+                set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>1))
+            elseif appliedSolvers.MILP == "Gurobi"
+                set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "NumericFocus"=>1))
+            else
+                set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+            end
 
             return (lag_obj = best_actual, iterations = iter, lag_status = lag_status)
         end
@@ -389,10 +402,16 @@ function _bundle_level(
     # Approximation of Lagrangian dual as a function of the multipliers
     approx_model = JuMP.Model(Gurobi.Optimizer)
     # even if objective is quadratic, it should be possible to use Gurobi
-    set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
-    set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
-
-    #JuMP.set_silent(approx_model)
+    if appliedSolvers.Lagrange == "CPLEX"
+        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+        set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+    elseif appliedSolvers.Lagrange == "Gurobi"
+        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "NumericFocus"=>1))
+        set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+    else
+        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
+        set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+    end
 
     # NOTE Determine sign for bundle regularization term
     # fact = (dualsense == JuMP.MOI.MIN_SENSE ? 1 : -1)
@@ -519,8 +538,14 @@ function _bundle_level(
                 JuMP.fix(bin_state, integrality_handler.old_rhs[i], force = true)
             end
 
-            set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
-
+            if appliedSolvers.MILP == "CPLEX"
+                set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>1))
+            elseif appliedSolvers.MILP == "Gurobi"
+                set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "NumericFocus"=>1))
+            else
+                set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+            end
+            
             return (lag_obj = best_actual, iterations = iter, lag_status = lag_status)
         end
 

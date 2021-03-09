@@ -258,7 +258,15 @@ function solve_subproblem_forward_outer(
     parameterize_lin(node, noise)
     if model.ext[:outer_iteration] > 1
         linearizedSubproblem = node.ext[:linSubproblem]
-        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+
+        if appliedSolvers.MILP == "CPLEX"
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>1))
+        elseif appliedSolvers.MILP == "Gurobi"
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "NumericFocus"=>1))
+        else
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+        end
+
         JuMP.optimize!(linearizedSubproblem)
         bound_value = JuMP.objective_value(node.ext[:linSubproblem])
     end
