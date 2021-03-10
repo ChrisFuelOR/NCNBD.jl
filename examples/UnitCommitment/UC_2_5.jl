@@ -356,7 +356,7 @@ function define_2_5()
 
             # user-defined function for expression building
             nlf_valve_expr = function nonl_function_expr(y::JuMP.VariableRef)
-                return :($(generators[i].v_a) * $(y)^2 + $(generators[i].v_b) * $(y)^2 + $(generators[i].v_d) * abs(sin($(generators[i].v_e) * ($(generators[i].pmin) - $(y)))))
+                return :($(generators[i].v_a) * $(y)^2 + $(generators[i].v_b) * $(y) + $(generators[i].v_d) * abs(sin($(generators[i].v_e) * ($(generators[i].pmin) - $(y)))))
             end
 
             # define nonlinear expression
