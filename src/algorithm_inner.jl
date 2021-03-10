@@ -314,6 +314,8 @@ function solve_subproblem_forward_inner(
     #     nothing
     # end
 
+    @infiltrate infiltrate_state in [:all, :inner]
+    
     # REGULARIZE SUBPROBLEM
     ############################################################################
     if node_index > 1
