@@ -40,8 +40,6 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{
         # Determine Triangulation
         nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision_vector)
 
-        @infiltrate
-
         # Define overestimation/underestimation problem
         estimationProblem = JuMP.Model()
         set_optimizer(estimationProblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.NLP, "optcr"=>0.0))
@@ -123,8 +121,6 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         number_of_simplices = (size(valve_points, 1) - 1) * steps_per_valve_interval
 
-        @infiltrate
-
         # pre-allocate storage for simplices
         simplices = Vector{NCNBD.Simplex}(undef, Int(number_of_simplices))
 
@@ -159,8 +155,6 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
             @assert isapprox(xcoord, ub, atol=1e-9)
 
         end
-
-        @infiltrate
 
         # set up triangulation
         triangulation = Triangulation(simplices, plaPrecision_vector, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())
