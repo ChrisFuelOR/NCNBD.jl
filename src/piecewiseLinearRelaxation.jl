@@ -96,7 +96,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         steps_per_valve_interval = plaPrecision_vector[1]
 
         # get interval to be considered
-        lower_bound = JuMP.lower_bound(nlFunction.variablesContained[1])
+        lower_bound = JuMP.lower_bound(nlFunction.pmin)
         upper_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
 
         # initialize parameters

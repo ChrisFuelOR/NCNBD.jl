@@ -101,6 +101,7 @@ mutable struct NonlinearFunction
     triangulation :: Union{Triangulation, Nothing} # to store related Triangulation
     shift :: Symbol #either :shift or :noshift (for some concave cases)
     refineType :: Symbol #either :replace or :keep
+    pmin :: Float64 #required for lower bound of generation variable
     ext::Dict{Symbol,Any} # required to store solutions later
 
     function NonlinearFunction(
@@ -111,6 +112,7 @@ mutable struct NonlinearFunction
         variablesContained::Vector{JuMP.VariableRef},
         shift::Symbol,
         refineType::Symbol,
+        pmin::Float64,
          )
         return new(
             nonlinfunc_eval,
@@ -121,7 +123,8 @@ mutable struct NonlinearFunction
             nothing,
             shift,
             refineType,
-            Dict{Symbol,Any}()
+            pmin,
+            Dict{Symbol,Any}(),
         )
     end
 end

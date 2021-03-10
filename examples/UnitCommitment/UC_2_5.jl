@@ -371,9 +371,8 @@ function define_2_5()
             gen = linearizedSubproblem[:gen][i]
             aux = linearizedSubproblem[:valve_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_valve_eval, nlf_valve_expr, aux, [gen.out], :noshift, :replace)
+            nlf = NCNBD.NonlinearFunction(nlf_valve_eval, nlf_valve_expr, aux, [gen.out], :noshift, :replace, generators[i].pmin)
             push!(nonlinearFunctionList, nlf)
-
         end
 
         # store in ext of subproblem
