@@ -253,14 +253,14 @@ function define_2_5()
 
         JuMP.@variable(
                     subproblem,
-                    generators[i].pmin <= gen[i = 1:num_of_generators] <= generators[i].pmax,
+                    0.0 <= gen[i = 1:num_of_generators] <= generators[i].pmax,
                     SDDP.State,
                     initial_value = generators[i].gen_ini
                     )
 
         JuMP.@variable(
                     linearizedSubproblem,
-                    generators[i].pmin <= gen[i = 1:num_of_generators] <= generators[i].pmax,
+                    0.0 <= gen[i = 1:num_of_generators] <= generators[i].pmax,
                     NCNBD.State,
                     initial_value = generators[i].gen_ini
                     )
