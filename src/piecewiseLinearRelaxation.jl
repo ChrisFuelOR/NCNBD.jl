@@ -89,47 +89,74 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
     dimension = size(nlFunction.variablesContained, 1)
 
     # 1D
+    # NOTE: CHANGED FOR VALVE POINT EFFECT; NO EQUIDISTANT STEPS BUT VALVE POINTS
     ############################################################################
     if dimension == 1
         # get plaPrecision
-        plaPrecision = plaPrecision_vector[1]
+        steps_per_valve_interval = plaPrecision_vector[1]
 
         # get interval to be considered
         lower_bound = JuMP.lower_bound(nlFunction.variablesContained[1])
         upper_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
-        interval_length = upper_bound - lower_bound
 
-        # determine uniform grid based on user-given precision
-        # note: if precision is no exact divisor of interval_length, the precision
-        # is decreased to obtain a uniform grid
-        number_of_simplices = ceil(Int64, interval_length / plaPrecision)
-        simplex_length = interval_length / number_of_simplices
+        # initialize parameters
+        k = 0
+        e = 5
+
+        # initialize valve-point storage
+        valve_points = Float64[]
+
+        # push lower_bound to valve points
+        push!(valve_points, lower_bound)
+
+        # determine relevant valve-points
+        looping = true
+        while looping
+            valve_point = k/e * pi + lower_bound
+            if valve_point > upper_bound
+                looping = false
+                push!(valve_points, upper_bound)
+            else
+                push!(valve_points, valve_point)
+                k += 1
+            end
+        end
+
+        number_of_simplices = (size(valve_points, 1) - 1) * steps_per_valve_interval
 
         # pre-allocate storage for simplices
         simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
 
-        # add first values to vectors
-        xcoord = lower_bound
-        func_value = nlFunction.nonlinfunc_eval(xcoord)
-
         # determine simplices
-        for simplexIndex = 1 : number_of_simplices
-            # add empty Simplex
-            simplices[simplexIndex] = NCNBD.Simplex(Array{Float64,2}(undef, dimension+1, 1), Vector{Float64}(undef, dimension+1), Inf, Inf)
+        for valve_interval_index = 1:size(valve_points, 1)-1
+            lb = valve_points[valve_interval_index]
+            ub = valve_points[valve_interval_index + 1]
+            interval_length = ub - lb
+            step_length = interval_length / steps_per_valve_interval
 
-            # add both vertices
-            simplices[simplexIndex].vertices[1,1] = xcoord
-            xcoord += simplex_length
-            simplices[simplexIndex].vertices[2,1] = xcoord
+            # add first values to vectors
+            xcoord = lb
+            func_value = nlFunction.nonlinfunc_eval(xcoord)
 
-            # add function values
-            simplices[simplexIndex].vertice_values[1] = func_value
-            func_value =  nlFunction.nonlinfunc_eval(xcoord)
-            simplices[simplexIndex].vertice_values[2] = func_value
+            for step_index = 1:steps_per_valve_interval
+                # add empty Simplex
+                simplices[simplexIndex] = NCNBD.Simplex(Array{Float64,2}(undef, dimension+1, 1), Vector{Float64}(undef, dimension+1), Inf, Inf)
+
+                # add both vertices
+                simplices[simplexIndex].vertices[1,1] = xcoord
+                xcoord += step_length
+                simplices[simplexIndex].vertices[2,1] = xcoord
+
+                # add function values
+                simplices[simplexIndex].vertice_values[1] = func_value
+                func_value =  nlFunction.nonlinfunc_eval(xcoord)
+                simplices[simplexIndex].vertice_values[2] = func_value
+
+            end
+
+            @assert isapprox(xcoord, ub, atol=1e-9)
 
         end
-
-        @assert isapprox(xcoord, upper_bound, atol=1e-9)
 
         # set up triangulation
         triangulation = Triangulation(simplices, plaPrecision_vector, JuMP.VariableRef[], JuMP.ConstraintRef[], Dict{Symbol,Any}())

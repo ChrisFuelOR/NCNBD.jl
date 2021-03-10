@@ -48,7 +48,7 @@ function unitCommitment()
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = [[0.238], [0.226], [0.204], [0.564], [0.646]] # apart from one generator always 1/5 of pmax
+    plaPrecision = [[1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0]]
     binaryPrecisionFactor = 1/7
 
     # define infiltration level
@@ -285,7 +285,7 @@ function define_2_5()
             JuMP.@variable(problem, shutdown_costs[i=1:num_of_generators] >= 0.0)
             JuMP.@variable(problem, fuel_costs[i=1:num_of_generators] >= 0.0)
             JuMP.@variable(problem, om_costs[i=1:num_of_generators] >= 0.0)
-            JuMP.@variable(problem, emission_costs[i=1:num_of_generators] >= 0.0)
+            #JuMP.@variable(problem, emission_costs[i=1:num_of_generators] >= 0.0)
 
             # generation bounds
             JuMP.@constraint(problem, genmin[i=1:num_of_generators], gen[i].out >= commit[i].out * generators[i].pmin)
@@ -312,8 +312,10 @@ function define_2_5()
 
             # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
             # --------------------------------------------------------------
-            JuMP.@variable(problem, emission_aux[1:num_of_generators])
-            JuMP.@constraint(problem, emissioncost[i=1:num_of_generators], emission_price * emission_aux[i] == emission_costs[i])
+            #JuMP.@variable(problem, emission_aux[1:num_of_generators])
+            #JuMP.@constraint(problem, emissioncost[i=1:num_of_generators], emission_price * emission_aux[i] == emission_costs[i])
+            #TODO: eq_fuel_costs(i,t).. fuel_costs(i,t) =g= gendata(i,"v_a")*power(gen(i,t),2) + gendata(i,"v_b")*gen(i,t) + gendata(i,"v_c")*commit(i,t) + gendata(i,"v_d") * abs(sin(gendata(i,"v_e") * (gendata(i, "Pmin")- gen(i,t))));
+
         end
 
         # DEFINE STAGE OBJECTIVE
@@ -326,7 +328,7 @@ function define_2_5()
         demand_slack = subproblem[:demand_slack]
         load_shedding = subproblem[:load_shedding]
         SDDP.@stageobjective(subproblem,
-                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
+                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] for i in 1:num_of_generators)
                             + demand_slack * demand_penalty + load_shedding * demand_penalty)
 
         su_costs = linearizedSubproblem[:startup_costs]
@@ -337,7 +339,7 @@ function define_2_5()
         demand_slack = linearizedSubproblem[:demand_slack]
         load_shedding = linearizedSubproblem[:load_shedding]
         NCNBD.@lin_stageobjective(linearizedSubproblem,
-                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
+                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] for i in 1:num_of_generators)
                             + demand_slack * demand_penalty + load_shedding * demand_penalty)
 
         # DEFINE NONLINEARITY
