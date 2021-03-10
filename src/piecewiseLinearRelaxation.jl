@@ -126,8 +126,10 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         number_of_simplices = (size(valve_points, 1) - 1) * steps_per_valve_interval
 
+        @infiltrate
+
         # pre-allocate storage for simplices
-        simplices = Vector{NCNBD.Simplex}(undef, number_of_simplices)
+        simplices = Vector{NCNBD.Simplex}(undef, Int(number_of_simplices))
 
         # determine simplices
         for valve_interval_index = 1:size(valve_points, 1)-1
