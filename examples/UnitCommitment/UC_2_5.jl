@@ -328,7 +328,6 @@ function define_2_5()
         sd_costs = subproblem[:shutdown_costs]
         f_costs = subproblem[:fuel_costs]
         om_costs = subproblem[:om_costs]
-        em_costs = subproblem[:emission_costs]
         demand_slack = subproblem[:demand_slack]
         load_shedding = subproblem[:load_shedding]
         SDDP.@stageobjective(subproblem,
@@ -339,7 +338,6 @@ function define_2_5()
         sd_costs = linearizedSubproblem[:shutdown_costs]
         f_costs = linearizedSubproblem[:fuel_costs]
         om_costs = linearizedSubproblem[:om_costs]
-        em_costs = linearizedSubproblem[:emission_costs]
         demand_slack = linearizedSubproblem[:demand_slack]
         load_shedding = linearizedSubproblem[:load_shedding]
         NCNBD.@lin_stageobjective(linearizedSubproblem,
