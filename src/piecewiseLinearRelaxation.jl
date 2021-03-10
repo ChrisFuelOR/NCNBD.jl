@@ -97,7 +97,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 
         # get interval to be considered
         pmin = nlFunction.pmin
-        lower_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
+        lower_bound = JuMP.lower_bound(nlFunction.variablesContained[1])
         upper_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
 
         # initialize parameters
