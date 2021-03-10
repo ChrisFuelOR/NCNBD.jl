@@ -108,9 +108,6 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         # initialize valve-point storage
         valve_points = Float64[]
 
-        # push lower_bound to valve points
-        push!(valve_points, lower_bound)
-
         # determine relevant valve-points
         looping = true
         while looping
