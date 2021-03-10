@@ -209,7 +209,7 @@ function define_5_10()
     # NOTE: start-up cost is scaled if less than 24 stages are used, shut-down cost not
 
     demand_penalty = 5e2
-    emission_price = 25
+    emission_price = 5
 
     demand = [8.53 8.02 7.36 7.31 7.44]
 
