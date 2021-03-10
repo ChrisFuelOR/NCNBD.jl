@@ -118,8 +118,8 @@ function unitCommitment_with_parameters(;
     time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Array{Array{Float64,1},1} = [[0.236], [0.238], [0.21], [0.226], [0.204], [0.38], [0.416], [0.422], [0.564], [0.646]], # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor::Float64 = 1/7,
+    plaPrecision::Array{Array{Float64,1},1} = [[0.118], [0.119], [0.105], [0.113], [0.102], [0.19], [0.208], [0.211], [0.282], [0.232]], # apart from one generator always 1/5 of pmax
+    binaryPrecisionFactor::Float64 = 1/15,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
     lagrangian_method::Symbol = :kelley, # alternatives: :kelley, :bundle_proximal, :bundle_level
