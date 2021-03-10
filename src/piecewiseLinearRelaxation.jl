@@ -121,8 +121,6 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
             end
         end
 
-        @infiltrate
-
         number_of_simplices = (size(valve_points, 1) - 1) * steps_per_valve_interval
 
         # pre-allocate storage for simplices
@@ -140,7 +138,6 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
             xcoord = lb
             func_value = nlFunction.nonlinfunc_eval(xcoord)
 
-            @infiltrate
             for step_index = 1:steps_per_valve_interval
 
                 simplexIndex = Int((valve_interval_index - 1) * steps_per_valve_interval + step_index)
@@ -157,12 +154,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
                 func_value =  nlFunction.nonlinfunc_eval(xcoord)
                 simplices[simplexIndex].vertice_values[2] = func_value
 
-                @infiltrate
-
             end
-
-            @infiltrate
-
             @assert isapprox(xcoord, ub, atol=1e-9)
 
         end
