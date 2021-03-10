@@ -140,7 +140,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
             func_value = nlFunction.nonlinfunc_eval(xcoord)
 
             for step_index = 1:steps_per_valve_interval
-                simplexIndex = (valve_interval_index - 1) * steps_per_valve_interval + step_index
+                simplexIndex = Int((valve_interval_index - 1) * steps_per_valve_interval + step_index)
                 # add empty Simplex
                 simplices[simplexIndex] = NCNBD.Simplex(Array{Float64,2}(undef, dimension+1, 1), Vector{Float64}(undef, dimension+1), Inf, Inf)
 
