@@ -18,15 +18,20 @@ struct Generator
     gen_ini::Float64
     pmax::Float64
     pmin::Float64
-    fuel_cost::Float64
+    #fuel_cost::Float64
     om_cost::Float64
     su_cost::Float64
     sd_cost::Float64
     ramp_up::Float64
     ramp_dw::Float64
-    a::Float64
-    b::Float64
-    c::Float64
+    #a::Float64
+    #b::Float64
+    #c::Float64
+    v_a::Float64
+    v_b::Float64
+    v_c::Float64
+    v_d::Float64
+    v_e::Float64
 end
 
 
@@ -39,7 +44,7 @@ function unitCommitment()
     lagrangian_rtol = 1e-4
 
     # define time and iteration limits
-    lagrangian_iteration_limit = 1000
+    lagrangian_iteration_limit = 10000
     iteration_limit = 1000
     time_limit = 10800
 
@@ -48,7 +53,7 @@ function unitCommitment()
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = [[0.236], [0.238], [0.21], [0.226], [0.204], [0.38], [0.416], [0.422], [0.564], [0.646]] # apart from one generator always 1/5 of pmax
+    plaPrecision = [[1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0]]
     binaryPrecisionFactor = 1/7
 
     # define infiltration level
@@ -78,7 +83,7 @@ function unitCommitment()
     outer_loop_strategy = :approx
 
     # used solvers
-    solvers = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"]
+    solvers = ["CPLEX", "CPLEX", "LINDOGLOBAL", "LINDOGLOBAL", "CPLEX"]
 
     # CALL METHOD WITH PARAMETERS
     ############################################################################
@@ -118,15 +123,15 @@ function unitCommitment_with_parameters(;
     time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Array{Array{Float64,1},1} = [[0.118], [0.119], [0.105], [0.113], [0.102], [0.19], [0.208], [0.211], [0.282], [0.232]], # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor::Float64 = 1/15,
+    plaPrecision::Array{Array{Float64,1},1} = [[1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0], [1.0]], # apart from one generator always 1/5 of pmax
+    binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
     lagrangian_method::Symbol = :kelley, # alternatives: :kelley, :bundle_proximal, :bundle_level
     bundle_alpha::Float64 = 0.5,
     bundle_factor::Float64 = 1.0,
     level_factor::Float64 = 0.2,
-    solvers::Vector{String} = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"],
+    solvers::Vector{String} = ["CPLEX", "CPLEX", "LINDOGLOBAL", "LINDOGLOBAL", "CPLEX"],
     cut_selection::Bool = true,
     lag_status_regime::Symbol = :lax,
     outer_loop_strategy::Symbol = :approx,
@@ -180,7 +185,7 @@ function unitCommitment_with_parameters(;
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = iteration_limit, print_level = 2,
                 time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_5_10_f.log")
+                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_5_10_v.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
@@ -203,13 +208,14 @@ function define_5_10()
         Generator(1, 2.2, 2.82, 0.85, 61.59, 0.0, 486.81, 49.0, 0.9, 0.79, -0.3, 1.1, 0.0),
         Generator(0, 0.0, 3.23, 0.84, 54.92, 0.0, 503.34, 50.0, 1.01, 1.00, -0.24, 1.04, 0.0),
     ]
+
     num_of_generators = size(generators,1)
 
     # NOTE: no fixed cost, no fixed emission cost, no o&m cost so far
     # NOTE: start-up cost is scaled if less than 24 stages are used, shut-down cost not
 
     demand_penalty = 5e2
-    emission_price = 25
+    #emission_price = 25
 
     demand = [8.53 8.02 7.36 7.31 7.44]
 
@@ -290,7 +296,7 @@ function define_5_10()
             JuMP.@variable(problem, shutdown_costs[i=1:num_of_generators] >= 0.0)
             JuMP.@variable(problem, fuel_costs[i=1:num_of_generators] >= 0.0)
             JuMP.@variable(problem, om_costs[i=1:num_of_generators] >= 0.0)
-            JuMP.@variable(problem, emission_costs[i=1:num_of_generators] >= 0.0)
+            #JuMP.@variable(problem, emission_costs[i=1:num_of_generators] >= 0.0)
 
             # generation bounds
             JuMP.@constraint(problem, genmin[i=1:num_of_generators], gen[i].out >= commit[i].out * generators[i].pmin)
@@ -312,13 +318,13 @@ function define_5_10()
             # costs
             JuMP.@constraint(problem, startupcost[i=1:num_of_generators], num_of_stages/24 * generators[i].su_cost * up[i] == startup_costs[i])
             JuMP.@constraint(problem, shutdowncost[i=1:num_of_generators], generators[i].sd_cost * down[i] == shutdown_costs[i])
-            JuMP.@constraint(problem, fuelcost[i=1:num_of_generators], generators[i].fuel_cost * gen[i].out == fuel_costs[i])
+            #JuMP.@constraint(problem, fuelcost[i=1:num_of_generators], generators[i].fuel_cost * gen[i].out == fuel_costs[i])
             JuMP.@constraint(problem, omcost[i=1:num_of_generators], generators[i].om_cost * gen[i].out == om_costs[i])
 
             # DEFINE EXPRESSION GRAPH FOR NONLINEAR CONSTRAINT
             # --------------------------------------------------------------
-            JuMP.@variable(problem, emission_aux[1:num_of_generators])
-            JuMP.@constraint(problem, emissioncost[i=1:num_of_generators], emission_price * emission_aux[i] == emission_costs[i])
+            JuMP.@variable(problem, valve_aux[1:num_of_generators])
+            JuMP.@constraint(problem, fuelcost[i=1:num_of_generators], generators[i].v_c * commit[i].out + valve_aux[i] == fuel_costs[i])
         end
 
         # DEFINE STAGE OBJECTIVE
@@ -327,54 +333,51 @@ function define_5_10()
         sd_costs = subproblem[:shutdown_costs]
         f_costs = subproblem[:fuel_costs]
         om_costs = subproblem[:om_costs]
-        em_costs = subproblem[:emission_costs]
         demand_slack = subproblem[:demand_slack]
         load_shedding = subproblem[:load_shedding]
         SDDP.@stageobjective(subproblem,
-                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
+                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] for i in 1:num_of_generators)
                             + demand_slack * demand_penalty + load_shedding * demand_penalty)
 
         su_costs = linearizedSubproblem[:startup_costs]
         sd_costs = linearizedSubproblem[:shutdown_costs]
         f_costs = linearizedSubproblem[:fuel_costs]
         om_costs = linearizedSubproblem[:om_costs]
-        em_costs = linearizedSubproblem[:emission_costs]
         demand_slack = linearizedSubproblem[:demand_slack]
         load_shedding = linearizedSubproblem[:load_shedding]
         NCNBD.@lin_stageobjective(linearizedSubproblem,
-                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
+                            sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] for i in 1:num_of_generators)
                             + demand_slack * demand_penalty + load_shedding * demand_penalty)
 
         # DEFINE NONLINEARITY
         # ------------------------------------------------------------------
-        nlf_emission_eval =
+        nlf_valve_eval =
 
         for i in 1:num_of_generators
             # user-defined function for evaluation
-            nlf_emission_eval = function nonl_function_eval(y::Float64)
-                return generators[i].b * y + generators[i].a * y^2
+            nlf_valve_eval = function nonl_function_eval(y::Float64)
+                return generators[i].v_a * y^2 + generators[i].v_b * y + generators[i].v_d * abs(sin(generators[i].v_e * (generators[i].pmin - y)))
             end
 
             # user-defined function for expression building
-            nlf_emission_expr = function nonl_function_expr(y::JuMP.VariableRef)
-                return :($(generators[i].b) * $(y) + $(generators[i].a) * $(y)^2)
+            nlf_valve_expr = function nonl_function_expr(y::JuMP.VariableRef)
+                return :($(generators[i].v_a) * $(y)^2 + $(generators[i].v_b) * $(y) + $(generators[i].v_d) * abs(sin($(generators[i].v_e) * ($(generators[i].pmin) - $(y)))))
             end
 
             # define nonlinear expression
             gen = subproblem[:gen][i]
-            nonlinear_exp = nlf_emission_expr(gen.out)
+            nonlinear_exp = nlf_valve_expr(gen.out)
 
             # nonlinear constraint
-            aux = subproblem[:emission_aux][i]
+            aux = subproblem[:valve_aux][i]
             JuMP.add_NL_constraint(subproblem, :($(aux) == $(nonlinear_exp)))
 
             # define nonlinearFunction struct for PLA
             gen = linearizedSubproblem[:gen][i]
-            aux = linearizedSubproblem[:emission_aux][i]
+            aux = linearizedSubproblem[:valve_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, aux, [gen.out], :noshift, :replace)
+            nlf = NCNBD.NonlinearFunction(nlf_valve_eval, nlf_valve_expr, aux, [gen.out], :noshift, :replace, generators[i].pmin)
             push!(nonlinearFunctionList, nlf)
-
         end
 
         # store in ext of subproblem
