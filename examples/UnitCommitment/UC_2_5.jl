@@ -185,7 +185,7 @@ function unitCommitment_with_parameters(;
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = iteration_limit, print_level = 2,
                 time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_2_5_f.log")
+                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_2_5_v.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
