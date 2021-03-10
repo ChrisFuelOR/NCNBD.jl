@@ -40,6 +40,8 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{
         # Determine Triangulation
         nlFunction.triangulation = triangulate!(nlFunction, node, plaPrecision_vector)
 
+        @infiltrate
+
         # Define overestimation/underestimation problem
         estimationProblem = JuMP.Model()
         set_optimizer(estimationProblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.NLP, "optcr"=>0.0))
