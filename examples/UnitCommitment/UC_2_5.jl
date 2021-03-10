@@ -83,7 +83,7 @@ function unitCommitment()
     outer_loop_strategy = :approx
 
     # used solvers
-    solvers = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"]
+    solvers = ["CPLEX", "CPLEX", "LINDOGLOBAL", "LINDOGLOBAL", "CPLEX"]
 
     # CALL METHOD WITH PARAMETERS
     ############################################################################
@@ -131,7 +131,7 @@ function unitCommitment_with_parameters(;
     bundle_alpha::Float64 = 0.5,
     bundle_factor::Float64 = 1.0,
     level_factor::Float64 = 0.2,
-    solvers::Vector{String} = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"],
+    solvers::Vector{String} = ["CPLEX", "CPLEX", "LINDOGLOBAL", "LINDOGLOBAL", "CPLEX"],
     cut_selection::Bool = true,
     lag_status_regime::Symbol = :lax,
     outer_loop_strategy::Symbol = :approx,
