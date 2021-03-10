@@ -111,7 +111,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         push!(valve_points, lower_bound)
         looping = true
         while looping
-            valve_point = k/e * pi + lower_bound
+            valve_point = k/e * pi + pmin
             if valve_point > upper_bound
                 looping = false
                 push!(valve_points, upper_bound)
