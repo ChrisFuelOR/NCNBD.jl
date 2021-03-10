@@ -96,7 +96,8 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         steps_per_valve_interval = plaPrecision_vector[1]
 
         # get interval to be considered
-        lower_bound = nlFunction.pmin
+        pmin = nlFunction.pmin
+        lower_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
         upper_bound = JuMP.upper_bound(nlFunction.variablesContained[1])
 
         # initialize parameters
@@ -107,6 +108,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         valve_points = Float64[]
 
         # determine relevant valve-points
+        push!(valve_points, lower_bound)
         looping = true
         while looping
             valve_point = k/e * pi + lower_bound
