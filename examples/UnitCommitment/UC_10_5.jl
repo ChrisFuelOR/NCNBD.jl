@@ -284,7 +284,7 @@ function define_10_5()
 
             # demand slack
             JuMP.@variable(problem, demand_slack >= 0.0)
-            JuMP.@variable(problem, load_shedding >= 0.0)
+            JuMP.@variable(problem, neg_demand_slack >= 0.0)
 
             # cost variables
             JuMP.@variable(problem, startup_costs[i=1:num_of_generators] >= 0.0)
@@ -308,7 +308,7 @@ function define_10_5()
             JuMP.@constraint(problem, shutdown[i=1:num_of_generators], down[i] >= commit[i].in - commit[i].out)
 
             # load balance
-            JuMP.@constraint(problem, load, sum(gen[i].out for i in 1:num_of_generators) + demand_slack - load_shedding == demand[t] )
+            JuMP.@constraint(problem, load, sum(gen[i].out for i in 1:num_of_generators) + demand_slack - neg_demand_slack == demand[t] )
 
             # costs
             JuMP.@constraint(problem, startupcost[i=1:num_of_generators], num_of_stages/24 * generators[i].su_cost * up[i] == startup_costs[i])
@@ -329,20 +329,20 @@ function define_10_5()
         f_costs = subproblem[:fuel_costs]
         om_costs = subproblem[:om_costs]
         demand_slack = subproblem[:demand_slack]
-        load_shedding = subproblem[:load_shedding]
+        neg_demand_slack = subproblem[:neg_demand_slack]
         SDDP.@stageobjective(subproblem,
                             sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] for i in 1:num_of_generators)
-                            + demand_slack * demand_penalty + load_shedding * demand_penalty)
+                            + demand_slack * demand_penalty + neg_demand_slack * demand_penalty)
 
         su_costs = linearizedSubproblem[:startup_costs]
         sd_costs = linearizedSubproblem[:shutdown_costs]
         f_costs = linearizedSubproblem[:fuel_costs]
         om_costs = linearizedSubproblem[:om_costs]
         demand_slack = linearizedSubproblem[:demand_slack]
-        load_shedding = linearizedSubproblem[:load_shedding]
+        neg_demand_slack = linearizedSubproblem[:neg_demand_slack]
         NCNBD.@lin_stageobjective(linearizedSubproblem,
                             sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] for i in 1:num_of_generators)
-                            + demand_slack * demand_penalty + load_shedding * demand_penalty)
+                            + demand_slack * demand_penalty + neg_demand_slack * demand_penalty)
 
         # DEFINE NONLINEARITY
         # ------------------------------------------------------------------
