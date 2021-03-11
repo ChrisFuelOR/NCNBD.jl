@@ -44,7 +44,7 @@ function unitCommitment()
     lagrangian_rtol = 1e-4
 
     # define time and iteration limits
-    lagrangian_iteration_limit = 10000
+    lagrangian_iteration_limit = 1000
     iteration_limit = 1000
     time_limit = 10800
 
