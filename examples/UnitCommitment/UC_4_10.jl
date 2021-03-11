@@ -120,7 +120,7 @@ function unitCommitment_with_parameters(;
     lagrangian_rtol::Float64 = 1e-4,
     lagrangian_iteration_limit::Int = 10000,
     iteration_limit::Int=1000,
-    time_limit::Int = 10800,
+    time_limit::Int = 14400,
     sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
     plaPrecision::Array{Array{Float64,1},1} = [[2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [2.0], [2.0]], # apart from one generator always 1/5 of pmax
@@ -131,7 +131,7 @@ function unitCommitment_with_parameters(;
     bundle_alpha::Float64 = 0.5,
     bundle_factor::Float64 = 1.0,
     level_factor::Float64 = 0.2,
-    solvers::Vector{String} = ["CPLEX", "CPLEX", "LINDOGLOBAL", "LINDOGLOBAL", "CPLEX"],
+    solvers::Vector{String} = ["CPLEX", "CPLEX", "COUENNE", "LINDOGLOBAL", "CPLEX"],
     cut_selection::Bool = true,
     lag_status_regime::Symbol = :lax,
     outer_loop_strategy::Symbol = :approx,
