@@ -403,7 +403,7 @@ function _bundle_level(
     approx_model = JuMP.Model(Gurobi.Optimizer)
     # even if objective is quadratic, it should be possible to use Gurobi
     if appliedSolvers.Lagrange == "CPLEX"
-        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>1))
+        set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>0))
         set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "numericalemphasis"=>0))
     elseif appliedSolvers.Lagrange == "Gurobi"
         set_optimizer(approx_model, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0, "NumericFocus"=>1))
