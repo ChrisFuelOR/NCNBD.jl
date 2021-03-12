@@ -1,4 +1,4 @@
-module UC_24_3
+module UC_16_3
 
 export unitCommitment
 export unitCommitment_with_parameters
@@ -49,7 +49,7 @@ function unitCommitment()
     time_limit = 10800
 
     # define sigma
-    sigma = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0]
+    sigma = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0]
     sigma_factor = 2.0
 
     # define initial approximations
@@ -121,7 +121,7 @@ function unitCommitment_with_parameters(;
     lagrangian_iteration_limit::Int = 10000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
-    sigma::Vector{Float64} = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
+    sigma::Vector{Float64} = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
     sigma_factor::Float64 = 2.0,
     plaPrecision::Dict{Symbol,Array{Array{Float64,1},1}} = Dict(:valve => [[1.0], [1.0], [1.0]], :emi => [[0.226], [0.564], [0.646]]), # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
@@ -139,7 +139,7 @@ function unitCommitment_with_parameters(;
 
     # DEFINE MODEL
     ############################################################################
-    model = define_24_3()
+    model = define_16_3()
 
     # DEFINE SOLVERS
     ############################################################################
@@ -185,7 +185,7 @@ function unitCommitment_with_parameters(;
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = iteration_limit, print_level = 2,
                 time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_24_3_v_e.log")
+                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_16_3_v_e.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
@@ -194,7 +194,7 @@ function unitCommitment_with_parameters(;
 end
 
 
-function define_24_3()
+function define_16_3()
 
     generators = [
         Generator(0, 0.0, 1.13, 0.48, 0.0, 171.60, 17.0, 0.28, 0.27, -0.24, 1.02, 0.0, 6.16, 49.01, 15.12, 1.13, 5),
@@ -210,9 +210,9 @@ function define_24_3()
     demand_penalty = 5e2
     emission_price = 25
 
-    demand = [3.06 2.91 2.71 2.7 2.73 2.91 3.38 4.01 4.6 4.78 4.81 4.84 4.89 4.44 4.57 4.6 4.58 4.47 4.32 4.36 4.5 4.27 3.93 3.61]
+    demand = [3.06 2.91 2.71 2.7 2.73 2.91 3.38 4.01 4.6 4.78 4.81 4.84 4.89 4.44 4.57 4.6]
 
-    num_of_stages = 24
+    num_of_stages = 16
 
     model = SDDP.LinearPolicyGraph(
         stages = num_of_stages,
