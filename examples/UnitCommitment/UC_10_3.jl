@@ -65,7 +65,7 @@ function unitCommitment()
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :kelley
+    lagrangian_method = :bundle_level
     # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5
@@ -127,7 +127,7 @@ function unitCommitment_with_parameters(;
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
-    lagrangian_method::Symbol = :bundle_level, # alternatives: :kelley, :bundle_proximal, :bundle_level
+    lagrangian_method::Symbol = :kelley, # alternatives: :kelley, :bundle_proximal, :bundle_level
     bundle_alpha::Float64 = 0.5,
     bundle_factor::Float64 = 1.0,
     level_factor::Float64 = 0.2,
