@@ -39,7 +39,7 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Dict{Symbol,A
         if nlFunction.nl_type == :emi
             plaPrecision_vector = plaPrecision[:emi][nlIndex/2]
         elseif nlFunction.nl_type == :valve
-            plaPrecision_vector = plaPrecision[:valve][floor(nlIndex/2 + 1)]
+            plaPrecision_vector = plaPrecision[:valve][Int(0floor(nlIndex/2 + 1))]
         end
 
         # Determine Triangulation
