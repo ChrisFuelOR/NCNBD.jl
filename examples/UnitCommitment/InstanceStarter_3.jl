@@ -19,6 +19,11 @@ include("UC_10_3.jl")
 include("UC_10_5.jl")
 include("UC_10_10.jl")
 
+include("UC_16_3.jl")
+include("UC_24_3.jl")
+include("UC_24_4.jl")
+include("UC_36_3.jl")
+
 function start_instances()
 
     # INSTANCE DEFINITIONS
@@ -77,9 +82,15 @@ function start_instances()
                       #[UC_10_3, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
                       #[UC_10_3, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       #[UC_10_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      [UC_10_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      #[UC_10_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       #[UC_10_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
                       #[UC_10_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+
+                      [UC_24_3, 1e-4, 1e-4, :none, :kelley, 0.2, 1e-2, 1e-2],
+                      [UC_24_3, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      [UC_24_4, 1e-4, 1e-4, :none, :kelley, 0.2, 1e-2, 1e-2],
+                      [UC_24_4, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      [UC_36_3, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       ]
 
     for parameter_set in parameter_sets
