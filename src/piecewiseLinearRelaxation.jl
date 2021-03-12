@@ -38,7 +38,7 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Dict{Symbol,A
         plaPrecision_vector = Float64[]
         if nlFunction.nl_type == :emi
             plaPrecision_vector = plaPrecision[:emi][nlIndex/2]
-        elif nlFunction.nl_type == :valve
+        elseif nlFunction.nl_type == :valve
             plaPrecision_vector = plaPrecision[:valve][floor(nlIndex/2 + 1)]
         end
 
