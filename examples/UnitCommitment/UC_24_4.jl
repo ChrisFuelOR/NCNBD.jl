@@ -53,7 +53,7 @@ function unitCommitment()
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = Dict(:valve => [[1.0], [1.0], [1.0], [1.0]], :emi => [[0.226], [0.564], [0.646], []])
+    plaPrecision = Dict(:valve => [[1.0], [1.0], [1.0], [1.0]], :emi => [[0.226], [0.564], [0.646], [0.204]])
     binaryPrecisionFactor = 1/7
 
     # define infiltration level
@@ -123,7 +123,7 @@ function unitCommitment_with_parameters(;
     time_limit::Int = 10800,
     sigma::Vector{Float64} = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Dict{Symbol,Array{Array{Float64,1},1}} = Dict(:valve => [[1.0], [1.0], [1.0], [1.0]], :emi => [[0.226], [0.564], [0.646], []]), # apart from one generator always 1/5 of pmax
+    plaPrecision::Dict{Symbol,Array{Array{Float64,1},1}} = Dict(:valve => [[1.0], [1.0], [1.0], [1.0]], :emi => [[0.226], [0.564], [0.646], [0.204]]), # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
@@ -200,7 +200,7 @@ function define_24_3()
         Generator(0, 0.0, 1.13, 0.48, 0.0, 171.60, 17.0, 0.28, 0.27, -0.24, 1.02, 0.0, 6.16, 49.01, 15.12, 1.13, 5),
         Generator(1, 2.2, 2.82, 0.85, 0.0, 486.81, 49.0, 0.9, 0.79, -0.3, 1.1, 0.0, 0.22, 61.19, 30.33, 2.82, 5),
         Generator(0, 0.0, 3.23, 0.84, 0.0, 503.34, 50.0, 1.01, 1.00, -0.24, 1.04, 0.0, 0.28, 54.35, 30.58, 3.23, 5),
-        Generator(0, 0.0, 1.02, 0.47, 0.0, 168.04, 17.0, 0.22, 0.275, 5.24, 45.43, 14.69, 1.02, 5),
+        Generator(0, 0.0, 1.02, 0.47, 0.0, 168.04, 17.0, 0.22, 0.275, -0.17, 1.0, 0.0, 5.24, 45.43, 14.69, 1.02, 5),
     ]
 
     num_of_generators = size(generators,1)
