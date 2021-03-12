@@ -55,7 +55,7 @@ struct InitialAlgoParams
     epsilon_outerLoop :: Float64
     epsilon_innerLoop :: Float64
     binaryPrecision :: Dict{Symbol, Float64}
-    plaPrecision :: Array{Vector{Float64},1}
+    plaPrecision :: Dict{Symbol,Array{Array{Float64,1},1}}
     sigma :: Vector{Float64}
     sigma_factor :: Float64
     lagrangian_atol :: Float64
@@ -102,6 +102,7 @@ mutable struct NonlinearFunction
     shift :: Symbol #either :shift or :noshift (for some concave cases)
     refineType :: Symbol #either :replace or :keep
     pmin :: Float64 #required for lower bound of generation variable
+    nl_type :: Symbol # type of nonlinearity
     ext::Dict{Symbol,Any} # required to store solutions later
 
     function NonlinearFunction(
@@ -113,6 +114,7 @@ mutable struct NonlinearFunction
         shift::Symbol,
         refineType::Symbol,
         pmin::Float64,
+        nl_type :: Symbol,
          )
         return new(
             nonlinfunc_eval,
@@ -124,6 +126,7 @@ mutable struct NonlinearFunction
             shift,
             refineType,
             pmin,
+            nl_type,
             Dict{Symbol,Any}(),
         )
     end
