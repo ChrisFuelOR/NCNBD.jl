@@ -96,7 +96,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
     # 1D
     # NOTE: CHANGED FOR VALVE POINT EFFECT; NO EQUIDISTANT STEPS BUT VALVE POINTS
     ############################################################################
-    if dimension == 1 || nlFunction.nl_type == :valve
+    if dimension == 1 && nlFunction.nl_type == :valve
         # get plaPrecision
         steps_per_valve_interval = plaPrecision_vector[1]
 
@@ -172,7 +172,7 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
         nlFunction.triangulation.ext[:node] = node
 
     ############################################################################
-    elseif dimension == 1 || nlFunction.nl_type == :emi
+    elseif dimension == 1 && nlFunction.nl_type == :emi
 
         # get plaPrecision
        plaPrecision = plaPrecision_vector[1]
