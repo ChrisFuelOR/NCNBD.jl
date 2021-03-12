@@ -407,7 +407,7 @@ function define_24_3()
             gen = linearizedSubproblem[:gen][i]
             aux = linearizedSubproblem[:emission_aux][i]
 
-            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, aux, [gen.out], :noshift, :replace, :emi)
+            nlf = NCNBD.NonlinearFunction(nlf_emission_eval, nlf_emission_expr, aux, [gen.out], :noshift, :replace, generators[i].pmin, :emi)
             push!(nonlinearFunctionList, nlf)
 
         end
