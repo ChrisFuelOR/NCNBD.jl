@@ -124,7 +124,7 @@ function unitCommitment_with_parameters(;
     sigma::Vector{Float64} = 2.5 * [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
     sigma_factor::Float64 = 2.0,
     plaPrecision::Dict{Symbol,Array{Array{Float64,1},1}} = Dict(:valve => [[1.0], [1.0], [1.0]], :emi => [[0.226], [0.564], [0.646]]), # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor::Float64 = 1/7,
+    binaryPrecisionFactor::Float64 = 1/15,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
     lagrangian_method::Symbol = :kelley, # alternatives: :kelley, :bundle_proximal, :bundle_level
