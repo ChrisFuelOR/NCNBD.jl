@@ -315,7 +315,7 @@ function solve_subproblem_forward_inner(
     # end
 
     @infiltrate infiltrate_state in [:all, :inner]
-    
+
     # REGULARIZE SUBPROBLEM
     ############################################################################
     if node_index > 1
@@ -1207,14 +1207,15 @@ function inner_loop_forward_sigma_test(
 
         # COMPARE SOLUTIONS
         ########################################################################
-        if !isapprox(reg_results.objective, non_reg_results.objective)
+        #if !isapprox(reg_results.objective, non_reg_results.objective)
             # if stage objectives are not approximately equal, then the
             # regularization is not exact and sigma should be increased
-            algoParams.sigma[node_index] = algoParams.sigma[node_index] * algoParams.sigma_factor
+        #    algoParams.sigma[node_index] = algoParams.sigma[node_index] * algoParams.sigma_factor
             # marker if new inner loop iteration should be started
             # instead of heading to outer loop
-            sigma_increased = true
-        end
+        #    sigma_increased = true
+        #end
+        sigma_increased = false
 
         # Cumulate the stage_objective. (NOTE: not really required anymore)
         cumulative_value += non_reg_results.stage_objective

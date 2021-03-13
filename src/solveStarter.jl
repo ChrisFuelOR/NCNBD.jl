@@ -545,9 +545,8 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             TimerOutputs.@timeit NCNBD_TIMER "sigma_test" begin
                 sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass, sigma_increased)
             end
-            #sigma_increased = sigma_test_results.sigma_increased
-            sigma_increased = false
-
+            sigma_increased = sigma_test_results.sigma_increased
+            
             @infiltrate algoParams.infiltrate_state in [:all, :sigma, :outer] #|| model.ext[:iteration] == 14
 
             if !sigma_increased
