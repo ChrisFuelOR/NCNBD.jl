@@ -542,9 +542,9 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         ########################################################################
         if result_inner.has_converged
 
-            #TimerOutputs.@timeit NCNBD_TIMER "sigma_test" begin
-            #    sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass, sigma_increased)
-            #end
+            TimerOutputs.@timeit NCNBD_TIMER "sigma_test" begin
+                sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass, sigma_increased)
+            end
             #sigma_increased = sigma_test_results.sigma_increased
             sigma_increased = false
 
