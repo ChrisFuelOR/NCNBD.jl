@@ -123,7 +123,7 @@ function unitCommitment_with_parameters(;
     time_limit::Int = 7200,
     sigma::Vector{Float64} = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Dict{Symbol,Array{Array{Float64,1},1}} = Dict(:valve => [[1.0], [1.0], [1.0]], :emi => [[0.226], [0.564], [0.646]]), # apart from one generator always 1/5 of pmax
+    plaPrecision::Dict{Symbol,Array{Array{Float64,1},1}} = Dict(:valve => [[2.0], [2.0], [2.0]], :emi => [[0.113], [0.282], [0.323]]), # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
@@ -210,7 +210,7 @@ function define_24_3()
     demand_penalty = 5e2
     emission_price = 25
 
-    demand = 1.15 * [3.06 2.91 2.71 2.7 2.73 2.91 3.38 4.01 4.6 4.78 4.81 4.84 4.89 4.44 4.57 4.6 4.58 4.47 4.32 4.36 4.5 4.27 3.93 3.61]
+    demand = 0.85 * [3.06 2.91 2.71 2.7 2.73 2.91 3.38 4.01 4.6 4.78 4.81 4.84 4.89 4.44 4.57 4.6 4.58 4.47 4.32 4.36 4.5 4.27 3.93 3.61]
 
     num_of_stages = 24
 
