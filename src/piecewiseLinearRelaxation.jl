@@ -1,32 +1,48 @@
-# Copyright Christian Füllner (Karlsruhe Institute of Technology) 2020
-#
-# This source code form is subject to the terms of the Mozilla Public License, v. x.x.
-# If a copy of the MPL was not distributed with this file, you can obtain one
-# at https://mozilla.org/MPL/x.x.
+# The function
+# > "piecewiseLinearApproximation",
+# > "_solve_Lagrangian_relaxation",
+# is derived from the package "PiecewiseLinearOpt.jl" by Joey Huchette
+# released under the MIT Expat License.
+# This specific function is also relased under MIT Expat License.
 
-# This file is inspired by and re-uses parts from the source code of
-# SDDiP.jl (lkapelevich),
-# SLDP.jl (bfpc)
-# and especially SDDP.jl (odow)
-# and piecewiseLinearOpt.jl (joehuchette).
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2016: Joey Huchette.
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software
+# is furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+# IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+################################################################################
+# All other functions are released under Mozilla Public License 2.0.
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+################################################################################
 
 
 """
-    NCNBD.piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{Float64},1}, appliedSolvers::AppliedSolvers)
-
 Determines a piecewise linear relaxation for all nonlinear functions in node.
-
 """
-
 function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{Float64},1}, appliedSolvers::NCNBD.AppliedSolvers)
 
     # MILP subproblem
     linearizedSubproblem = node.ext[:linSubproblem]
-
-    # TODO: Alternative: Define dicts for lists for storing variable
-    # and constraint references in linearizedSubproblem.ext.
-    #linearizedSubproblem.ext[:varReferences]
-    #linearizedSubproblem.ext[:constrReferences]
 
     # LOOP OVER ALL NONLINEAR FUNCTIONS AND CALL MORE SPECIFIC FUNCTIONS
     ############################################################################
@@ -82,6 +98,9 @@ function piecewiseLinearRelaxation!(node::SDDP.Node, plaPrecision::Array{Vector{
 end
 
 
+"""
+Determines a triangulation to define a piecewise linear function on it.
+"""
 function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaPrecision_vector::Vector{Float64})
 
     # CHECK FOR ONE- OR TWO-DIMENSIONAL CASE
@@ -255,12 +274,9 @@ function triangulate!(nlFunction::NCNBD.NonlinearFunction, node::SDDP.Node, plaP
 end
 
 """
-    NCNBD.piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.Model, estimationProblem::JuMP.Model)
-
 Determines an MILP model for the piecewise linear approximation given by the triangulation.
 Currently, only allows for a disaggregated logarithmic convex combination model.
 Note that also the over-/underestimation problem is set up using these constraints.
-
 """
 
 function piecewiseLinearApproximation!(nlIndex::Int64, triangulation::NCNBD.Triangulation, linSubproblem::JuMP.Model, estimationProblem::JuMP.Model)
@@ -385,14 +401,9 @@ end
 
 
 """
-    NCNBD.determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunction,
-    estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers)
-
 Determines an up and down shift based on the maximum overestimation and underestimation errors of the PLA determined before.
 Return both shifts in a vector.
-
 """
-
 function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunction, estimationProblem::JuMP.Model, appliedSolvers::NCNBD.AppliedSolvers, direction::Symbol)
 
     @assert direction == :shiftUp || direction == :shiftDown || direction == :shift
@@ -416,10 +427,6 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
     dimension = size(nlfunction.variablesContained, 1)
     # required variable representing PLA function value
     y_est = estimationProblem[:y_est]
-
-    # variableRefs to insert into nonlinear expression
-    # note that we cannot insert nlfunction.variablesContained, since those variables
-    # belong to the linearized subproblem. We have to use x_1_est and x_2_est
 
     if dimension == 1
         x_1 = estimationProblem[:x_1_est]
@@ -460,6 +467,9 @@ function determineShifts!(simplex_index::Int64, nlfunction::NCNBD.NonlinearFunct
 
 end
 
+"""
+Executing a piecewise linear refinement.
+"""
 function piecewise_linear_refinement(model::SDDP.PolicyGraph{T}, appliedSolvers::NCNBD.AppliedSolvers) where{T}
     # ITERATE OVER NODES
     ############################################################################

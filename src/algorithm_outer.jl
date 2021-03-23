@@ -1,5 +1,26 @@
+# The functions
+# > "outer_loop_iteration",
+# > "outer_loop_forward_pass",
+# > "solve_subproblem_forward_outer"
+# are derived from similar named functions (iteration, forward_pass,
+# solve_subproblem) in the 'SDDP.jl' package by
+# Oscar Dowson and released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson <o.dowson@gmail.com>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
+
 const NCNBD_TIMER = TimerOutputs.TimerOutput()
 
+"""
+Executing an outer loop iteration for NC-NBD.
+"""
 function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
@@ -46,9 +67,8 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
         end
     end
 
-    # LOGGING RESULTS?
+    # LOGGING RESULTS
     ############################################################################
-
     @infiltrate algoParams.infiltrate_state in [:all, :outer]
     push!(
         options.log_outer,
@@ -96,6 +116,9 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     )
 end
 
+"""
+Executing a forward pass of an outer loop iteration for NC-NBD.
+"""
 function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
@@ -228,6 +251,9 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
 end
 
 
+"""
+Solving a subproblem in the forward pass of an outer loop iteration for NC-NBD.
+"""
 function solve_subproblem_forward_outer(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
@@ -309,16 +335,6 @@ function solve_subproblem_forward_outer(
 
     @infiltrate algoParams.infiltrate_state in [:all, :outer]
 
-    # If require_duals = true, check for dual feasibility and return a dict with
-    # the dual on the fixed constraint associated with each incoming state
-    # variable. If require_duals=false, return an empty dictionary for
-    # type-stability.
-    dual_values = if require_duals
-        SDDP.get_dual_variables(node, node.integrality_handler)
-    else
-        Dict{Symbol,Float64}()
-    end
-
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
     # end
@@ -330,22 +346,4 @@ function solve_subproblem_forward_outer(
         stage_objective = stage_objective,
         bound = bound
     )
-end
-
-
-# TODO: actually not required
-# Requires node.subproblem to have been solved with DualStatus == FeasiblePoint
-function get_dual_variables(node::SDDP.Node, ::SDDP.ContinuousRelaxation)
-    # Note: due to JuMP's dual convention, we need to flip the sign for
-    # maximization problems.
-    dual_values = Dict{Symbol,Float64}()
-    if JuMP.dual_status(node.ext[:linSubproblem]) != JuMP.MOI.FEASIBLE_POINT
-        SDDP.write_subproblem_to_file(node, "linSubproblem.mof.json", throw_error = true)
-    end
-    dual_sign = JuMP.objective_sense(node.ext[:linSubproblem]) == MOI.MIN_SENSE ? 1.0 : -1.0
-    for (name, state_comp) in node.ext[:lin_states]
-        ref = JuMP.FixRef(state_comp.in)
-        dual_values[name] = dual_sign * JuMP.dual(ref)
-    end
-    return dual_values
 end

@@ -1,11 +1,12 @@
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
 """
-    NCNBD.divide_simplex_by_longest_edge!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
-
-Divides a given simplex by longest edge (by essentially deleting it from the triangulation
-and constructing two new simplices)
-
+Divides a given simplex by longest edge
 """
-
 function divide_simplex_by_longest_edge!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
 
     simplex = triangulation.simplices[simplex_index]
@@ -20,6 +21,10 @@ function divide_simplex_by_longest_edge!(simplex_index::Int64, triangulation::NC
     return new_simplex_indices
 end
 
+"""
+Divides a given simplex by longest edge in 1D (by essentially deleting it from the triangulation
+and constructing two new simplices)
+"""
 function divide_simplex_by_longest_edge_1D!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
     # get simplex and nlfunction
     simplex = triangulation.simplices[simplex_index]
@@ -47,6 +52,10 @@ function divide_simplex_by_longest_edge_1D!(simplex_index::Int64, triangulation:
     return new_simplex_indices
 end
 
+"""
+Divides a given simplex by longest edge in 2D (by essentially deleting it from the triangulation
+and constructing two new simplices)
+"""
 function divide_simplex_by_longest_edge_2D!(simplex_index::Int64, triangulation::NCNBD.Triangulation)
     # get simplex and nlfunction
     simplex = triangulation.simplices[simplex_index]
@@ -107,6 +116,9 @@ function divide_simplex_by_longest_edge_2D!(simplex_index::Int64, triangulation:
 
 end
 
+"""
+Checks whether a given point is within a given simplex
+"""
 function pointInTriangle(vertices::Array{Float64,2}, point::Vector{Float64})
 
     @assert size(vertices, 1) == 3
@@ -121,6 +133,9 @@ function pointInTriangle(vertices::Array{Float64,2}, point::Vector{Float64})
     return 0 <= weight_1 && weight_1 <= 1 && 0 <= weight_2 && weight_2 <= 1 && 0 <= weight_3 && weight_3 <= 1
 end
 
+"""
+Checks whether a given point is within a given interval
+"""
 function pointInInterval(vertices::Array{Float64,2}, point::Float64)
 
     @assert size(vertices, 1) == 2

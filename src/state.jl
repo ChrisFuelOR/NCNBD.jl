@@ -1,3 +1,23 @@
+# The functions
+# > "set_incoming_lin_state",
+# > "set_incoming_state",
+# > "setup_state",
+# > "get_outgoing_state",
+# and structs
+# > "State",
+# > "StateInfo"
+# are derived from similar named functions in the 'SDDP.jl' package by
+# Oscar Dowson and released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson <o.dowson@gmail.com>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
 # must be mutable in my case, as in_part has to be set later
 mutable struct StateInfo
     in::JuMP.VariableInfo

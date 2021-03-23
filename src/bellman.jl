@@ -1,3 +1,31 @@
+# The functions
+# > "BellmanFunction",
+# > "bellman_term",
+# > "initialize_bellman_function_MILP"
+# > "initialize_bellman_function_MINLP"
+# > "refine_bellman_function"
+# > "_add_average_cut"
+# > "_add_cut"
+# > "add_cut_constraints_to_models"
+# > "_cut_selection_update"
+# > "_eval_height"
+# and structs
+# > "SampledState",
+# > "LevelOneOracle",
+# > "NonConvexApproximation"
+# > "BellmanFunction"
+# are derived from similar named functions and structs in the 'SDDP.jl' package by
+# Oscar Dowson and released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson <o.dowson@gmail.com>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
 mutable struct SampledState
     state::Dict{Symbol,Float64}
     dominating_cut::NCNBD.NonlinearCut
@@ -45,6 +73,9 @@ mutable struct BellmanFunction <: SDDP.AbstractBellmanFunction
     risk_set_cuts::Set{Vector{Float64}}
 end
 
+"""
+Required to define Bellman functions.
+"""
 function BellmanFunction(;
     lower_bound = -Inf,
     upper_bound = Inf,
@@ -63,6 +94,9 @@ function bellman_term(bellman_function::NCNBD.BellmanFunction)
     return bellman_function.global_theta.theta
 end
 
+"""
+Initializing the bellman function for the MILP subproblems.
+"""
 function initialize_bellman_function_MILP(
     factory::SDDP.InstanceFactory{BellmanFunction},
     model::SDDP.PolicyGraph{T},
@@ -109,6 +143,9 @@ function initialize_bellman_function_MILP(
 end
 
 
+"""
+Initializing the bellman function for the MINLP subproblems.
+"""
 function initialize_bellman_function_MINLP(
     factory::SDDP.InstanceFactory{BellmanFunction},
     model::SDDP.PolicyGraph{T},
@@ -155,6 +192,9 @@ function initialize_bellman_function_MINLP(
 end
 
 
+"""
+Refining the bellman function of a node by constructing a new cut
+"""
 # Could also be shifted to SDDP.jl, since it overwrites an existing function,
 # but with additional arguments. Therefore, both methods can be distinguished.
 function refine_bellman_function(
@@ -222,6 +262,9 @@ function refine_bellman_function(
 end
 
 
+"""
+Adding one more cut to the bellman function (taking expectations in stochastic case).
+"""
 # Could also be shifted to SDDP.jl, since it overwrites an existing function,
 # but with additional arguments. Therefore, both methods can be distinguished.
 function _add_average_cut(
@@ -288,6 +331,9 @@ function _add_average_cut(
 end
 
 
+"""
+Adding one more cut based on dual information.
+"""
 # Add the cut to the model and the convex approximation.
 function _add_cut(
     node::SDDP.Node,
@@ -339,6 +385,9 @@ function _add_cut(
 end
 
 
+"""
+Adding the constraints to described the new cut to the subproblems.
+"""
 function add_cut_constraints_to_models(
     node::SDDP.Node,
     V::NonConvexApproximation,
@@ -516,6 +565,10 @@ function add_cut_constraints_to_models(
 end
 
 
+"""
+Defining the constraints and variables corresponding to the cut projection
+from binary to original space.
+"""
 function add_cut_projection_to_model!(
     model::JuMP.Model,
     state_comp::JuMP.VariableRef,
@@ -632,6 +685,9 @@ function add_cut_projection_to_model!(
 end
 
 
+"""
+Simple cut selection feature.
+"""
 # Internal function: update the Level-One datastructures inside `bellman_function`.
 function _cut_selection_update(
     node::SDDP.Node,
@@ -790,6 +846,9 @@ function _cut_selection_update(
 end
 
 
+"""
+Evaluating the cuts at a specific point.
+"""
 # Internal function: calculate the height of `cut` evaluated at `state`.
 function _eval_height(node::SDDP.Node, cut::NCNBD.NonlinearCut, states::Dict{Symbol,Float64}, appliedSolvers::NCNBD.AppliedSolvers)
 

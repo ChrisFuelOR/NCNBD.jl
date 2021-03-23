@@ -1,3 +1,21 @@
+# The function
+# > "setup_state_backward",
+# is derived from function "setup_state" in the 'SDDP.jl' package by
+# Oscar Dowson and Lea Kapelevich released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson, Lea Kapelevich.
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
+
+"""
+Modifying the forward pass problem to include a regularization term.
+"""
 function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Model, sigma::Float64)
 
     #NOTE: The copy constraint is not modeled explicitly here. Instead,
@@ -61,6 +79,10 @@ function regularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
 
 end
 
+"""
+Modifying the forward pass problem to remove the regularization term
+and regain the original model.
+"""
 function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Model)
 
     reg_data = node.ext[:regularization_data]
@@ -91,6 +113,9 @@ function deregularize_subproblem!(node::SDDP.Node, linearizedSubproblem::JuMP.Mo
 end
 
 
+"""
+Modifying the backward pass problem to include a binary expansion of the state.
+"""
 function changeToBinarySpace!(
     node::SDDP.Node,
     linearizedSubproblem::JuMP.Model,
@@ -131,6 +156,9 @@ function changeToBinarySpace!(
 end
 
 
+"""
+Setting up the binary state variables.
+"""
 function setup_state_backward(
     subproblem::JuMP.Model,
     state_comp::State,
@@ -324,6 +352,9 @@ function setup_state_backward(
 end
 
 
+"""
+Modifying the backward pass problem to regain the original states.
+"""
 function changeToOriginalSpace!(
     node::SDDP.Node,
     linearizedSubproblem::JuMP.Model,
@@ -371,6 +402,9 @@ function changeToOriginalSpace!(
 end
 
 
+"""
+Determining the anchor points in the original space.
+"""
 function determine_used_trial_states(
     state_comp::State,
     state_value::Float64,
@@ -397,6 +431,9 @@ function determine_used_trial_states(
 end
 
 
+"""
+Introducing a regularizing term to the backward pass problem in binary space.
+"""
 function regularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Model, sigma::Float64)
 
     bw_data = node.ext[:backward_data]
@@ -469,6 +506,9 @@ function regularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Model,
 end
 
 
+"""
+Regaining the unregularized problem in binary space.
+"""
 function deregularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Model)
 
     reg_data = node.ext[:regularization_data]
@@ -500,6 +540,9 @@ function deregularize_backward!(node::SDDP.Node, linearizedSubproblem::JuMP.Mode
 end
 
 
+"""
+Check if an increase of the number of binary variables is required.
+"""
 function binary_refinement_check(
     model::SDDP.PolicyGraph{T},
     previousSolution::Union{Vector{Dict{Symbol,Float64}},Nothing},
@@ -524,6 +567,10 @@ function binary_refinement_check(
 end
 
 
+"""
+Executing a binary refinement: Increasing the number of binary variables to
+approximate the states
+"""
 function binary_refinement(
     model::SDDP.PolicyGraph{T},
     algoParams::NCNBD.AlgoParams,

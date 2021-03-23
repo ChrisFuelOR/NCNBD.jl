@@ -1,3 +1,27 @@
+# The functions
+# > "print_helper",
+# > "print_banner",
+# > "print_iteration_header",
+# > "print_iteration",
+# > "print_footer",
+# > "log_iteration",
+# > "write_log_to_csv",
+# and structs
+# > "Log"
+# > "Options"
+# > "Results"
+# are derived from similar named functions in the 'SDDP.jl' package by
+# Oscar Dowson and released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson <o.dowson@gmail.com>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
 struct Log
     outer_iteration::Int
     iteration::Union{Int,Nothing}

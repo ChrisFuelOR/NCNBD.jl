@@ -1,3 +1,15 @@
+# This file redefines some functions from the 'JuMP.jl' package by
+# Copyright (c) 2017: Iain Dunning, Joey Huchette, Miles Lubin, and contributors
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2017: Iain Dunning, Joey Huchette, Miles Lubin, and contributors
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
 function JuMP.build_variable(
     _error::Function,
     info::JuMP.VariableInfo,
