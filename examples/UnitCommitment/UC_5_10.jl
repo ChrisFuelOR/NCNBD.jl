@@ -5,7 +5,7 @@
 ################################################################################
 
 """
-Unit commitment problem with 5 stages and 10 generators
+Unit commitment problem with 5 stages and 10 generators, including valve-point effect
 """
 
 module UC_5_10

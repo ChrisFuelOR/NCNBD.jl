@@ -5,7 +5,7 @@
 ################################################################################
 
 """
-Unit commitment problem with 2 stages and 1 generator
+Unit commitment problem with 2 stages and 1 generator, including valve-point effect
 """
 
 using JuMP

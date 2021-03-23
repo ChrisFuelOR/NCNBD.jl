@@ -1,3 +1,12 @@
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
+"""
+Unit commitment problem with 24 stages and 4 generators, including valve-point effect
+"""
 module UC_24_4
 
 export unitCommitment
