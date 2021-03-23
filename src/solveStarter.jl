@@ -108,19 +108,19 @@ function solve(
     end
 
     if print_level > 1
-        print_helper(print_parameters, log_file_handle, initialAlgoParams)
+        print_helper(print_parameters, log_file_handle, initialAlgoParams, appliedSolvers)
     end
 
     # if run_numerical_stability_report
     #     report =
-    #         sprint(io -> numerical_stability_report(io, model, print = print_level > 0))
+    #         sprint(io -> SDDP.numerical_stability_report(io, model, print = print_level > 0))
     #     print_helper(print, log_file_handle, report)
     # end
 
-    if print_level > 0
-        print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), log_file_handle)
-        print_helper(print_iteration_header, log_file_handle)
-    end
+    # if print_level > 0
+    #     print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), log_file_handle)
+    #     print_helper(print_iteration_header, log_file_handle)
+    # end
 
     # Convert the vector to an AbstractStoppingRule. Otherwise if the user gives
     # something like stopping_rules = [SDDP.IterationLimit(100)], the vector
@@ -346,14 +346,19 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     for (node_index, children) in model.nodes
         node = model.nodes[node_index]
 
-        # get corresponding pla precision (node_index is stage for non-Markovian policy graphs)
-        plaPrecision = initialAlgoParams.plaPrecision[node_index]
-
         # determines a piecewise linear relaxation for all nonlinear functions
         # in this node
         TimerOutputs.@timeit NCNBD_TIMER "initialize_PLR" begin
-            NCNBD.piecewiseLinearRelaxation!(node, plaPrecision, appliedSolvers)
+            NCNBD.piecewiseLinearRelaxation!(node, initialAlgoParams.plaPrecision, appliedSolvers)
         end
+
+        NCNBD.log_piecewise_linear(options, node_index)
+
+    end
+
+    if options.print_level > 0
+        print_helper(io -> println(io, "Solver: ", parallel_scheme, "\n"), options.log_file_handle)
+        print_helper(print_iteration_header, options.log_file_handle)
     end
 
     @infiltrate algoParams.infiltrate_state == :all
@@ -412,6 +417,11 @@ function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
 
     #previousSolution = nothing
 
+    # INITIALIZE BEST KNOWN POINT AND OBJECTIVE VALUE FOR INNER LOOP
+    ############################################################################
+    model.ext[:best_outer_loop_objective] = model.objective_sense == JuMP.MOI.MIN_SENSE ? Inf : -Inf
+    model.ext[:best_outer_loop_point] = Vector{Dict{Symbol,Float64}}()
+
     while true
         TimerOutputs.@timeit NCNBD_TIMER "outer_loop" begin
             result_outer = outer_loop_iteration(parallel_scheme, model, options, algoParams, appliedSolvers)
@@ -424,10 +434,12 @@ function master_loop_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph
             return result_outer.status
         end
 
-       # Piecewise linear refinement
-       TimerOutputs.@timeit NCNBD_TIMER "refine_PLR" begin
-            NCNBD.piecewise_linear_refinement(model, appliedSolvers)
-       end
+        if model.ext[:outer_iteration] > 1
+           # Piecewise linear refinement
+           TimerOutputs.@timeit NCNBD_TIMER "refine_PLR" begin
+                NCNBD.piecewise_linear_refinement(model, appliedSolvers)
+            end
+        end
 
     end
 end
@@ -443,6 +455,8 @@ function master_loop_ncnbd_inner(parallel_scheme::SDDP.Serial, model::SDDP.Polic
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     previousSolution = nothing
+
+    #TODO: Store best solution so far
 
     while true
         # start an inner loop
@@ -498,53 +512,84 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
     options::NCNBD.Options, algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers) where {T}
 
     previousSolution = nothing
+    previousBound = nothing
     sigma_increased = false
+    boundCheck = false
 
+    # INITIALIZE BEST KNOWN POINT AND OBJECTIVE VALUE FOR INNER LOOP
+    ############################################################################
+    model.ext[:best_inner_loop_objective] = model.objective_sense == JuMP.MOI.MIN_SENSE ? Inf : -Inf
+    model.ext[:best_inner_loop_point] = Vector{Dict{Symbol,Float64}}()
+
+    # ACTUAL LOOP
+    ############################################################################
     while true
+        # INNER LOOP
+        ########################################################################
         # start an inner loop
-        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, sigma_increased)
+        result_inner = inner_loop_iteration(model, options, algoParams, appliedSolvers, previousSolution, boundCheck, sigma_increased)
         # logging
         log_iteration(options, options.log_inner)
 
+        # initialize sigma_increased
+        sigma_increased = false
+
+        # initialize boundCheck
+        boundCheck = true
         @infiltrate algoParams.infiltrate_state in [:all, :sigma]
 
+        # IF CONVERGENCE IS ACHIEVED, CHECK IF ACTUAL OR ONLY REGULARIZED PROBLEM IS SOLVED
+        ########################################################################
         if result_inner.has_converged
 
             TimerOutputs.@timeit NCNBD_TIMER "sigma_test" begin
-                sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass)
+                sigma_test_results = inner_loop_forward_sigma_test(model, options, algoParams, appliedSolvers, result_inner.scenario_path, options.forward_pass, sigma_increased)
             end
+            sigma_increased = sigma_test_results.sigma_increased
 
-            upper_bound_non_reg = sigma_test_results.cumulative_value
-            upper_bound_reg = result_inner.upper_bound
+            @infiltrate algoParams.infiltrate_state in [:all, :sigma, :outer] #|| model.ext[:iteration] == 14
 
-            @infiltrate algoParams.infiltrate_state in [:all, :sigma]
-
-            if isapprox(upper_bound_non_reg, upper_bound_reg)
-                # by solving the regularized problem, approximately the real MILP has been solved
-                # we do not need an epsilon tolerance here, because the values should be exactly equal for a sufficiently high sigma
-                # WARNING: isapprox should not be used with 0 as comparison
-
+            if !sigma_increased
                 # update information for MINLP
-                result_inner.upper_bound = upper_bound_non_reg
-                result_inner.current_sol = sigma_test_results.sampled_states
-                sigma_increased = false
+                #result_inner.upper_bound = upper_bound_non_reg
+                #result_inner.current_sol = sigma_test_results.sampled_states
 
                 # return all results here to keep them accessible in outer pass
                 return result_inner
 
             else
-                # increase sigma
-                algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
-                sigma_increased = true
-
+                # reset previous values
+                previousSolution = nothing
+                previousBound = nothing
+                boundCheck = false # only refine bin. approx if sigma is not refined
             end
-            # return all results here to keep them accessible in outer pass
-            # return result_inner
+
+        # IF NO CONVERGENCE IS ACHIEVED, DO DIFFERENT CHECKS
+        ########################################################################
         else
+            # CHECK IF LOWER BOUND HAS IMPROVED
+            ############################################################################
+            # If not, then the cut was (probably) not tight enough,
+            # so binary approximation should be refined in the next iteration
+            # NOTE: This could also happen in other situations, e.g., if different trial solutions give
+            # the same lower bound. However, this is hard to rule out.
+            if !isnothing(previousBound)
+                if ! isapprox(previousBound, result_inner.lower_bound)
+                    boundCheck = false
+                end
+            else
+                boundCheck = false
+            end
+
+            # CHECK IF SIGMA SHOULD BE INCREASED (DUE TO LB > UB)
+            ############################################################################
             if result_inner.upper_bound - result_inner.lower_bound < - algoParams.epsilon_innerLoop * 0.1
                 # increase sigma
                 algoParams.sigma = algoParams.sigma * algoParams.sigma_factor
                 sigma_increased = true
+                previousSolution = nothing
+                previousBound = nothing
+                boundCheck = false # only refine bin. approx if sigma is not refined
             else
                 sigma_increased = false
             end
@@ -552,5 +597,6 @@ function inner_loop(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
 
         previousSolution = result_inner.current_sol
+        previousBound = result_inner.lower_bound
     end
 end

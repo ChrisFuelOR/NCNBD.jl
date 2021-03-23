@@ -1,4 +1,4 @@
-module UC_2_2
+module UC_3_5
 
 export unitCommitment
 export unitCommitment_with_parameters
@@ -33,22 +33,22 @@ end
 function unitCommitment()
 
     # define required tolerances
-    epsilon_outerLoop = 1e-3
-    epsilon_innerLoop = 1e-3
-    lagrangian_atol = 1e-8
-    lagrangian_rtol = 1e-8
+    epsilon_outerLoop = 1e-2
+    epsilon_innerLoop = 1e-2
+    lagrangian_atol = 1e-4
+    lagrangian_rtol = 1e-4
 
     # define time and iteration limits
-    lagrangian_iteration_limit = 1000
+    lagrangian_iteration_limit = 10000
     iteration_limit = 1000
     time_limit = 10800
 
     # define sigma
-    sigma = [0.0, 1000.0]
+    sigma = [0.0, 1000.0, 1000.0, 1000.0, 1000.0]
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = [0.4, 0.64] # apart from one generator always 1/5 of pmax
+    plaPrecision = [0.4, 0.64, 0.3, 1.04, 0.56] # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor = 1/7
 
     # define infiltration level
@@ -66,7 +66,7 @@ function unitCommitment()
 
     bundle_alpha = 0.5
     bundle_factor = 1.0
-    level_factor = 0.8
+    level_factor = 0.2
 
     # cut selection strategy
     cut_selection = true
@@ -75,8 +75,11 @@ function unitCommitment()
     lag_status_regime = :lax
     # alternatives: :rigorous, :lax
 
+    # outer loop strategy
+    outer_loop_strategy = :approx
+
     # used solvers
-    solvers = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"]
+    solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
 
     # CALL METHOD WITH PARAMETERS
     ############################################################################
@@ -98,8 +101,10 @@ function unitCommitment()
         bundle_alpha=bundle_alpha,
         bundle_factor=bundle_factor,
         level_factor=level_factor,
+        solvers=solvers,
         cut_selection=cut_selection,
         lag_status_regime=lag_status_regime,
+        outer_loop_strategy=outer_loop_strategy
     )
 end
 
@@ -112,9 +117,9 @@ function unitCommitment_with_parameters(;
     lagrangian_iteration_limit::Int = 1000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
-    sigma::Vector{Float64} = [0.0, 1000.0],
+    sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Vector{Float64} = [0.4, 0.64], # apart from one generator always 1/5 of pmax
+    plaPrecision::Vector{Float64} = [0.4, 0.64, 0.3, 1.04, 0.56], # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
@@ -124,12 +129,13 @@ function unitCommitment_with_parameters(;
     level_factor::Float64 = 0.4,
     solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
     cut_selection::Bool = true,
-    lag_status_regime::Symbol = :rigorous,
+    lag_status_regime::Symbol = :lax,
+    outer_loop_strategy::Symbol = :approx,
     )
 
     # DEFINE MODEL
     ############################################################################
-    model = define_2_2()
+    model = define_3_5()
 
     # DEFINE SOLVERS
     ############################################################################
@@ -158,7 +164,8 @@ function unitCommitment_with_parameters(;
                             lagrangian_rtol, lagrangian_iteration_limit,
                             dual_initialization_regime, lagrangian_method,
                             bundle_alpha, bundle_factor, level_factor,
-                            cut_selection, lag_status_regime)
+                            cut_selection, lag_status_regime,
+                            outer_loop_strategy)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
@@ -166,14 +173,15 @@ function unitCommitment_with_parameters(;
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
                                       bundle_factor, level_factor,
-                                      cut_selection, lag_status_regime)
+                                      cut_selection, lag_status_regime,
+                                      outer_loop_strategy)
 
     # SOLVE MODEL
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = iteration_limit, print_level = 2,
                 time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_2_2.log")
+                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_3_5.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
@@ -182,21 +190,24 @@ function unitCommitment_with_parameters(;
 end
 
 
-function define_2_2()
+function define_3_5()
 
     generators = [
         Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
         Generator(0, 0.0, 3.2, 0.64, 15.0, 4.0, 50.6, 50.6, 0.64, 0.64, -0.21, 1.0, 0.0),
+        Generator(0, 0.0, 1.5, 0.3, 17.0, 2.0, 57.1, 57.1, 0.3, 0.3, -0.39, 0.95, 0.0),
+        Generator(1, 4.0, 5.0, 1.04, 13.2, 4.0, 47.1, 47.1, 1.04, 1.04, -0.14, 1.09, 0.0),
+        Generator(1, 2.8, 2.8, 0.56, 14.3, 4.0, 56.9, 56.9, 0.56, 0.56, -0.24, 1.0, 0.0),
     ]
     num_of_generators = size(generators,1)
 
     demand_penalty = 5e2
     emission_price = 2.5
 
-    demand = [1.04 1.80]
+    demand = [8.0 8.5 10.1]
 
     model = SDDP.LinearPolicyGraph(
-        stages = 2,
+        stages = 3,
         lower_bound = 0.0,
         optimizer = GAMS.Optimizer,
         sense = :Min
@@ -368,4 +379,4 @@ end
 
 end
 
-#unitCommitment_2_2()
+#unitCommitment_3_5()
