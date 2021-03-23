@@ -1,3 +1,9 @@
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
 using JuMP
 using SDDP
 using NCNBD
@@ -24,6 +30,11 @@ include("UC_24_3.jl")
 include("UC_24_4.jl")
 include("UC_36_3.jl")
 
+
+"""
+Used to run different instances of the unit commitment problem (different number
+of stages, generators and different paramters) after each other
+"""
 function start_instances()
 
     # INSTANCE DEFINITIONS
