@@ -335,6 +335,16 @@ function solve_subproblem_forward_outer(
 
     @infiltrate algoParams.infiltrate_state in [:all, :outer]
 
+    # If require_duals = true, check for dual feasibility and return a dict with
+    # the dual on the fixed constraint associated with each incoming state
+    # variable. If require_duals=false, return an empty dictionary for
+    # type-stability.
+    dual_values = if require_duals
+        SDDP.get_dual_variables(node, node.integrality_handler)
+    else
+        Dict{Symbol,Float64}()
+    end
+
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
     # end
@@ -346,4 +356,21 @@ function solve_subproblem_forward_outer(
         stage_objective = stage_objective,
         bound = bound
     )
+end
+
+# TODO: actually not required
+# Requires node.subproblem to have been solved with DualStatus == FeasiblePoint
+function get_dual_variables(node::SDDP.Node, ::SDDP.ContinuousRelaxation)
+    # Note: due to JuMP's dual convention, we need to flip the sign for
+    # maximization problems.
+    dual_values = Dict{Symbol,Float64}()
+    if JuMP.dual_status(node.ext[:linSubproblem]) != JuMP.MOI.FEASIBLE_POINT
+        SDDP.write_subproblem_to_file(node, "linSubproblem.mof.json", throw_error = true)
+    end
+    dual_sign = JuMP.objective_sense(node.ext[:linSubproblem]) == MOI.MIN_SENSE ? 1.0 : -1.0
+    for (name, state_comp) in node.ext[:lin_states]
+        ref = JuMP.FixRef(state_comp.in)
+        dual_values[name] = dual_sign * JuMP.dual(ref)
+    end
+    return dual_values
 end
