@@ -5,7 +5,8 @@
 ################################################################################
 
 """
-Unit commitment problem with 24 stages and 3 generators
+Unit commitment problem with 24 stages and 3 generators,
+including valve-point effect but no emission costs
 """
 module UC_24_3
 
