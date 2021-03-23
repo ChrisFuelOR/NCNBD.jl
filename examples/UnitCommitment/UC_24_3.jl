@@ -121,7 +121,7 @@ function unitCommitment_with_parameters(;
     lagrangian_iteration_limit::Int = 10000,
     iteration_limit::Int=1000,
     time_limit::Int = 7200,
-    sigma::Vector{Float64} = 2.5 * [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
+    sigma::Vector{Float64} = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
     sigma_factor::Float64 = 2.0,
     plaPrecision::Dict{Symbol,Array{Array{Float64,1},1}} = Dict(:valve => [[1.0], [1.0], [1.0]], :emi => [[0.226], [0.564], [0.646]]), # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/15,
