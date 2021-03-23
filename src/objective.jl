@@ -1,3 +1,22 @@
+# The functions
+# > "lin_stageobjective",
+# > "set_lin_stage_objective",
+# > "set_lin_objective",
+# > "set_objective",
+# > "parameterize_lin",
+# > "parameterize",
+# are derived from similar named functions in the 'SDDP.jl' package by
+# Oscar Dowson and released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson <o.dowson@gmail.com>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
 macro lin_stageobjective(subproblem, expr)
     code = quote
         set_lin_stage_objective(

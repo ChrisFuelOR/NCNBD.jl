@@ -1,3 +1,50 @@
+# The functions
+# > "_kelley",
+# > "_solve_Lagrangian_relaxation",
+# are derived from similar named functions in the 'SDDP.jl' package by
+# Oscar Dowson and Lea Kapelevich released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson, Lea Kapelevich
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+################################################################################
+
+# The function
+# > "_bundle_level"
+# is derived from a similar named function in the 'SDDiP.jl' package by
+# Lea Kapelevich released under the MIT Expat License.
+# This specific function is also relased under MIT Expat License.
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2017: LEAXPS-15\lkape.
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the Software
+# is furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+# IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+################################################################################
+
+"""
+Kelley's method to solve Lagrangian dual
+"""
 function _kelley(
     node::SDDP.Node,
     node_index::Int64,
@@ -197,7 +244,9 @@ function _kelley(
 
 end
 
-
+"""
+Solving the Lagrangian relaxation problem
+"""
 function _solve_Lagrangian_relaxation!(
     subgradients::Vector{Float64},
     node::SDDP.Node,
@@ -225,6 +274,9 @@ function _solve_Lagrangian_relaxation!(
 end
 
 
+"""
+Initializing duals.
+"""
 function initialize_duals(
     node::SDDP.Node,
     linearizedSubproblem::JuMP.Model,
@@ -330,6 +382,9 @@ function initialize_duals(
 end
 
 
+"""
+Level bundle method to solve the Lagrangian duals.
+"""
 function _bundle_level(
     node::SDDP.Node,
     node_index::Int64,
@@ -352,13 +407,6 @@ function _bundle_level(
 
     # initialize bundle parameters
     level_factor = algoParams.level_factor
-
-    # NOTE initialize stability center
-    # center = deepcopy(dual_vars)
-
-    # This does not work since the problem has been changed since then
-    #assert JuMP.termination_status(model) == MOI.OPTIMAL
-    #obj = JuMP.objective_value(model)
 
     for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
         integrality_handler.old_rhs[i] = JuMP.fix_value(bin_state)
@@ -393,9 +441,6 @@ function _bundle_level(
     set_optimizer(model, optimizer_with_attributes(GAMS.Optimizer,  "Solver"=>appliedSolvers.Lagrange, "optcr"=>0.0))
 
     #JuMP.set_silent(approx_model)
-
-    # NOTE Determine sign for bundle regularization term
-    # fact = (dualsense == JuMP.MOI.MIN_SENSE ? 1 : -1)
 
     # Define Lagrangian dual multipliers
     @variables approx_model begin
