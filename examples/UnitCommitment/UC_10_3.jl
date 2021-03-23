@@ -54,15 +54,14 @@ function unitCommitment()
     time_limit = 10800
 
     # define sigma
-    sigma = [0.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0]
+    sigma = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0]
     sigma_factor = 2.0
 
     # define initial approximations
-    plaPrecision = [0.2, 0.32, 0.15] # apart from one generator always 1/5 of pmax
-    binaryPrecisionFactor = 1/15
+    plaPrecision = [[0.226], [0.564], [0.646]] # apart from one generator always 1/5 of pmax
+    binaryPrecisionFactor = 1/7
 
     # define infiltration level
-    # TODO: Abstract data type
     infiltrate_state = :none
     # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
 
@@ -71,7 +70,7 @@ function unitCommitment()
     # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
 
     # define solution method for lagrangian dual
-    lagrangian_method = :kelley
+    lagrangian_method = :bundle_level
     # alternatives: :kelley, :bundle_proximal, :bundle_level
 
     bundle_alpha = 0.5
@@ -85,8 +84,11 @@ function unitCommitment()
     lag_status_regime = :lax
     # alternatives: :rigorous, :lax
 
+    # outer loop strategy
+    outer_loop_strategy = :approx
+
     # used solvers
-    solvers = ["CPLEX", "CPLEX", "Baron", "Baron", "CPLEX"]
+    solvers = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"]
 
     # CALL METHOD WITH PARAMETERS
     ############################################################################
@@ -111,31 +113,33 @@ function unitCommitment()
         solvers=solvers,
         cut_selection=cut_selection,
         lag_status_regime=lag_status_regime,
+        outer_loop_strategy=outer_loop_strategy,
     )
 end
 
 
 function unitCommitment_with_parameters(;
-    epsilon_outerLoop::Float64 = 1e-3,
-    epsilon_innerLoop::Float64 = 1e-3,
-    lagrangian_atol::Float64 = 1e-8,
-    lagrangian_rtol::Float64 = 1e-8,
-    lagrangian_iteration_limit::Int = 1000,
+    epsilon_outerLoop::Float64 = 1e-2,
+    epsilon_innerLoop::Float64 = 1e-2,
+    lagrangian_atol::Float64 = 1e-4,
+    lagrangian_rtol::Float64 = 1e-4,
+    lagrangian_iteration_limit::Int = 10000,
     iteration_limit::Int=1000,
     time_limit::Int = 10800,
-    sigma::Vector{Float64} = [0.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
+    sigma::Vector{Float64} = [0.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
     sigma_factor::Float64 = 2.0,
-    plaPrecision::Vector{Float64} = [0.4, 0.64, 0.3], # apart from one generator always 1/5 of pmax
+    plaPrecision::Array{Array{Float64,1},1} = [[0.226], [0.564], [0.646]], # apart from one generator always 1/5 of pmax
     binaryPrecisionFactor::Float64 = 1/7,
     infiltrate_state::Symbol = :none, # alternatives: :none, :all, :outer, :sigma, :inner, :lagrange, :bellman
     dual_initialization_regime::Symbol = :zeros, # alternatives: :zeros, :gurobi_relax, :cplex_relax, :cplex_fixed, :cplex_combi
     lagrangian_method::Symbol = :kelley, # alternatives: :kelley, :bundle_proximal, :bundle_level
     bundle_alpha::Float64 = 0.5,
     bundle_factor::Float64 = 1.0,
-    level_factor::Float64 = 0.4,
-    solvers::Vector{String} = ["Gurobi", "Gurobi", "Baron", "Baron", "Gurobi"],
+    level_factor::Float64 = 0.2,
+    solvers::Vector{String} = ["CPLEX", "CPLEX", "Baron", "SCIP", "CPLEX"],
     cut_selection::Bool = true,
     lag_status_regime::Symbol = :lax,
+    outer_loop_strategy::Symbol = :approx,
     )
 
     # DEFINE MODEL
@@ -169,7 +173,8 @@ function unitCommitment_with_parameters(;
                             lagrangian_rtol, lagrangian_iteration_limit,
                             dual_initialization_regime, lagrangian_method,
                             bundle_alpha, bundle_factor, level_factor,
-                            cut_selection, lag_status_regime)
+                            cut_selection, lag_status_regime,
+                            outer_loop_strategy)
     algoParameters = NCNBD.AlgoParams(epsilon_outerLoop, epsilon_innerLoop,
                                       binaryPrecision, sigma, sigma_factor,
                                       infiltrate_state, lagrangian_atol,
@@ -177,14 +182,15 @@ function unitCommitment_with_parameters(;
                                       dual_initialization_regime,
                                       lagrangian_method, bundle_alpha,
                                       bundle_factor, level_factor,
-                                      cut_selection, lag_status_regime)
+                                      cut_selection, lag_status_regime,
+                                      outer_loop_strategy)
 
     # SOLVE MODEL
     ############################################################################
     NCNBD.solve(model, algoParameters, initialAlgoParameters, appliedSolvers,
                 iteration_limit = iteration_limit, print_level = 2,
                 time_limit = time_limit, stopping_rules = [NCNBD.DeterministicStopping()],
-                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_10_3.log")
+                log_file = "C:/Users/cg4102/Documents/julia_logs/UC_10_3_f.log")
 
     # WRITE LOGS TO FILE
     ############################################################################
@@ -196,19 +202,24 @@ end
 function define_10_3()
 
     generators = [
-        Generator(0, 0.0, 2.0, 0.4, 18.0, 2.0, 42.6, 42.6, 0.4, 0.4, -0.34, 1.0, 0.0),
-        Generator(0, 0.0, 3.2, 0.64, 15.0, 4.0, 50.6, 50.6, 0.64, 0.64, -0.21, 1.0, 0.0),
-        Generator(0, 0.0, 1.5, 0.3, 17.0, 2.0, 57.1, 57.1, 0.3, 0.3, -0.39, 0.95, 0.0),
+        Generator(0, 0.0, 1.13, 0.48, 53.97, 0.0, 171.60, 17.0, 0.28, 0.27, -0.24, 1.02, 0.0),
+        Generator(1, 2.2, 2.82, 0.85, 61.59, 0.0, 486.81, 49.0, 0.9, 0.79, -0.3, 1.1, 0.0),
+        Generator(0, 0.0, 3.23, 0.84, 54.92, 0.0, 503.34, 50.0, 1.01, 1.00, -0.24, 1.04, 0.0),
     ]
     num_of_generators = size(generators,1)
+
+    # NOTE: no fixed cost, no fixed emission cost, no o&m cost so far
+    # NOTE: start-up cost is scaled if less than 24 stages are used, shut-down cost not
 
     demand_penalty = 5e2
     emission_price = 25
 
-    demand = [1.04 1.8 1.72 1.15 1.24 1.33 1.4 2.1 1.8 1.2]
+    demand = [3.06 2.91 2.71 2.7 2.73 2.91 3.38 4.01 4.6 4.78]
+
+    num_of_stages = 10
 
     model = SDDP.LinearPolicyGraph(
-        stages = 10,
+        stages = num_of_stages,
         lower_bound = 0.0,
         optimizer = GAMS.Optimizer,
         sense = :Min
@@ -275,6 +286,7 @@ function define_10_3()
 
             # demand slack
             JuMP.@variable(problem, demand_slack >= 0.0)
+            JuMP.@variable(problem, load_shedding >= 0.0)
 
             # cost variables
             JuMP.@variable(problem, startup_costs[i=1:num_of_generators] >= 0.0)
@@ -289,8 +301,8 @@ function define_10_3()
 
             # ramping
             # we do not need a case distinction as we defined initial_values
-            JuMP.@constraint(problem, rampup[i=1:num_of_generators], gen[i].out - gen[i].in <= generators[i].ramp_up)
-            JuMP.@constraint(problem, rampdown[i=1:num_of_generators], gen[i].in - gen[i].out <= generators[i].ramp_dw)
+            JuMP.@constraint(problem, rampup[i=1:num_of_generators], gen[i].out - gen[i].in <= generators[i].ramp_up * commit[i].in + generators[i].pmin * (1-commit[i].in))
+            JuMP.@constraint(problem, rampdown[i=1:num_of_generators], gen[i].in - gen[i].out <= generators[i].ramp_dw * commit[i].out + generators[i].pmin * (1-commit[i].out))
 
             # start-up and shut-down
             # we do not need a case distinction as we defined initial_values
@@ -298,10 +310,10 @@ function define_10_3()
             JuMP.@constraint(problem, shutdown[i=1:num_of_generators], down[i] >= commit[i].in - commit[i].out)
 
             # load balance
-            JuMP.@constraint(problem, load, sum(gen[i].out for i in 1:num_of_generators) + demand_slack == demand[t] )
+            JuMP.@constraint(problem, load, sum(gen[i].out for i in 1:num_of_generators) + demand_slack - load_shedding == demand[t] )
 
             # costs
-            JuMP.@constraint(problem, startupcost[i=1:num_of_generators], generators[i].su_cost * up[i] == startup_costs[i])
+            JuMP.@constraint(problem, startupcost[i=1:num_of_generators], num_of_stages/24 * generators[i].su_cost * up[i] == startup_costs[i])
             JuMP.@constraint(problem, shutdowncost[i=1:num_of_generators], generators[i].sd_cost * down[i] == shutdown_costs[i])
             JuMP.@constraint(problem, fuelcost[i=1:num_of_generators], generators[i].fuel_cost * gen[i].out == fuel_costs[i])
             JuMP.@constraint(problem, omcost[i=1:num_of_generators], generators[i].om_cost * gen[i].out == om_costs[i])
@@ -320,9 +332,10 @@ function define_10_3()
         om_costs = subproblem[:om_costs]
         em_costs = subproblem[:emission_costs]
         demand_slack = subproblem[:demand_slack]
+        load_shedding = subproblem[:load_shedding]
         SDDP.@stageobjective(subproblem,
                             sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
-                            + demand_slack * demand_penalty)
+                            + demand_slack * demand_penalty + load_shedding * demand_penalty)
 
         su_costs = linearizedSubproblem[:startup_costs]
         sd_costs = linearizedSubproblem[:shutdown_costs]
@@ -330,15 +343,13 @@ function define_10_3()
         om_costs = linearizedSubproblem[:om_costs]
         em_costs = linearizedSubproblem[:emission_costs]
         demand_slack = linearizedSubproblem[:demand_slack]
+        load_shedding = linearizedSubproblem[:load_shedding]
         NCNBD.@lin_stageobjective(linearizedSubproblem,
                             sum(su_costs[i] + sd_costs[i] + f_costs[i] + om_costs[i] + em_costs[i] for i in 1:num_of_generators)
-                            + demand_slack * demand_penalty)
+                            + demand_slack * demand_penalty + load_shedding * demand_penalty)
 
         # DEFINE NONLINEARITY
         # ------------------------------------------------------------------
-        # TODO: Add c*commit, but then two-dimensional
-        # TODO: Use same function only ones, but insert correct paramters
-
         nlf_emission_eval =
 
         for i in 1:num_of_generators
@@ -379,5 +390,3 @@ function define_10_3()
 end
 
 end
-
-#unitCommitment_5_5()

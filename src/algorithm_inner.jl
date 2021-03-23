@@ -249,7 +249,13 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
         # Set optimizer to MILP optimizer
         linearizedSubproblem = node.ext[:linSubproblem]
 
-        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+        if appliedSolvers.MILP == "CPLEX"
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>0))
+        elseif appliedSolvers.MILP == "Gurobi"
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "NumericFocus"=>1))
+        else
+            set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+        end
 
         # SUBPROBLEM SOLUTION
         ############################################################################
@@ -709,7 +715,13 @@ function solve_subproblem_backward(
     end
 
     # reset solver as it may have been changed
-    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+    if appliedSolvers.MILP == "CPLEX"
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "numericalemphasis"=>0))
+    elseif appliedSolvers.MILP == "Gurobi"
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0, "NumericFocus"=>1))
+    else
+        set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+    end
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
@@ -837,7 +849,7 @@ function get_dual_variables_backward(
     end
     dual_bound = algoParams.sigma[node_index] * B_norm_bound
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
+    @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange] #|| node.ext[:linSubproblem].ext[:sddp_policy_graph].ext[:iteration] == 12
     try
         # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
         ########################################################################

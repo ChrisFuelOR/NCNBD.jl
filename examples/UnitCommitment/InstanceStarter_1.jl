@@ -12,7 +12,6 @@ using GAMS
 #using SCIP
 using Infiltrator
 
-include("UC_1_10.jl")
 include("UC_2_2.jl")
 include("UC_2_5.jl")
 include("UC_2_10.jl")
@@ -21,6 +20,10 @@ include("UC_3_10.jl")
 include("UC_4_5.jl")
 include("UC_4_10.jl")
 include("UC_5_5.jl")
+include("UC_5_10.jl")
+include("UC_10_3.jl")
+include("UC_10_5.jl")
+include("UC_10_10.jl")
 
 include("UC_2_2_Batt.jl")
 include("UC_2_5_Batt.jl")
