@@ -3,6 +3,7 @@ struct Log
     iteration::Union{Int,Nothing}
     lower_bound::Float64
     #best_upper_bound::Float64
+    best_upper_bound::Float64
     upper_bound::Float64
     current_state::Vector{Dict{Symbol,Float64}}
     #simulation_value::Float64
@@ -12,9 +13,13 @@ struct Log
     #sigma::Vector{Float64}
     #binaryPrecision::Dict{Symbol,Float64}
     sigma_increased::Union{Bool,Nothing}
-    bin_refinement::Union{Bool,Nothing}
+    bin_refinement::Union{Symbol,Nothing}
     subproblem_size::Union{Dict{Symbol,Int64},Nothing}
     opt_tolerance::Float64
+    lag_iterations::Union{Vector{Int},Nothing}
+    lag_status::Union{Vector{Symbol},Nothing}
+    total_cuts::Int
+    active_cuts::Int
 end
 
 
@@ -114,8 +119,18 @@ function print_banner(io)
     flush(io)
 end
 
-function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
+function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams, appliedSolvers::NCNBD.AppliedSolvers)
 
+    # Printing the time
+    println(io, Dates.now())
+
+    # Printint the file name
+    print(io, "calling ")
+    print(io, @__DIR__)
+    println(io)
+    println(io)
+
+    # Printing the parameters used
     println(io, Printf.@sprintf("outer loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_outerLoop))
     println(io, Printf.@sprintf("inner loop optimality tolerance: %1.4e", initialAlgoParams.epsilon_innerLoop))
     println(io, "Initial binary precision:")
@@ -124,6 +139,30 @@ function print_parameters(io, initialAlgoParams::NCNBD.InitialAlgoParams)
     println(io, initialAlgoParams.plaPrecision)
     println(io, "Initial sigma:")
     println(io, initialAlgoParams.sigma)
+    println(io, "Lagrangian atol:")
+    println(io, initialAlgoParams.lagrangian_atol)
+    println(io, "Lagrangian rtol:")
+    println(io, initialAlgoParams.lagrangian_rtol)
+    println(io, "Dual initialization:")
+    println(io, initialAlgoParams.dual_initialization_regime)
+    println(io, "Lagrangian solution method:")
+    println(io, initialAlgoParams.lagrangian_method)
+    if initialAlgoParams.lagrangian_method == :bundle_level
+        println(io, "Level parameter:")
+        println(io, initialAlgoParams.level_factor)
+    end
+    println(io, "Lagrangian solution regime:")
+    println(io, initialAlgoParams.lag_status_regime)
+    println(io, "Outer loop solution regime:")
+    println(io, initialAlgoParams.outer_loop_strategy)
+
+    println(io, "Used solvers:")
+    println(io, "LP:", appliedSolvers.LP)
+    println(io, "MILP:", appliedSolvers.MILP)
+    println(io, "MINLP:", appliedSolvers.MINLP)
+    println(io, "NLP:", appliedSolvers.NLP)
+    println(io, "Lagrange:", appliedSolvers.Lagrange)
+
     # println(io, "Sigma factor:")
     # println(io, initialAlgoParams.sigma_factor)
     flush(io)
@@ -133,7 +172,7 @@ end
 function print_iteration_header(io)
     println(
         io,
-        " Outer_Iteration   Inner_Iteration   Upper Bound     Lower Bound     Time (s)            sigma_ref    bin_ref     tot_var     bin_var     int_var     con  ",
+        " Outer_Iteration   Inner_Iteration   Upper Bound    Best Upper Bound     Lower Bound      Gap       Time (s)         sigma_ref    bin_ref     tot_var     bin_var     int_var       con       cuts   active     Lag iterations & status     ",
     )
     flush(io)
 end
@@ -149,7 +188,13 @@ function print_iteration(io, log::Log)
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.upper_bound), 13))
     print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.6e", log.best_upper_bound), 16))
+    print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.lower_bound), 13))
+    print(io, "   ")
+
+    gap = abs(log.best_upper_bound - log.lower_bound)/max(log.best_upper_bound, log.lower_bound)
+    print(io, lpad(Printf.@sprintf("%3.4f", gap), 8))
     print(io, "   ")
     print(io, lpad(Printf.@sprintf("%1.6e", log.time), 13))
     print(io, "   ")
@@ -160,7 +205,8 @@ function print_iteration(io, log::Log)
     end
     print(io, "   ")
     if !isnothing(log.bin_refinement)
-    	print(io, Printf.@sprintf("%9s", log.bin_refinement ? "true" : "false"))
+    	#print(io, Printf.@sprintf("%9s", log.bin_refinement ? "true" : "false"))
+        print(io, Printf.@sprintf("%9s", log.bin_refinement))
     else
    	    print(io, lpad(Printf.@sprintf(""), 9))
     end
@@ -173,9 +219,47 @@ function print_iteration(io, log::Log)
        	print(io, Printf.@sprintf("%9d", log.subproblem_size[:int_var]))
         print(io, "   ")
        	print(io, Printf.@sprintf("%9d", log.subproblem_size[:total_con]))
+    else
+        print(io, lpad(Printf.@sprintf(""), 45))
     end
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%5d", log.total_cuts), 7))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%5d", log.active_cuts), 7))
+    print(io, "     ")
+
+    if !isnothing(log.lag_iterations)
+        print(io, log.lag_iterations)
+    else
+        print(io, lpad(Printf.@sprintf(""), 19))
+    end
+    print(io, "   ")
+    if !isnothing(log.lag_status)
+        print(io, log.lag_status)
+    else
+        print(io, lpad(Printf.@sprintf(""), 19))
+    end
+    print(io, "   ")
+
     println(io)
     flush(io)
+end
+
+
+function print_piecewise_linear(io, time::Float64, node_index::Int)
+    println(io)
+    print(io, "   ")
+    print(io, "Initialized PLA for stage ", node_index)
+    print(io, " - ", time)
+    print(io, " sec. elapsed.")
+
+    println(io)
+    flush(io)
+end
+
+function log_piecewise_linear(options, node_index::Int)
+    print_piecewise_linear(options.log_file_handle, time() - options.start_time, node_index)
+
 end
 
 
@@ -289,4 +373,26 @@ function write_log_to_csv(model::SDDP.PolicyGraph, filename::String, algoParams:
         end
 
     end
+end
+
+
+function print_lagrange_header(io)
+    println(
+        io,
+        " Iteration     f_approx    best_actual     f_actual  ",
+    )
+    flush(io)
+end
+
+function print_lag_iteration(io, iter::Int, f_approx::Float64, best_actual::Float64, f_actual::Float64)
+    print(io, lpad(Printf.@sprintf("%5d", iter), 15))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.10e", f_approx), 13))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.10e", best_actual), 13))
+    print(io, "   ")
+    print(io, lpad(Printf.@sprintf("%1.10e", f_actual), 13))
+
+    println(io)
+    flush(io)
 end

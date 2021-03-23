@@ -13,8 +13,13 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
 
     # CALL THE INNER LOOP AND GET BACK RESULTS IF CONVERGED
     ############################################################################
-    TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
-        inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
+    if model.ext[:outer_iteration] > 1
+        TimerOutputs.@timeit NCNBD_TIMER "inner_loop" begin
+            inner_loop_results = NCNBD.inner_loop(parallel_scheme, model, options, algoParams, appliedSolvers)
+        end
+    else
+        model.ext[:total_cuts] = 0
+        model.ext[:active_cuts] = 0    
     end
 
     # START AN OUTER LOOP FORWARD PASS
@@ -22,13 +27,24 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
     TimerOutputs.@timeit NCNBD_TIMER "outer_loop_solution" begin
         forward_results = NCNBD.outer_loop_forward_pass(model, options, algoParams, appliedSolvers)
     end
-    # forward_pass options?
-    # TODO: values of which variables to return in optimal solution? Only states or all?
 
-    # DETERMINE AN ALTERNATIVE LOWER BOUND
+    # CHECK IF BEST KNOWN SOLUTION HAS BEEN IMPROVED
     ############################################################################
-    # TODO: TO BE IMPLEMENTED
-    # This can just be determined as the solution of the first stage from forward_results
+    if model.objective_sense == JuMP.MOI.MIN_SENSE
+        if forward_results.cumulative_value < model.ext[:best_outer_loop_objective]
+            # udpate best upper bound
+            model.ext[:best_outer_loop_objective] = forward_results.cumulative_value
+            # update best point so far
+            model.ext[:best_outer_loop_point] = forward_results.sampled_states
+        end
+    else
+        if forward_trajectory.cumulative_value > model.ext[:best_outer_loop_objective]
+            # udpate best lower bound
+            model.ext[:best_outer_loop_objective] = forward_results.cumulative_value
+            # update best point so far
+            model.ext[:best_outer_loop_point] = forward_results.sampled_states
+        end
+    end
 
     # LOGGING RESULTS?
     ############################################################################
@@ -41,6 +57,7 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
             nothing,
             #inner_loop_results.lower_bound,
             forward_results.first_stage_objective,
+            model.ext[:best_outer_loop_objective],
             forward_results.cumulative_value,
             forward_results.sampled_states,
             time() - options.start_time,
@@ -51,7 +68,11 @@ function outer_loop_iteration(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGr
             nothing,
             nothing,
             nothing,
-            algoParams.epsilon_outerLoop
+            algoParams.epsilon_outerLoop,
+            nothing,
+            nothing,
+            model.ext[:total_cuts],
+            model.ext[:active_cuts],
         ),
     )
 
@@ -142,7 +163,7 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
         # ===== End: starting state for infinite horizon =====
 
         # Set optimizer to MINLP optimizer
-        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
+        #set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
         #set_optimizer(node.subproblem, GAMS.Optimizer)
         #JuMP.set_optimizer_attribute(node.subproblem, "Solver", appliedSolvers.MINLP)
         #JuMP.set_optimizer_attribute(node.subproblem, "optcr", 0.0)
@@ -157,15 +178,18 @@ function outer_loop_forward_pass(model::SDDP.PolicyGraph{T},
                 incoming_state_value, # no State struct!
                 noise,
                 scenario_path[1:depth],
-                algoParams.infiltrate_state,
+                algoParams,
+                appliedSolvers,
                 require_duals = false,
             )
         end
         # Cumulate the stage_objective.
         cumulative_value += subproblem_results.stage_objective
         # Determine the first stage objective
-        if node_index == 1
+        if node_index == 1 && algoParams.outer_loop_strategy == :opt
             first_stage_objective = subproblem_results.objective
+        elseif node_index == 1 && algoParams.outer_loop_strategy == :approx
+            first_stage_objective = subproblem_results.bound
         end
         # Set the outgoing state value as the incoming state value for the next
         # node.
@@ -210,7 +234,8 @@ function solve_subproblem_forward_outer(
     state::Dict{Symbol,Float64},
     noise,
     scenario_path::Vector{Tuple{T,S}},
-    infiltrate_state::Symbol;
+    algoParams::NCNBD.AlgoParams,
+    appliedSolvers::NCNBD.AppliedSolvers;
     require_duals::Bool,
 ) where {T,S}
     #TODO: We can actually delete the duals part here
@@ -227,17 +252,52 @@ function solve_subproblem_forward_outer(
     #     nothing
     # end
 
-    JuMP.optimize!(node.subproblem)
+    # SOLVE THE MILP TO OBTAIN A BOUND ON THE MINLP
+    ############################################################################
+    set_incoming_lin_state(node, state)
+    parameterize_lin(node, noise)
+    linearizedSubproblem = node.ext[:linSubproblem]
+    set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
+    JuMP.optimize!(linearizedSubproblem)
+    bound_value = JuMP.objective_value(node.ext[:linSubproblem])
+
+    # BOUND THE MINLP OPTIMAL VALUE
+    # This way, a lot of branch-and-cut nodes can be pruned early on
+    ############################################################################
+    if model.ext[:outer_iteration] == 1
+        if model.objective_sense == JuMP.MOI.MIN_SENSE
+            JuMP.@constraint(node.subproblem, bound_constr, JuMP.objective_function(node.subproblem) >= bound_value)
+        else
+            JuMP.@constraint(node.subproblem, bound_constr, JuMP.objective_function(node.subproblem) <= bound_value)
+        end
+    else
+        JuMP.set_normalized_rhs(node.subproblem[:bound_constr], bound_value)
+    end
+
+    # SOLVE THE MINLP
+    ############################################################################
+    if algoParams.outer_loop_strategy == :opt
+        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>0.0))
+        JuMP.optimize!(node.subproblem)
+
+    elseif algoParams.outer_loop_strategy == :approx
+        relativeGap = algoParams.epsilon_outerLoop * 0.01
+        set_optimizer(node.subproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MINLP, "optcr"=>relativeGap))
+        JuMP.optimize!(node.subproblem)
+    end
+
+    state = SDDP.get_outgoing_state(node)
+    stage_objective = SDDP.stage_objective_value(node.stage_objective)
+    # upper bound (for minimization), primal solution
+    objective = JuMP.objective_value(node.subproblem)
+    # not actual objective, but lower bound (for minimization), dual solution
+    bound = JuMP.objective_bound(node.subproblem)
 
     #if JuMP.primal_status(node.subproblem) != JuMP.MOI.FEASIBLE_POINT
     #    SDDP.attempt_numerical_recovery(node)
     #end
 
-    state = SDDP.get_outgoing_state(node)
-    stage_objective = SDDP.stage_objective_value(node.stage_objective)
-    objective = JuMP.objective_value(node.subproblem)
-
-    @infiltrate infiltrate_state in [:all, :outer]
+    @infiltrate algoParams.infiltrate_state in [:all, :outer]
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -258,6 +318,7 @@ function solve_subproblem_forward_outer(
         duals = dual_values,
         objective = objective,
         stage_objective = stage_objective,
+        bound = bound
     )
 end
 
