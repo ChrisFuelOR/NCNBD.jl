@@ -1,3 +1,14 @@
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
+"""
+Unit commitment problem with 10 stages and 3 generators and some battery storage
+with nonlinear load curve
+"""
+
 module UC_10_3_Batt
 
 export unitCommitment

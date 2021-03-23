@@ -1,3 +1,9 @@
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
 using JuMP
 using SDDP
 using NCNBD
@@ -16,53 +22,23 @@ include("UC_4_5.jl")
 include("UC_4_10.jl")
 include("UC_5_5.jl")
 
+include("UC_2_2_Batt.jl")
+include("UC_2_5_Batt.jl")
+include("UC_2_10_Batt.jl")
+include("UC_3_10_Batt.jl")
+include("UC_4_10_Batt.jl")
+include("UC_5_5_Batt.jl")
+include("UC_10_3_Batt.jl")
+
+
+"""
+Used to run different instances of the unit commitment problem (different number
+of stages, generators and different paramters) after each other
+"""
 function start_instances()
 
     # INSTANCE DEFINITIONS
     parameter_sets = [
-                      #[UC_1_10, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-
-                      #[UC_2_2, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_2_2, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #[UC_2_2, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_2_2, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #[UC_2_2, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_2_2, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-
-                      #[UC_2_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_2_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      # [UC_2_5, 1e-8, 1e-8, :cplex_combi, :kelley, 0.0],
-                      # [UC_2_5, 1e-8, 1e-8, :cplex_combi, :bundle_level, 0.2],
-                      #[UC_2_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_2_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-
-                      #[UC_2_10, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_2_10, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #[UC_2_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_2_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-
-                      # [UC_3_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      # [UC_3_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      # [UC_3_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      # [UC_3_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #
-                      # [UC_3_10, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      # [UC_3_10, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      # [UC_3_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      # [UC_3_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #
-                      # [UC_4_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      # [UC_4_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #[UC_4_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_4_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-
-                      # [UC_4_10, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      # [UC_4_10, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-                      #[UC_4_10, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_4_10, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
-
-                      #[UC_5_5, 1e-8, 1e-8, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      #[UC_5_5, 1e-8, 1e-8, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       [UC_5_5, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
                       [UC_5_5, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
                       ]
