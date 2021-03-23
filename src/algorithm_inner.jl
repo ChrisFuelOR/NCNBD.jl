@@ -1,3 +1,31 @@
+# The functions
+# > "inner_loop_iteration",
+# > "inner_loop_forward_pass",
+# > "solve_subproblem_forward_inner",
+# > "solve_all_children",
+# > "solve_subproblem_backward",
+# > "get_dual_variables_backward",
+# > "calculate_bound",
+# > "solve_first_stage_problem"
+# > "inner_loop_forward_sigma_test"
+# > "solve_subproblem_sigma_test"
+# are derived from similar named functions (iteration, forward_pass, backward_pass,
+# solve_all_children, solve_subproblem, get_dual_variables, calculate_bound,
+# solve_first_stage_problem) in the 'SDDP.jl' package by
+# Oscar Dowson and released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
+
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson <o.dowson@gmail.com>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
+
+"""
+Executing an inner loop iteration for NC-NBD.
+"""
 function inner_loop_iteration(
     model::SDDP.PolicyGraph{T},
     options::NCNBD.Options,
@@ -15,7 +43,6 @@ function inner_loop_iteration(
     else
         model.ext[:iteration] = 1
     end
-    # TODO: Should this be set to 0 again for each new outer loop?
 
     # FORWARD PASS
     ############################################################################
@@ -43,7 +70,7 @@ function inner_loop_iteration(
     end
     boundCheck = true
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 13
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # BACKWARD PASS
     ############################################################################
@@ -130,7 +157,7 @@ function inner_loop_iteration(
     ############################################################################
     has_converged, status = convergence_test(model, options.log_inner, options.stopping_rules, :inner)
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] >= 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     return NCNBD.InnerLoopIterationResult(
         #Distributed.myid(),
@@ -145,6 +172,9 @@ function inner_loop_iteration(
 end
 
 
+"""
+Executing the forward pass of an inner loop iteration for NC-NBD.
+"""
 function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Options,
     algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
     ::SDDP.DefaultForwardPass) where {T}
@@ -281,6 +311,9 @@ function inner_loop_forward_pass(model::SDDP.PolicyGraph{T}, options::NCNBD.Opti
 end
 
 
+"""
+Solving the subproblem within the forward pass of an inner loop of NC-NBD.
+"""
 # Internal function: solve the subproblem associated with node given the
 # incoming state variables state and realization of the stagewise-independent
 # noise term noise. If require_duals=true, also return the dual variables
@@ -342,8 +375,8 @@ function solve_subproblem_forward_inner(
 
     state = get_outgoing_state(node)
     objective = JuMP.objective_value(node.ext[:linSubproblem])
-    stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function])) #JuMP.value(node.ext[:lin_stage_objective])
-    @infiltrate infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 14
+    stage_objective = objective - JuMP.value(bellman_term(node.ext[:lin_bellman_function]))
+    @infiltrate infiltrate_state in [:all, :inner]
 
     # If require_duals = true, check for dual feasibility and return a dict with
     # the dual on the fixed constraint associated with each incoming state
@@ -357,22 +390,6 @@ function solve_subproblem_forward_inner(
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
-    # end
-
-    # STORE RESULTS FOR NL-CONSTRAINT VARIABLES FOR PLA REFINEMENT
-    ############################################################################
-    # number_of_nonlinearities = size(node.ext[:nlFunctions], 1)
-    #
-    # for i = 1:number_of_nonlinearities
-    #     nlFunction = node.ext[:nlFunctions][i]
-    #     dimension = size(nlFunction.variablesContained, 1)
-    #
-    #     nlFunction.ext[:optSolution] = Dict{JuMP.VariableRef, Float64}()
-    #
-    #     for j = 1:dimension
-    #         variableReference = nlFunction.variablesContained[j]
-    #         nlFunction.ext[:optSolution][variableReference] = JuMP.value(variableReference)
-    #     end
     # end
 
     # DE-REGULARIZE SUBPROBLEM
@@ -390,6 +407,9 @@ function solve_subproblem_forward_inner(
 end
 
 
+"""
+Executing the backward pass of an inner loop of NC-NBD.
+"""
 function inner_loop_backward_pass(
     model::SDDP.PolicyGraph{T},
     options::NCNBD.Options,
@@ -517,6 +537,7 @@ function inner_loop_backward_pass(
             #TODO: Has to be adapted for stochastic case
             push!(model.ext[:lag_status], items.lag_status[1])
 
+            #TODO: No cut-sharing allowed so far
             # if options.refine_at_similar_nodes
             #     # Refine the bellman function at other nodes with the same
             #     # children, e.g., in the same stage of a Markovian policy graph.
@@ -548,6 +569,9 @@ function inner_loop_backward_pass(
 end
 
 
+"""
+Solving all children within the backward pass.
+"""
 function solve_all_children(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
@@ -639,6 +663,9 @@ function solve_all_children(
 end
 
 
+"""
+Solving the backward pass problem for one specific child
+"""
 # Internal function: solve the subproblem associated with node given the
 # incoming state variables state and realization of the stagewise-independent
 # noise term noise. If require_duals=true, also return the dual variables
@@ -676,7 +703,7 @@ function solve_subproblem_backward(
 
     # BACKWARD PASS PREPARATION
     ############################################################################
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # Also adapt solver here
     TimerOutputs.@timeit NCNBD_TIMER "space_change" begin
@@ -700,7 +727,7 @@ function solve_subproblem_backward(
 
     # REGULARIZE ALSO FOR BACKWARD PASS (FOR PRIMAL SOLUTION TO BOUND LAGRANGIAN DUAL)
     ############################################################################
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     node.ext[:regularization_data] = Dict{Symbol,Any}()
     regularize_backward!(node, linearizedSubproblem, algoParams.sigma[node_index])
@@ -724,7 +751,7 @@ function solve_subproblem_backward(
     solver_obj = JuMP.objective_value(linearizedSubproblem)
     @assert JuMP.termination_status(linearizedSubproblem) == MOI.OPTIMAL
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # PREPARE ACTUAL BACKWARD PASS METHOD BY DEREGULARIZATION
     ############################################################################
@@ -754,7 +781,7 @@ function solve_subproblem_backward(
         lag_status = :none
     end
 
-    @infiltrate algoParams.infiltrate_state in [:all, :inner] #|| model.ext[:iteration] == 8
+    @infiltrate algoParams.infiltrate_state in [:all, :inner]
 
     # if node.post_optimize_hook !== nothing
     #     node.post_optimize_hook(pre_optimize_ret)
@@ -776,6 +803,10 @@ function solve_subproblem_backward(
 end
 
 
+"""
+Calling the Lagrangian dual solution method and determining dual variables
+required to construct a cut
+"""
 function get_dual_variables_backward(
     node::SDDP.Node,
     node_index::Int64,
@@ -864,43 +895,6 @@ function get_dual_variables_backward(
 
         @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
 
-        # # SOLUTION WITH BOUNDED DUAL VARIABLES
-        # ########################################################################
-        # if boundCheck == false
-        #     dual_vars = dual_vars_initial
-        #
-        #     # SOLUTION WITHOUT BOUNDED DUAL VARIABLES (BETTER TO OBTAIN BASIC SOLUTIONS)
-        #     ########################################################################
-        #     if algoParams.lagrangian_method == :kelley
-        #         results = _kelley(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
-        #         lag_obj = results.lag_obj
-        #         lag_iterations = results.iterations
-        #         lag_status = lag_status
-        #     elseif algoParams.lagrangian_method == :bundle_level
-        #         results = _bundle_level(node, node_index, solver_obj, dual_vars, integrality_handler, algoParams, appliedSolvers, dual_bound)
-        #         lag_obj = results.lag_obj
-        #         lag_iterations = results.iterations
-        #         lag_status = lag_status
-        #     end
-        #
-        #     # OPTIMAL VALUE CHECKS
-        #     ########################################################################
-        #     if algoParams.lag_status_regime == :rigorous
-        #         if lag_status == :conv
-        #             error("Lagrangian dual converged to value < solver_obj.")
-        #         elseif lag_status == :sub
-        #             error("Lagrangian dual had subgradients zero without LB=UB.")
-        #         elseif lag_status == :iter
-        #             error("Solving Lagrangian dual exceeded iteration limit.")
-        #         end
-        #
-        #     elseif algoParams.lag_status_regime == :lax
-        #         # all cuts will be used as they are valid even though not necessarily tight
-        #     end
-        # end
-        #
-        # @infiltrate algoParams.infiltrate_state in [:all, :inner, :lagrange]
-
     catch e
         SDDP.write_subproblem_to_file(node, "subproblem.mof.json", throw_error = false)
         rethrow(e)
@@ -930,8 +924,7 @@ end
 
 """
 Calculate the lower bound (if minimizing, otherwise upper bound) of the problem
-model at the point state, assuming the risk measure at the root node is
-risk_measure.
+model at the point state.
 """
 function calculate_bound(
     model::SDDP.PolicyGraph{T},
@@ -1004,6 +997,9 @@ function calculate_bound(
 end
 
 
+"""
+Solving the first-stage problem to determine a lower bound
+"""
 function solve_first_stage_problem(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},
@@ -1084,6 +1080,10 @@ function solve_first_stage_problem(
 end
 
 
+"""
+Executing a forward pass to check if parameter sigma is chosen sufficiently
+large in NC-NBD.
+"""
 function inner_loop_forward_sigma_test(
     model::SDDP.PolicyGraph{T}, options::NCNBD.Options,
     algoParams::NCNBD.AlgoParams, appliedSolvers::NCNBD.AppliedSolvers,
@@ -1138,13 +1138,7 @@ function inner_loop_forward_sigma_test(
                options.cycle_discretization_delta
                 push!(starting_states, incoming_state_value)
             end
-            # TODO(odow):
-            # - A better way of randomly sampling a starting state.
-            # - Is is bad that we splice! here instead of just sampling? For
-            #   convergence it is probably bad, since our list of possible
-            #   starting states keeps changing, but from a computational
-            #   perspective, we don't want to keep a list of discretized points
-            #   in the state-space δ distance apart...
+
             incoming_state_value = splice!(starting_states, rand(1:length(starting_states)))
         end
         # ===== End: starting state for infinite horizon =====
@@ -1158,10 +1152,6 @@ function inner_loop_forward_sigma_test(
         else
             set_optimizer(linearizedSubproblem, optimizer_with_attributes(GAMS.Optimizer, "Solver"=>appliedSolvers.MILP, "optcr"=>0.0))
         end
-
-        #set_optimizer(linearizedSubproblem, GAMS.Optimizer)
-        #JuMP.set_optimizer_attribute(linearizedSubproblem, "Solver", appliedSolvers.MILP)
-        #JuMP.set_optimizer_attribute(linearizedSubproblem, "optcr", 0.0)
 
         # SOLVE REGULARIZED PROBLEM
         ############################################################################
@@ -1202,8 +1192,6 @@ function inner_loop_forward_sigma_test(
                 require_duals = false,
             )
         end
-
-        #@infiltrate
 
         # COMPARE SOLUTIONS
         ########################################################################
@@ -1258,6 +1246,9 @@ function inner_loop_forward_sigma_test(
 end
 
 
+"""
+Solving the subproblems for the sigma test.
+"""
 function solve_subproblem_sigma_test(
     model::SDDP.PolicyGraph{T},
     node::SDDP.Node{T},

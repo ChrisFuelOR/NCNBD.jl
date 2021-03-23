@@ -1,13 +1,20 @@
-# Copyright Christian Füllner (Karlsruhe Institute of Technology) 2020
-#
-# This source code form is subject to the terms of the Mozilla Public License, v. x.x.
-# If a copy of the MPL was not distributed with this file, you can obtain one
-# at https://mozilla.org/MPL/x.x.
+# The structs
+# > "NonlinearCut",
+# > "OuterLoopIterationResult"
+# > "InnerLoopIterationResult"
+# > "BackwardPassItems"
+# are derived from similar named structs (Cut, IterationResult, BackwardPassItems)
+# in the 'SDDP.jl' package by
+# Oscar Dowson and released under the Mozilla Public License 2.0.
+# The reproduced function and other functions in this file are also released
+# under Mozilla Public License 2.0
 
-# This file is inspired by and re-uses parts from the source code of
-# SDDiP.jl (lkapelevich),
-# SLDP.jl (bfpc)
-# and SDDP.jl (odow).
+# Copyright (c) 2021 Christian Fuellner <christian.fuellner@kit.edu>
+# Copyright (c) 2021 Oscar Dowson <o.dowson@gmail.com>
+
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+# If a copy of the MPL was not distributed with this file, You can obtain one at http://mozilla.org/MPL/2.0/.
+################################################################################
 
 import JuMP
 import Revise
