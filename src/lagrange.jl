@@ -258,7 +258,7 @@ function _kelley(
         value = f_actual
         fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
         for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
-            value = value - fact * cut[:dual_vars][i] * integrality_handler.old_rhs[i]
+            value = value - fact * dual_vars[i] * integrality_handler.old_rhs[i]
         end
         new_cut = NCNBD.HotstartCut(value, subgradients, dual_vars)
         append(node.ext[:hotstartModel][:cuts], new_cut)
