@@ -146,6 +146,45 @@ function _kelley(
     iter = 0
     lag_status = :none
 
+    # INITIALIZE CUTTING-PLANE FOR HOTSTART
+    ############################################################################
+    if node.ext[:hotstartModel] == :exists
+        hotstartModel = node.ext[:hotstartModel]
+
+        for cut in hotstartModel[:cuts]
+
+            # determine f_actual (cut[:value] denotes the scenario independent part of the objective)
+            f_actual = cut[:value]
+            fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
+
+            for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
+                f_actual = f_actual + fact * cut[:dual_vars][i] * integrality_handler.old_rhs[i]
+            end
+            @infiltrate
+
+            # add cut to cutting_plane model
+            if dualsense == MOI.MIN_SENSE
+                JuMP.@constraint(
+                    approx_model,
+                    θ >= f_actual + LinearAlgebra.dot(cut[:subgradients], x - cut[:dual_vars])
+                )
+                if f_actual <= best_actual
+                    best_actual = f_actual
+                    best_mult .= cut[:dual_vars]
+                end
+            else
+                JuMP.@constraint(
+                    approx_model,
+                    θ <= f_actual + LinearAlgebra.dot(cut[:subgradients], x - cut[:dual_vars])
+                )
+                if f_actual >= best_actual
+                    best_actual = f_actual
+                    best_mult .= cut[:dual_vars]
+                end
+            end
+        end
+    end
+
     while iter < integrality_handler.iteration_limit
         iter += 1
 
@@ -214,6 +253,15 @@ function _kelley(
         elseif best_actual > f_approx + atol/10.0
             error("Could not solve for Lagrangian duals. LB > UB.")
         end
+
+        # add current cut to hotstartModel
+        value = f_actual
+        fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
+        for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
+            value = value - fact * cut[:dual_vars][i] * integrality_handler.old_rhs[i]
+        end
+        new_cut = NCNBD.HotstartCut(value, subgradients, dual_vars)
+        append(node.ext[:hotstartModel][:cuts], new_cut)
 
         # return
         if lag_status == :sub || lag_status == :aopt || lag_status == :conv

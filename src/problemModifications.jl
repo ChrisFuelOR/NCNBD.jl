@@ -612,6 +612,13 @@ function binary_refinement(
         binaryRefinement = :all
     end
 
+    # Delete all existing cutting-plane model information for hot start
+    for node in model.nodes
+        hotstartModel = node.ext[:hotstartModel]
+        hotstartModel[:cuts] = NCNBD.hostartCut[]
+        hotstartModel[:status] = :new
+    end
+
     return binaryRefinement
 
 end

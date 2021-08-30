@@ -220,3 +220,15 @@ struct BackwardPassItems{T,U}
         )
     end
 end
+
+# struct for hot start of Lagrangian dual solution
+mutable struct HotstartCut
+    value::Float64
+    subgradients::Vector{Float64}
+    dual_vars::Vector{Float64}
+end
+
+mutable struct HotstartModel
+    status::Symbol # new or exists
+    cuts::Vector{NCNBD.HotstartCut}
+end

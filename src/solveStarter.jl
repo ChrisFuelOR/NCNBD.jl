@@ -286,6 +286,10 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
             #JuMP.set_silent(node.ext[:linSubproblem])
 
         end
+
+        # Initialize hotstart model for solving Lagrangian duals
+        node.ext[:hotstartModel] = NCNBD.hotstartModel(:new, NCNBD.hostartCut[])
+        
     end
 
     @infiltrate algoParams.infiltrate_state == :all
