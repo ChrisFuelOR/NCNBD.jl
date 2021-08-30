@@ -255,12 +255,12 @@ function _kelley(
         end
 
         # add current cut to hotstartModel
-        value = f_actual
+        corrected_value = f_actual
         fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
         for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
-            value = value - fact * dual_vars[i] * integrality_handler.old_rhs[i]
+            corrected_value = corrected_value - fact * dual_vars[i] * integrality_handler.old_rhs[i]
         end
-        new_cut = NCNBD.HotstartCut(value, subgradients, dual_vars)
+        new_cut = NCNBD.HotstartCut(corrected_value, subgradients, dual_vars)
         node.ext[:hotstartModel].status = :exists
         push!(node.ext[:hotstartModel].cuts, new_cut)
         @infiltrate
