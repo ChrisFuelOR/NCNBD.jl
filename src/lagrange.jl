@@ -148,10 +148,10 @@ function _kelley(
 
     # INITIALIZE CUTTING-PLANE FOR HOTSTART
     ############################################################################
-    if node.ext[:hotstartModel] == :exists
+    if node.ext[:hotstartModel].status == :exists
         hotstartModel = node.ext[:hotstartModel]
 
-        for cut in hotstartModel[:cuts]
+        for cut in hotstartModel.cuts
 
             # determine f_actual (cut[:value] denotes the scenario independent part of the objective)
             f_actual = cut[:value]
@@ -261,8 +261,9 @@ function _kelley(
             value = value - fact * dual_vars[i] * integrality_handler.old_rhs[i]
         end
         new_cut = NCNBD.HotstartCut(value, subgradients, dual_vars)
+        node.ext[:hotstartModel].status = :exists
         @infiltrate
-        append(node.ext[:hotstartModel][:cuts], new_cut)
+        append(node.ext[:hotstartModel].cuts, new_cut)
 
         # return
         if lag_status == :sub || lag_status == :aopt || lag_status == :conv
