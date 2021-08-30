@@ -288,7 +288,7 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
 
         # Initialize hotstart model for solving Lagrangian duals
-        node.ext[:hotstartModel] = NCNBD.HotstartModel(:new, NCNBD.HostartCut[])
+        node.ext[:hotstartModel] = NCNBD.HotstartModel(:new, NCNBD.HotstartCut[])
 
     end
 
