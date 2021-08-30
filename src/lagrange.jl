@@ -263,7 +263,7 @@ function _kelley(
         new_cut = NCNBD.HotstartCut(value, subgradients, dual_vars)
         node.ext[:hotstartModel].status = :exists
         @infiltrate
-        append(node.ext[:hotstartModel].cuts, new_cut)
+        append!(node.ext[:hotstartModel].cuts, new_cut)
 
         # return
         if lag_status == :sub || lag_status == :aopt || lag_status == :conv
