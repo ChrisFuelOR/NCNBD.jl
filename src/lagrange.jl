@@ -154,11 +154,11 @@ function _kelley(
         for cut in hotstartModel.cuts
 
             # determine f_actual (cut[:value] denotes the scenario independent part of the objective)
-            f_actual = cut[:value]
+            f_actual = cut.value
             fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
 
             for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
-                f_actual = f_actual + fact * cut[:dual_vars][i] * integrality_handler.old_rhs[i]
+                f_actual = f_actual + fact * cut.dual_vars[i] * integrality_handler.old_rhs[i]
             end
             @infiltrate
 
@@ -166,20 +166,20 @@ function _kelley(
             if dualsense == MOI.MIN_SENSE
                 JuMP.@constraint(
                     approx_model,
-                    θ >= f_actual + LinearAlgebra.dot(cut[:subgradients], x - cut[:dual_vars])
+                    θ >= f_actual + LinearAlgebra.dot(cut.subgradients, x - cut.dual_vars)
                 )
                 if f_actual <= best_actual
                     best_actual = f_actual
-                    best_mult .= cut[:dual_vars]
+                    best_mult .= cut.dual_vars
                 end
             else
                 JuMP.@constraint(
                     approx_model,
-                    θ <= f_actual + LinearAlgebra.dot(cut[:subgradients], x - cut[:dual_vars])
+                    θ <= f_actual + LinearAlgebra.dot(cut.subgradients, x - cut.dual_vars)
                 )
                 if f_actual >= best_actual
                     best_actual = f_actual
-                    best_mult .= cut[:dual_vars]
+                    best_mult .= cut.dual_vars
                 end
             end
         end
@@ -263,7 +263,6 @@ function _kelley(
         new_cut = NCNBD.HotstartCut(corrected_value, subgradients, dual_vars)
         node.ext[:hotstartModel].status = :exists
         push!(node.ext[:hotstartModel].cuts, new_cut)
-        @infiltrate
 
         # return
         if lag_status == :sub || lag_status == :aopt || lag_status == :conv
