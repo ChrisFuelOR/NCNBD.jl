@@ -288,8 +288,8 @@ function solve_ncnbd(parallel_scheme::SDDP.Serial, model::SDDP.PolicyGraph{T},
         end
 
         # Initialize hotstart model for solving Lagrangian duals
-        node.ext[:hotstartModel] = NCNBD.hotstartModel(:new, NCNBD.hostartCut[])
-        
+        node.ext[:hotstartModel] = NCNBD.HotstartModel(:new, NCNBD.hostartCut[])
+
     end
 
     @infiltrate algoParams.infiltrate_state == :all
