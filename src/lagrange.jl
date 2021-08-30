@@ -261,6 +261,7 @@ function _kelley(
             value = value - fact * dual_vars[i] * integrality_handler.old_rhs[i]
         end
         new_cut = NCNBD.HotstartCut(value, subgradients, dual_vars)
+        @infiltrate
         append(node.ext[:hotstartModel][:cuts], new_cut)
 
         # return
