@@ -200,6 +200,8 @@ function _kelley(
         f_actual = _solve_Lagrangian_relaxation!(subgradients, node, dual_vars, integrality_handler.slacks, :yes)
         @infiltrate algoParams.infiltrate_state in [:all, :lagrange] #|| model.ext[:sddp_policy_graph].ext[:iteration] == 12
 
+		@infiltrate iter == 4
+
         # ADD CUTTING PLANE
         ########################################################################
         # Update the model and update best function value so far
