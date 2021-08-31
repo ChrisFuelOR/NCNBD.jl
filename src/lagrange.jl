@@ -156,11 +156,16 @@ function _kelley(
 
                 # determine f_actual (cut[:value] denotes the scenario independent part of the objective)
                 fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
-                f_actual = cut.value + fact * LinearAlgebra.dot(cut.dual_vars, integrality_handler.old_rhs)
+
+                # rhs correction
+                rhs_correction = cut.rhs - integrality_handler.old_rhs
 
                 # determine new subgradients
-                new_subgradients = cut.subgradients + cut.rhs - integrality_handler.old_rhs
+                new_subgradients = cut.subgradients + rhs_correction
 
+                # determine new function value
+                f_actual = cut.value + fact * LinearAlgebra.dot(cut.dual_vars, rhs_correction)
+                
                 # add cut to cutting_plane model
                 if dualsense == MOI.MIN_SENSE
                     JuMP.@constraint(
@@ -252,10 +257,6 @@ function _kelley(
 
         # setup cuts for hotstartModel
         # ----------------------------------------------------------------------
-        # store x-independent value
-        fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
-        corrected_value = f_actual - fact * LinearAlgebra.dot(dual_vars, integrality_handler.old_rhs)
-
         # store subgradients, rhs and dual_vars
         cut_subgradients = Vector{Float64}(undef, size(dual_vars,1))
         cut_duals = Vector{Float64}(undef, size(dual_vars,1))
@@ -268,7 +269,7 @@ function _kelley(
         end
 
         # add current cut to hotstartModel and change status
-        new_cut = NCNBD.HotstartCut(corrected_value, cut_subgradients, cut_duals, cut_rhs)
+        new_cut = NCNBD.HotstartCut(f_actual, cut_subgradients, cut_duals, cut_rhs)
         push!(node.ext[:hotstartModel].cuts, new_cut)
         node.ext[:hotstartModel].status = :exists
         # ----------------------------------------------------------------------
