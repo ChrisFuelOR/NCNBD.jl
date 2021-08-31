@@ -267,7 +267,7 @@ function _kelley(
         cuts_duals = Vector{Float64}(undef, size(dual_vars,1))
         cuts_rhs = Vector{Float64}(undef, size(dual_vars,1))
 
-        for i in 1:size(dual_vars,1))
+        for i in 1:size(dual_vars,1)
             cut_subgradients[i] = subgradients[i]
             duals[i] = dual_vars[i]
             rhs[i] = integrality_handler.old_rhs[i]
