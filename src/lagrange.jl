@@ -264,17 +264,17 @@ function _kelley(
 
         # store subgradients, rhs and dual_vars
         cut_subgradients = Vector{Float64}(undef, size(dual_vars,1))
-        cuts_duals = Vector{Float64}(undef, size(dual_vars,1))
-        cuts_rhs = Vector{Float64}(undef, size(dual_vars,1))
+        cut_duals = Vector{Float64}(undef, size(dual_vars,1))
+        cut_rhs = Vector{Float64}(undef, size(dual_vars,1))
 
         for i in 1:size(dual_vars,1)
             cut_subgradients[i] = subgradients[i]
-            cuts_duals[i] = dual_vars[i]
-            cuts_rhs[i] = integrality_handler.old_rhs[i]
+            cut_duals[i] = dual_vars[i]
+            cut_rhs[i] = integrality_handler.old_rhs[i]
         end
 
         # add current cut to hotstartModel and change status
-        new_cut = NCNBD.HotstartCut(corrected_value, subgradients, dual_vars)
+        new_cut = NCNBD.HotstartCut(corrected_value, cut_subgradients, cut_duals, cut_rhs)
         push!(node.ext[:hotstartModel].cuts, new_cut)
         node.ext[:hotstartModel].status = :exists
         # ----------------------------------------------------------------------
