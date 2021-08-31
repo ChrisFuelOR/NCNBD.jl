@@ -269,8 +269,8 @@ function _kelley(
 
         for i in 1:size(dual_vars,1)
             cut_subgradients[i] = subgradients[i]
-            duals[i] = dual_vars[i]
-            rhs[i] = integrality_handler.old_rhs[i]
+            cuts_duals[i] = dual_vars[i]
+            cuts_rhs[i] = integrality_handler.old_rhs[i]
         end
 
         # add current cut to hotstartModel and change status
