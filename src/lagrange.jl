@@ -148,31 +148,33 @@ function _kelley(
 
     # INITIALIZE CUTTING-PLANE FOR HOTSTART
     ############################################################################
-    if node.ext[:hotstartModel].status == :exists
-        hotstartModel = node.ext[:hotstartModel]
+    TimerOutputs.@timeit NCNBD_TIMER "hotstart_lagrange" begin
+        if node.ext[:hotstartModel].status == :exists
+            hotstartModel = node.ext[:hotstartModel]
 
-        for cut in hotstartModel.cuts
+            for cut in hotstartModel.cuts
 
-            # determine f_actual (cut[:value] denotes the scenario independent part of the objective)
-            fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
-            f_actual = cut.value + fact * LinearAlgebra.dot(cut.dual_vars, integrality_handler.old_rhs)
+                # determine f_actual (cut[:value] denotes the scenario independent part of the objective)
+                fact = (JuMP.objective_sense(model) == JuMP.MOI.MIN_SENSE ? 1 : -1)
+                f_actual = cut.value + fact * LinearAlgebra.dot(cut.dual_vars, integrality_handler.old_rhs)
 
-            # determine new subgradients
-            new_subgradients = cut.subgradients + cut.rhs - integrality_handler.old_rhs
+                # determine new subgradients
+                new_subgradients = cut.subgradients + cut.rhs - integrality_handler.old_rhs
 
-            # add cut to cutting_plane model
-            if dualsense == MOI.MIN_SENSE
-                JuMP.@constraint(
-                    approx_model,
-                    θ >= f_actual + LinearAlgebra.dot(new_subgradients, x - cut.dual_vars)
-                )
-            else
-                JuMP.@constraint(
-                    approx_model,
-                    θ <= f_actual + LinearAlgebra.dot(new_subgradients, x - cut.dual_vars)
-                )
+                # add cut to cutting_plane model
+                if dualsense == MOI.MIN_SENSE
+                    JuMP.@constraint(
+                        approx_model,
+                        θ >= f_actual + LinearAlgebra.dot(new_subgradients, x - cut.dual_vars)
+                    )
+                else
+                    JuMP.@constraint(
+                        approx_model,
+                        θ <= f_actual + LinearAlgebra.dot(new_subgradients, x - cut.dual_vars)
+                    )
+                end
+
             end
-
         end
     end
 
