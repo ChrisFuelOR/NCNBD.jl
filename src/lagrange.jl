@@ -228,8 +228,8 @@ function _kelley(
 
         print("UB: ", f_approx, ", LB: ", f_actual)
         println()
-
-        @infiltrate
+        # Logging
+        print_helper(print_lag_iteration, lag_log_file_handle, iter, f_approx, best_actual, f_actual)
 
         # CONVERGENCE CHECKS AND UPDATE
         ########################################################################
@@ -309,9 +309,6 @@ function _kelley(
         dual_vars .= value.(x)
         # can be deleted with the next update of GAMS.jl
         replace!(dual_vars, NaN => 0)
-
-        # Logging
-        print_helper(print_lag_iteration, lag_log_file_handle, iter, f_approx, best_actual, f_actual)
 
     end
 
