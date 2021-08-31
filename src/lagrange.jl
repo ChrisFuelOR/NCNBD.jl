@@ -166,19 +166,11 @@ function _kelley(
                     approx_model,
                     θ >= f_actual + LinearAlgebra.dot(new_subgradients, x - cut.dual_vars)
                 )
-                if f_actual <= best_actual
-                    best_actual = f_actual
-                    best_mult .= cut.dual_vars
-                end
             else
                 JuMP.@constraint(
                     approx_model,
                     θ <= f_actual + LinearAlgebra.dot(new_subgradients, x - cut.dual_vars)
                 )
-                if f_actual >= best_actual
-                    best_actual = f_actual
-                    best_mult .= cut.dual_vars
-                end
             end
 
             @infiltrate
