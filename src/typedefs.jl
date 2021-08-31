@@ -226,6 +226,7 @@ mutable struct HotstartCut
     value::Float64
     subgradients::Vector{Float64}
     dual_vars::Vector{Float64}
+    rhs::Vector{Float64}
 end
 
 mutable struct HotstartModel
