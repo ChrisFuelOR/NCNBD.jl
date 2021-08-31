@@ -165,7 +165,7 @@ function _kelley(
 
                 # determine new function value
                 f_actual = cut.value + fact * LinearAlgebra.dot(cut.dual_vars, rhs_correction)
-                
+
                 # add cut to cutting_plane model
                 if dualsense == MOI.MIN_SENSE
                     JuMP.@constraint(
@@ -180,6 +180,13 @@ function _kelley(
                 end
 
             end
+
+            # Get a bound from the approximate model
+	        JuMP.optimize!(approx_model)
+	        @assert JuMP.termination_status(approx_model) == JuMP.MOI.OPTIMAL
+	        f_approx = JuMP.objective_value(approx_model)
+			dual_vars .= value.(x)
+
             @infiltrate
         end
     end
