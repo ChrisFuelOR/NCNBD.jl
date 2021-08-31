@@ -160,7 +160,6 @@ function _kelley(
             for (i, (name, bin_state)) in enumerate(node.ext[:backward_data][:bin_states])
                 f_actual = f_actual + fact * cut.dual_vars[i] * integrality_handler.old_rhs[i]
             end
-            @infiltrate
 
             # add cut to cutting_plane model
             if dualsense == MOI.MIN_SENSE
@@ -182,6 +181,8 @@ function _kelley(
                     best_mult .= cut.dual_vars
                 end
             end
+
+            @infiltrate
         end
     end
 
@@ -228,6 +229,8 @@ function _kelley(
 
         print("UB: ", f_approx, ", LB: ", f_actual)
         println()
+
+        @infiltrate
 
         # CONVERGENCE CHECKS AND UPDATE
         ########################################################################
