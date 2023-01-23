@@ -228,7 +228,8 @@ function define_24_3()
         stages = num_of_stages,
         lower_bound = 0.0,
         optimizer = GAMS.Optimizer,
-        sense = :Min
+        sense = :Min,
+        integrality_handler = SDDP.ContinuousRelaxation(),
     ) do subproblem, t
 
         # DEFINE LINEARIZED PROBLEM (MILP)

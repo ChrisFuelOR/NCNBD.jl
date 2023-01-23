@@ -25,13 +25,13 @@ include("UC_10_3.jl")
 include("UC_10_5.jl")
 include("UC_10_10.jl")
 
-include("UC_2_2_Batt.jl")
-include("UC_2_5_Batt.jl")
-include("UC_2_10_Batt.jl")
-include("UC_3_10_Batt.jl")
-include("UC_4_10_Batt.jl")
-include("UC_5_5_Batt.jl")
-include("UC_10_3_Batt.jl")
+# include("UC_2_2_Batt.jl")
+# include("UC_2_5_Batt.jl")
+# include("UC_2_10_Batt.jl")
+# include("UC_3_10_Batt.jl")
+# include("UC_4_10_Batt.jl")
+# include("UC_5_5_Batt.jl")
+# include("UC_10_3_Batt.jl")
 
 
 """
@@ -42,11 +42,11 @@ function start_instances()
 
     # INSTANCE DEFINITIONS
     parameter_sets = [
-                      [UC_5_5_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      [UC_5_5_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      #[UC_5_5_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      #[UC_5_5_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
 
-                      [UC_10_3_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
-                      [UC_10_3_Batt, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
+                      #[UC_10_3_Batt, 1e-4, 1e-4, :none, :kelley, 0.0, 1e-2, 1e-2],
+                      [UC_2_2, 1e-4, 1e-4, :none, :bundle_level, 0.2, 1e-2, 1e-2],
 
                       ]
 
